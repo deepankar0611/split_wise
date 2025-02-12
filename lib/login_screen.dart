@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:split_wise/sign_up.dart';
+import 'home_screen.dart';
 import 'local.dart';
 
 class LoginPage extends StatefulWidget {
@@ -17,7 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
   Future<void> _signIn() async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -31,11 +33,18 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Login Successful!")),
         );
-        // Navigate to home screen if needed
+        // Navigate to HomeScreen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  HomeScreen()), // Ensure HomeScreen is imported
+        );
       } else {
         await _auth.signOut(); // Prevent access if email is not verified
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Please verify your email before logging in.")),
+          SnackBar(
+              content: Text("Please verify your email before logging in.")),
         );
       }
     } catch (e) {
@@ -45,26 +54,32 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
-  Widget _backButton() {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context);
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10),
-        child: Row(
-          children: <Widget>[
-            Container(
-              padding: EdgeInsets.only(left: 0, top: 10, bottom: 10),
-              child: Icon(Icons.keyboard_arrow_left, color: Colors.black),
-            ),
-            Text('Back',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500))
-          ],
-        ),
-      ),
-    );
+      if (googleUser == null) {
+        print("Google Sign-In was cancelled.");
+        return null;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      print("Google Sign-In Successful: ${userCredential.user?.email}");
+      return userCredential;
+    } catch (e, stackTrace) {
+      print("Google Sign-In Failed: $e\n$stackTrace");
+      return null;
+    }
   }
 
   Widget _entryField(String title, {bool isPassword = false}) {
@@ -79,7 +94,8 @@ class _LoginPageState extends State<LoginPage> {
           ),
           SizedBox(height: 10),
           TextField(
-            controller: title == "Email id" ? _emailController : _passwordController,
+            controller:
+                title == "Email id" ? _emailController : _passwordController,
             obscureText: isPassword,
             decoration: InputDecoration(
               border: InputBorder.none,
@@ -112,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
           gradient: LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
-            colors: [Color(0xfffbb448), Color(0xfff7892b)],
+            colors: [Color(0xFF3C7986), Color(0xFF1A2E39)],
           ),
         ),
         child: Text(
@@ -148,50 +164,58 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _facebookButton() {
-    return Container(
-      height: 50,
-      margin: EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(10)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            flex: 1,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Color(0xff1959a9),
-                borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(5),
-                    topLeft: Radius.circular(5)),
+  Widget _googleSignInButton() {
+    return GestureDetector(
+      onTap: () {
+        signInWithGoogle().then((value) {
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => HomeScreen()));
+        });
+      },
+      child: Container(
+        height: 50,
+        margin: EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              flex: 1,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Color(0xFF1A2E39),
+                  borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(5),
+                      topLeft: Radius.circular(5)),
+                ),
+                alignment: Alignment.center,
+                child: Text('G',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w400)),
               ),
-              alignment: Alignment.center,
-              child: Text('f',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 25,
-                      fontWeight: FontWeight.w400)),
             ),
-          ),
-          Expanded(
-            flex: 5,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Color(0xff2872ba),
-                borderRadius: BorderRadius.only(
-                    bottomRight: Radius.circular(5),
-                    topRight: Radius.circular(5)),
+            Expanded(
+              flex: 5,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Color(0xFF3C7986),
+                  borderRadius: BorderRadius.only(
+                      bottomRight: Radius.circular(5),
+                      topRight: Radius.circular(5)),
+                ),
+                alignment: Alignment.center,
+                child: Text('Sign in with Google',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w400)),
               ),
-              alignment: Alignment.center,
-              child: Text('Log in with Facebook',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400)),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -217,7 +241,7 @@ class _LoginPageState extends State<LoginPage> {
             Text(
               'Register',
               style: TextStyle(
-                  color: Color(0xfff79c4f),
+                  color: Color(0xFF1A2E39),
                   fontSize: 13,
                   fontWeight: FontWeight.w600),
             ),
@@ -231,20 +255,24 @@ class _LoginPageState extends State<LoginPage> {
     return RichText(
       textAlign: TextAlign.center,
       text: TextSpan(
-        text: 'd',
+        text: 's',
         style: TextStyle(
           fontSize: 30,
           fontWeight: FontWeight.w700,
-          color: Color(0xffe46b10),
+          color: Color(0xFF1A2E39),
         ),
         children: [
           TextSpan(
-            text: 'ev',
-            style: TextStyle(color: Colors.black, fontSize: 30),
+            text: 'et',
+            style: TextStyle(color: Color(0xFF3C7986), fontSize: 30),
           ),
           TextSpan(
-            text: 'rnz',
-            style: TextStyle(color: Color(0xffe46b10), fontSize: 30),
+            text: 'tle',
+            style: TextStyle(color: Color(0xFF1A2E39), fontSize: 30),
+          ),
+          TextSpan(
+            text: 'up',
+            style: TextStyle(color: Color(0xFF3C7986), fontSize: 30),
           ),
         ],
       ),
@@ -293,14 +321,13 @@ class _LoginPageState extends State<LoginPage> {
                               fontSize: 14, fontWeight: FontWeight.w500)),
                     ),
                     _divider(),
-                    _facebookButton(),
+                    _googleSignInButton(),
                     SizedBox(height: height * .055),
                     _createAccountLabel(),
                   ],
                 ),
               ),
             ),
-            Positioned(top: 40, left: 0, child: _backButton()),
           ],
         ),
       ),

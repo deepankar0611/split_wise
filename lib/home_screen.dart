@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-class Testing extends StatefulWidget {
-  const Testing({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<Testing> createState() => _TestingState();
+  State<HomeScreen> createState() => _TestingState();
 }
 
-class _TestingState extends State<Testing> {
+class _TestingState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
