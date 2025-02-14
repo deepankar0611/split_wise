@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'friends.dart'; // Import AddExpenseScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _TestingState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _TestingState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,13 +29,22 @@ class _TestingState extends State<HomeScreen> {
                   children: [
                     _buildActionButton(LucideIcons.dollarSign, "Proceed to Payment"),
                     _buildActionButton(LucideIcons.send, "Send Reminder"),
-                    _buildActionButton(LucideIcons.share, "Share Payment"),
+                    _buildActionButton(
+                      LucideIcons.share,
+                      "Share Payment",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AddExpenseScreen()),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
           Expanded(
             child: _buildTransactionList(),
           ),
@@ -45,8 +55,8 @@ class _TestingState extends State<HomeScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+      decoration: const BoxDecoration(
         color: Color(0xFF234567),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
@@ -58,7 +68,7 @@ class _TestingState extends State<HomeScreen> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+            children: const [
               Icon(Icons.arrow_back_ios, color: Colors.white),
               Text(
                 "Peter Clarkson",
@@ -67,33 +77,30 @@ class _TestingState extends State<HomeScreen> {
               Icon(Icons.settings, color: Colors.white),
             ],
           ),
-          SizedBox(height: 20),
-          Text(
-            "Total:",
-            style: TextStyle(color: Colors.white70, fontSize: 16),
-          ),
-          SizedBox(height: 5),
-          Text(
-            "-\$154,68",
-            style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 60),
+          const SizedBox(height: 20),
+          const Text("Total:", style: TextStyle(color: Colors.white70, fontSize: 16)),
+          const SizedBox(height: 5),
+          const Text("-\$154,68", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 60),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label) {
-    return Column(
-      children: [
-        CircleAvatar(
-          backgroundColor: Colors.white,
-          radius: 25,
-          child: Icon(icon, color: Colors.blue, size: 24),
-        ),
-        SizedBox(height: 5),
-        Text(label, style: TextStyle(color: Colors.blue, fontSize: 12), textAlign: TextAlign.center),
-      ],
+  Widget _buildActionButton(IconData icon, String label, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        children: [
+          const CircleAvatar(
+            backgroundColor: Colors.white,
+            radius: 25,
+            child: Icon(LucideIcons.dollarSign, color: Colors.blue, size: 24),
+          ),
+          const SizedBox(height: 5),
+          Text(label, style: const TextStyle(color: Colors.blue, fontSize: 12), textAlign: TextAlign.center),
+        ],
+      ),
     );
   }
 
@@ -107,7 +114,7 @@ class _TestingState extends State<HomeScreen> {
     ];
 
     return ListView.builder(
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
       itemCount: transactions.length,
       itemBuilder: (context, index) {
         return _buildTransactionItem(
@@ -123,14 +130,14 @@ class _TestingState extends State<HomeScreen> {
 
   Widget _buildTransactionItem(IconData icon, String title, String subtitle, String amount, Color color) {
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: color.withOpacity(0.2),
           child: Icon(icon, color: color),
         ),
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600])),
         trailing: Text(
           amount,

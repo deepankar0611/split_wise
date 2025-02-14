@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:split_wise/payer_selection_sheet.dart';
 
 import 'bottomsheet.dart';
 
@@ -39,113 +40,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     "Utilities",
     "Others"
   ];
-
-  void _openPayerSelectionSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text("Choose Payer", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const Divider(),
-                  Expanded(
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: friends.map((friend) {
-                        bool isSelected = selectedPayers.contains(friend);
-                        return ListTile(
-                          leading: const CircleAvatar(backgroundColor: Colors.grey),
-                          title: Text(friend),
-                          trailing: isSelected ? const Icon(Icons.check, color: Colors.teal) : null,
-                          onTap: () {
-                            setModalState(() {
-                              if (isSelected) {
-                                selectedPayers.remove(friend);
-                                payerAmounts.remove(friend);
-                              } else {
-                                selectedPayers.add(friend);
-                                payerAmounts[friend] = 0.0;
-                              }
-                              _updateRemainingAmount(setModalState);
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  if (selectedPayers.length > 1) const Divider(),
-                  if (selectedPayers.length > 1) buildAmountEntry(setModalState),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {}); // Update UI
-                      Navigator.pop(context);
-                    },
-                    child: const Text("Done"),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-
-  void _updateRemainingAmount(StateSetter setModalState) {
-    double totalPaid = payerAmounts.values.fold(0.0, (sum, amount) => sum + amount);
-    setModalState(() {
-      remainingAmount = totalAmount - totalPaid;
-    });
-  }
-
-  Widget buildAmountEntry(StateSetter setModalState) {
-    return Column(
-      children: [
-        const Text("Enter Paid Amounts", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        ...selectedPayers.map((payer) {
-          return ListTile(
-            leading: const CircleAvatar(backgroundColor: Colors.grey),
-            title: Text(payer),
-            trailing: SizedBox(
-              width: 100,
-              child: TextField(
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(prefixText: "₹ "),
-                onChanged: (value) {
-                  setModalState(() {
-                    payerAmounts[payer] = double.tryParse(value) ?? 0.0;
-                    _updateRemainingAmount(setModalState);
-                  });
-                },
-              ),
-            ),
-          );
-        }).toList(),
-        const SizedBox(height: 10),
-        Text(
-          "₹ ${totalAmount - remainingAmount} of ₹ $totalAmount",
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        Text(
-          remainingAmount == 0 ? "₹ 0.00 left" : "₹ $remainingAmount left",
-          style: TextStyle(color: remainingAmount == 0 ? Colors.green : Colors.red),
-        ),
-      ],
-    );
-  }
 
   void _toggleSelection(String name) {
     setState(() {
@@ -360,9 +254,23 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   },
                   child:  TextButton(
                     onPressed: (){
-                      setState(() {
-                        _openPayerSelectionSheet();
-                      });
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context)=>
+                              PayerSelectionSheet(
+                                  friends: friends,
+                                  selectedPayers: selectedPayers,
+                                  payerAmounts: payerAmounts,
+                                  totalAmount: totalAmount,
+                                  onSelectionDone: (updatedPayers, updatedAmounts) {
+                                    setState(() {
+                                      selectedPayers = updatedPayers;
+                                      payerAmounts = updatedAmounts;
+                                    });
+                                  },
+                              )
+                          )
+                      );
                     },
                     child: Text(
                       selectedPayers.length == 1

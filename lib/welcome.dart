@@ -61,7 +61,7 @@ class _IntroPageState extends State<IntroPage> {
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => AddExpenseScreen()),
+      MaterialPageRoute(builder: (context) => LoginScreen()),
     );
   }
 
