@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'login.dart';
 import 'login_screen.dart';
 
 class GetStarted extends StatefulWidget {
@@ -47,7 +48,7 @@ class _GetStartedState extends State<GetStarted> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>  LoginPage(),
+                    builder: (context) =>  LoginScreen(),
                   ),
                 );
               },
