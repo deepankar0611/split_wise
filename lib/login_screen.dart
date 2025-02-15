@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:split_wise/Search/bottom_bar.dart';
 import 'package:split_wise/sign_up.dart';
 import 'home_screen.dart';
 import 'local.dart';
@@ -38,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
           context,
           MaterialPageRoute(
               builder: (context) =>
-                  HomeScreen()), // Ensure HomeScreen is imported
+                  BottomBar()), // Ensure HomeScreen is imported
         );
       } else {
         await _auth.signOut(); // Prevent access if email is not verified

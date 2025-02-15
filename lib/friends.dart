@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:split_wise/payer_selection_sheet.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -9,141 +10,144 @@ class AddExpenseScreen extends StatefulWidget {
 }
 
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
-  List<String> friends = [
-    "John Doe",
-    "Meghan Thomas",
-    "Alan Bates",
-    "Rahul Das",
-    "Sarah Sengupta"
-  ];
-  List<String> groups = ["Room No 402", "Office Team"];
+  List<Map<String, dynamic>> friends = [];
   List<String> selectedPeople = [];
+  bool isLoading = true;
   bool showExpenseDetails = false;
   String searchQuery = "";
-  String selectedCategory = "Grocery"; // Default category
-  List<String> selectedPayers = ["You"];
-  Map<String, double> payerAmounts = {};
+  String selectedCategory = "Grocery";
   double totalAmount = 0.0;
-  double remainingAmount = 0.0;
 
   final List<String> categories = [
-    "Grocery",
-    "Medicine",
-    "Food",
-    "Rent",
-    "Travel",
-    "Shopping",
-    "Entertainment",
-    "Utilities",
-    "Others"
+    "Grocery", "Medicine", "Food", "Rent", "Travel",
+    "Shopping", "Entertainment", "Utilities", "Others"
   ];
+
+
+
+
+  @override
+  void initState() {
+    super.initState();
+    fetchFriends();
+  }
+
+  Future<void> fetchFriends() async {
+    String userId = FirebaseAuth.instance.currentUser!.uid;
+    print("Fetching friends for user: $userId"); // Debugging
+
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('friends')
+          .get();
+
+      print("🔥 Friends found: ${snapshot.docs.length}");
+
+      if (!mounted) return; // ✅ Prevent calling setState() if widget is disposed
+
+      setState(() {
+        friends = snapshot.docs.map((doc) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+          return {
+            "uid": doc.id,
+            "name": data.containsKey("name") ? data["name"] : "Unknown",
+            "email": data.containsKey("email") ? data["email"] : "No Email",
+            "profilePic": data.containsKey("profilePic") ? data["profilePic"] : "",
+          };
+        }).toList();
+        isLoading = false;
+      });
+    } catch (e) {
+      print("❌ Error fetching friends: $e");
+      if (!mounted) return; // ✅ Prevent calling setState() if widget is disposed
+      setState(() => isLoading = false);
+    }
+  }
+
+
 
   void _toggleSelection(String name) {
     setState(() {
-      if (selectedPeople.contains(name)) {
-        selectedPeople.remove(name);
-      } else {
-        selectedPeople.add(name);
-      }
+      selectedPeople.contains(name)
+          ? selectedPeople.remove(name)
+          : selectedPeople.add(name);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text("Add an expense"),
         backgroundColor: Colors.teal,
         actions: [
           TextButton(
             onPressed: () {},
-            child: const Text(
-              "Save",
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
+            child: const Text("Save", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
       body: Column(
         children: [
-          // Search Section
           Padding(
             padding: const EdgeInsets.all(10.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "With you and:",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                const Text("With you and:",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 Wrap(
                   spacing: 8.0,
                   children: selectedPeople
                       .map((name) => Chip(
-                            label: Text(name),
-                            avatar: const CircleAvatar(
-                                backgroundColor: Colors.grey),
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            onDeleted: () => _toggleSelection(name),
-                          ))
+                    label: Text(name),
+                    avatar: const CircleAvatar(backgroundColor: Colors.grey),
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    onDeleted: () => _toggleSelection(name),
+                  ))
                       .toList(),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   decoration: InputDecoration(
-                    hintText: "Enter names, emails, or phone #s",
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0)),
+                    hintText: "Search friends...",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
                     prefixIcon: const Icon(Icons.search),
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      searchQuery = value.toLowerCase();
-                    });
-                  },
+                  onChanged: (value) => setState(() => searchQuery = value.toLowerCase()),
                 ),
               ],
             ),
           ),
 
-          // Filtered Friends and Groups List
           Expanded(
-            child: ListView(
-              children: [
-                _buildSectionTitle("Recent"),
-                _buildFilteredList(["Room No 402"]),
-                _buildSectionTitle("Groups"),
-                _buildFilteredList(groups),
-                _buildSectionTitle("Friends"),
-                _buildFilteredList(friends),
-              ],
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : friends.isEmpty
+                ? const Center(child: Text("No friends found"))
+                : ListView(
+              children: friends
+                  .where((friend) =>
+                  friend["name"].toLowerCase().contains(searchQuery))
+                  .map((friend) => _buildFriendItem(friend))
+                  .toList(),
             ),
           ),
 
-          // Submit Button
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: () {
-                setState(() {
-                  showExpenseDetails = true;
-                });
-              },
+              onPressed: () => setState(() => showExpenseDetails = true),
               child: const Center(
-                child: Text(
-                  "Submit",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
+                child: Text("Submit", style: TextStyle(fontSize: 18, color: Colors.white)),
               ),
             ),
           ),
@@ -154,28 +158,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Text(title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _buildFilteredList(List<String> list) {
-    final filteredList =
-        list.where((name) => name.toLowerCase().contains(searchQuery)).toList();
-    return Column(
-      children: filteredList.map((name) => _buildContactItem(name)).toList(),
-    );
-  }
-
-  Widget _buildContactItem(String name) {
+  Widget _buildFriendItem(Map<String, dynamic> friend) {
     return ListTile(
-      leading: const CircleAvatar(backgroundColor: Colors.grey),
-      title: Text(name),
-      onTap: () => _toggleSelection(name),
-      trailing: selectedPeople.contains(name)
+      leading: CircleAvatar(
+        backgroundImage:
+        friend["profilePic"].isNotEmpty ? NetworkImage(friend["profilePic"]) : null,
+        backgroundColor: Colors.grey,
+        child: friend["profilePic"].isEmpty ? Text(friend["name"][0]) : null,
+      ),
+      title: Text(friend["name"]),
+      subtitle: Text(friend["email"]),
+      onTap: () => _toggleSelection(friend["name"]),
+      trailing: selectedPeople.contains(friend["name"])
           ? const Icon(Icons.check, color: Colors.teal)
           : null,
     );
@@ -187,109 +181,43 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         const Divider(),
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(children: [
-            Wrap(
-              spacing: 8.0,
-              children: selectedPeople
-                  .map((name) => Chip(
-                        label: Text(name),
-                        avatar:
-                            const CircleAvatar(backgroundColor: Colors.grey),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              decoration: InputDecoration(
-                hintText: "Enter a description",
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0)),
-                prefixIcon: const Icon(Icons.description),
+          child: Column(
+            children: [
+              Wrap(
+                spacing: 8.0,
+                children: selectedPeople
+                    .map((name) => Chip(label: Text(name), avatar: const CircleAvatar(backgroundColor: Colors.grey)))
+                    .toList(),
               ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              decoration: InputDecoration(
-                hintText: "₹ 0.00",
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0)),
-                prefixIcon: const Icon(Icons.currency_rupee),
+              const SizedBox(height: 10),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "Enter a description",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+                  prefixIcon: const Icon(Icons.description),
+                ),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-
-            // Dropdown for Expense Category
-            DropdownButtonFormField<String>(
-              value: selectedCategory,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0)),
-                prefixIcon: const Icon(Icons.category),
+              const SizedBox(height: 10),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "₹ 0.00",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+                  prefixIcon: const Icon(Icons.currency_rupee),
+                ),
+                keyboardType: TextInputType.number,
               ),
-              items: categories.map((category) {
-                return DropdownMenuItem<String>(
-                  value: category,
-                  child: Text(category),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedCategory = value!;
-                });
-              },
-            ),
-            Row(
-              children: [
-                const Text(
-                  "Paid by: ",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: selectedCategory,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+                  prefixIcon: const Icon(Icons.category),
                 ),
-                GestureDetector(
-                  onTap: () {
-
-                  },
-                  child:  TextButton(
-                    onPressed: (){
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context)=>
-                              PayerSelectionSheet(
-                                  friends: friends,
-                                  selectedPayers: selectedPayers,
-                                  payerAmounts: payerAmounts,
-                                  totalAmount: totalAmount,
-                                  onSelectionDone: (updatedPayers, updatedAmounts) {
-                                    setState(() {
-                                      selectedPayers = updatedPayers;
-                                      payerAmounts = updatedAmounts;
-                                    });
-                                  },
-                              )
-                          )
-                      );
-                    },
-                    child: Text(
-                      selectedPayers.length == 1
-                          ? "You"
-                          : "${selectedPayers.length}",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal, // Highlight "You" as a button
-                        decoration:
-                        TextDecoration.underline, // Make it look clickable
-                      ),
-                    ),
-                  ),
-                ),
-                const Text(
-                  " and split equally",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ]),
+                items: categories.map((category) => DropdownMenuItem(value: category, child: Text(category))).toList(),
+                onChanged: (value) => setState(() => selectedCategory = value!),
+              ),
+            ],
+          ),
         ),
       ],
     );

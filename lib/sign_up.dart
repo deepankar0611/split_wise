@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'local.dart';
@@ -18,18 +19,31 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _usernameController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<void> signUpUser(String email, String password) async {
+  Future<void> signUpUser(String email, String password, String name) async {
     try {
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Send email verification
+      // Get the user ID
       User? user = userCredential.user;
-      if (user != null && !user.emailVerified) {
-        await user.sendEmailVerification();
-        print("Verification email sent!");
+      if (user != null) {
+        String uid = user.uid;
+
+        // Store user data in Firestore with UID as document ID
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'uid': uid,
+          'name': name,
+          'email': email,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Send email verification
+        if (!user.emailVerified) {
+          await user.sendEmailVerification();
+          print("Verification email sent!");
+        }
       }
     } catch (e) {
       print("Error: $e");
@@ -85,7 +99,7 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget _submitButton() {
     return GestureDetector(
       onTap: () {
-        signUpUser(_emailController.text, _passwordController.text);
+        signUpUser(_emailController.text, _passwordController.text, _usernameController.text);
       },
       child: Container(
         width: MediaQuery.of(context).size.width,

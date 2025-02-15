@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'friends.dart'; // Import AddExpenseScreen
+import 'friends.dart';
+import 'notification.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -68,13 +69,22 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Icon(Icons.arrow_back_ios, color: Colors.white),
-              Text(
+            children: [
+              const Icon(Icons.arrow_back_ios, color: Colors.white),
+              const Text(
                 "Peter Clarkson",
                 style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              Icon(Icons.settings, color: Colors.white),
+              // 🔔 Notification Icon (Navigates to NotificationScreen)
+              IconButton(
+                icon: const Icon(Icons.notifications, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const Notificationn()),
+                  );
+                },
+              ),
             ],
           ),
           const SizedBox(height: 20),

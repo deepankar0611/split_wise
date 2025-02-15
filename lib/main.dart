@@ -1,5 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:split_wise/Search/bottom_bar.dart';
+import 'package:split_wise/Search/search_bar.dart';
+import 'package:split_wise/friends.dart';
+import 'package:split_wise/login_screen.dart'; // Ensure this file contains LoginPage class
+import 'package:split_wise/sign_up.dart';
 import 'package:split_wise/splash_screen.dart'; // Import the Splash Screen
 
 void main() async {
@@ -15,12 +21,19 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Split Wise',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasData) {
+            return const BottomBar(); // User is logged in
+          } else {
+            return  LoginPage(); // Ensure this class exists
+          }
+        },
       ),
-      home: const SplashScreen(), // Now fetching from the separate file
     );
   }
 }
