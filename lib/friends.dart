@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:split_wise/payer_selection_sheet.dart';
 
-import 'bottomsheet.dart';
-
-
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
 
