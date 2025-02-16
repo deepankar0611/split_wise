@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PayerSelectionSheet extends StatefulWidget {
-  final List<String> friends;
+  final List<Map<String, dynamic>> friends;
   final List<String> selectedPayers;
   final Map<String, double> payerAmounts;
   final double totalAmount;
@@ -53,30 +53,35 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                 const Text("Choose Payer", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const Divider(),
                 Expanded(
-                  child: Material(
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: widget.friends.map((friend) {
-                        bool isSelected = selectedPayers.contains(friend);
-                        return ListTile(
-                          leading: const CircleAvatar(backgroundColor: Colors.grey),
-                          title: Text(friend),
-                          trailing: isSelected ? const Icon(Icons.check, color: Colors.teal) : null,
-                          onTap: () {
-                            setModalState(() {
-                              if (isSelected) {
-                                selectedPayers.remove(friend);
-                                payerAmounts.remove(friend);
-                              } else {
-                                selectedPayers.add(friend);
-                                payerAmounts[friend] = 0.0;
-                              }
-                              _updateRemainingAmount();
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
+                  child: ListView.builder(
+                    itemCount: widget.friends.length,
+                    itemBuilder: (context, index) {
+                      final friend = widget.friends[index];
+                      final bool isSelected = selectedPayers.contains(friend["name"]);
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: friend["profilePic"]?.isNotEmpty == true
+                              ? NetworkImage(friend["profilePic"])
+                              : null,
+                          backgroundColor: Colors.grey,
+                          child: (friend["profilePic"]?.isEmpty ?? true) ? Text(friend["name"][0]) : null,
+                        ),
+                        title: Text(friend["name"]),
+                        trailing: isSelected ? const Icon(Icons.check, color: Colors.teal) : null,
+                        onTap: () {
+                          setModalState(() {
+                            if (isSelected) {
+                              selectedPayers.remove(friend["name"]);
+                              payerAmounts.remove(friend["name"]);
+                            } else {
+                              selectedPayers.add(friend["name"]);
+                              payerAmounts[friend["name"]] = 0.0;
+                            }
+                            _updateRemainingAmount();
+                          });
+                        },
+                      );
+                    },
                   ),
                 ),
                 if (selectedPayers.length > 1) const Divider(),
@@ -104,9 +109,18 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
         const Text("Enter Paid Amounts", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         ...selectedPayers.map((payer) {
+          final friend = widget.friends.firstWhere(
+                (f) => f["name"] == payer,
+            orElse: () => {"profilePic": "", "name": payer}, // Avoids crash if payer not found
+          );
+
           return Material(
             child: ListTile(
-              leading: const CircleAvatar(backgroundColor: Colors.grey),
+              leading: CircleAvatar(
+                backgroundImage: friend["profilePic"].isNotEmpty ? NetworkImage(friend["profilePic"]) : null,
+                backgroundColor: Colors.grey,
+                child: friend["profilePic"].isEmpty ? Text(payer[0]) : null,
+              ),
               title: Text(payer),
               trailing: SizedBox(
                 width: 100,
@@ -115,6 +129,10 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                   decoration: const InputDecoration(prefixText: "₹ "),
                   onChanged: (value) {
                     setModalState(() {
+                      // Prevents "Bad state: No element" error
+                      if (!payerAmounts.containsKey(payer)) {
+                        payerAmounts[payer] = 0.0;
+                      }
                       payerAmounts[payer] = double.tryParse(value) ?? 0.0;
                       _updateRemainingAmount();
                     });
