@@ -4,6 +4,7 @@ import 'package:split_wise/friends.dart';
 import 'package:split_wise/home_screen.dart';
 import 'package:split_wise/login.dart';
 
+import '../login_screen.dart';
 import 'search_bar.dart';
 
 class BottomBar extends StatefulWidget {
@@ -77,7 +78,7 @@ class ProfileScreen extends StatelessWidget {
     await FirebaseAuth.instance.signOut();
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) =>  LoginScreen()),
+      MaterialPageRoute(builder: (context) =>  LoginPage()),
     );
   }
 

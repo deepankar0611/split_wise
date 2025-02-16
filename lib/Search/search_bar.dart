@@ -19,14 +19,18 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       return const Stream.empty();
     }
 
+    String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
+
     return FirebaseFirestore.instance.collection('users').snapshots().map(
           (snapshot) {
         return snapshot.docs
             .map((doc) => doc.data())
-            .where((user) => user['name']
-            .toString()
-            .toLowerCase()
-            .contains(name.toLowerCase()))
+            .where((user) =>
+        user['uid'] != currentUserUid && // Exclude current user
+            user['name']
+                .toString()
+                .toLowerCase()
+                .contains(name.toLowerCase()))
             .toList();
       },
     );
