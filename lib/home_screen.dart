@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:split_wise/profile_overview.dart';
 import 'friends.dart';
 import 'notification.dart';
 
@@ -36,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const AddExpenseScreen()),
+                          MaterialPageRoute(builder: (context) => const ProfileOverviewScreen()),
                         );
                       },
                     ),

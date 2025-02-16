@@ -17,6 +17,8 @@ dependencies:
   lucide_icons: ^0.257.0
   google_sign_in: ^6.0.0
   video_player:
+  supabase_flutter: ^1.10.19
+  image_picker:
 
 
 dev_dependencies:
