@@ -22,8 +22,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   List<String> selectedPayers = ["You"];
   Map<String, double> payerAmounts = {};
   double totalAmount = 0.0;
-  final TextEditingController amountController = TextEditingController();
-
 
   final List<String> categories = [
     "Grocery", "Medicine", "Food", "Rent", "Travel",
@@ -33,9 +31,26 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   @override
   void initState() {
     super.initState();
-    // No need to fetch friends here, StreamBuilder will handle it
+    _fetchFriends();
   }
 
+  void _fetchFriends() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('friends')
+        .get();
+
+    setState(() {
+      friends = snapshot.docs.map((doc) {
+        return {
+          "uid": doc.id,
+          "name": doc["name"] ?? "Unknown",
+          "profilePic": doc["profilePic"] ?? "",
+        };
+      }).toList();
+    });
+  }
 
   void _toggleSelection(Map<String, dynamic> friend) {
     setState(() {
@@ -48,48 +63,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     });
   }
 
-  void _saveExpense() async {
-    if (amountController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the amount.')),
-      );
-      return;
-    }
-
-    double amount = double.tryParse(amountController.text) ?? 0.0;
-    if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount.')),
-      );
-      return;
-    }
-
-    if(selectedPeople.isEmpty){
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one person.')),
-      );
-      return;
-    }
-
-    try {
-      await FirebaseFirestore.instance.collection('expenses').add({
-        'amount': amount,
-        'category': selectedCategory,
-        'paidBy': selectedPayers, // Store payers
-        'with': selectedPeople.map((person) => person['uid']).toList(), // Store UIDs
-        'userId': userId, // User who added the expense
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      Navigator.pop(context); // Go back after saving
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving expense: $e')),
-      );
-    }
-  }
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,7 +72,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         backgroundColor: Colors.teal,
         actions: [
           TextButton(
-            onPressed: _saveExpense,
+            onPressed: () {}, // TODO: Implement Save logic
             child: const Text("Save", style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -151,7 +124,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ),
           ),
 
-          // Friends List from Firebase (using StreamBuilder)
+          // Friends List from Firebase
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -245,32 +218,96 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   Widget _buildExpenseDetailsUI() {
     return Column(
-        children: [
+      children: [
         const Divider(),
-    Padding(
-    padding: const EdgeInsets.all(16.0),
-    child: Column(
-    children: [
-    Wrap(
-    spacing: 8.0,
-    children: selectedPeople.map((friend) {
-    return Chip(
-    label: Text(friend["name"]),
-    avatar: CircleAvatar(
-    backgroundImage: friend["profilePic"].isNotEmpty
-    ? NetworkImage(friend["profilePic"])
-        : null,
-    backgroundColor: Colors.grey,
-    child: friend["profilePic"].isEmpty
-    ? Text(friend["name"][0])
-        : null,
-    ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Wrap(
+                spacing: 8.0,
+                children: selectedPeople.map((friend) {
+                  return Chip(
+                    label: Text(friend["name"]),
+                    avatar: CircleAvatar(
+                      backgroundImage: friend["profilePic"].isNotEmpty
+                          ? NetworkImage(friend["profilePic"])
+                          : null,
+                      backgroundColor: Colors.grey,
+                      child: friend["profilePic"].isEmpty
+                          ? Text(friend["name"][0])
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "₹ 0.00",
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0)),
+                  prefixIcon: const Icon(Icons.currency_rupee),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 10),
+
+              // Category Dropdown
+              DropdownButtonFormField<String>(
+                value: selectedCategory,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0)),
+                  prefixIcon: const Icon(Icons.category),
+                ),
+                items: categories.map((category) {
+                  return DropdownMenuItem<String>(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedCategory = value!;
+                  });
+                },
+              ),
+              const SizedBox(height: 10),
+
+              // Payer Selection
+              Row(
+                children: [
+                  const Text("Paid by: ",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PayerSelectionSheet(
+                            friends: selectedPeople, // Pass list containing both names & profilePic
+                            selectedPayers: selectedPayers,
+                            payerAmounts: payerAmounts,
+                            totalAmount: totalAmount,
+                            onSelectionDone: (updatedPayers, updatedAmounts) {
+                              setState(() {
+                                payerAmounts = updatedAmounts;
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+
+                    child: Text(selectedPayers.join(", ")),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
-    }).toList(),
-    ),
-    const SizedBox(height: 10),
-    TextField(
-    controller: amountController,
-    decoration: InputDecoration(
-    hintText: "₹ 0.00",
-  },),
+  }
+}
