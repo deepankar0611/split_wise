@@ -76,21 +76,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             onPressed: () {
 
               Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FinalSplitScreen(
-                      selectedPayers: selectedPayers,
-                      payerAmounts: payerAmounts,
-                      totalAmount: totalAmount,
-                      totalSelectedPeople: selectedPeople.length, // Correctly passing the count
-                      onSelectionDone: (updatedPayers, updatedAmounts) {
-                        setState(() {
-                          selectedPayers = updatedPayers;
-                          payerAmounts = updatedAmounts;
-                        });
-                      },
-                    ),
-                  ));
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FinalSplitScreen(
+                    selectedPeople: selectedPeople, // Now passing selected people
+                    payerAmounts: payerAmounts,
+                    totalAmount: totalAmount, userName: '',
+                  ),
+                ),
+              );
+
 
             }, // TODO: Implement Save logic
             child: const Text("Save", style: TextStyle(color: Colors.white)),

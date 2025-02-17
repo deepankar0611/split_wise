@@ -1,28 +1,31 @@
 import 'package:flutter/material.dart';
 
 class FinalSplitScreen extends StatelessWidget {
-  final List<String> selectedPayers;
+  final List<Map<String, dynamic>> selectedPeople;
   final Map<String, double> payerAmounts;
   final double totalAmount;
-  final int totalSelectedPeople;
+  final String userName; // Added user name
 
   const FinalSplitScreen({
     super.key,
-    required this.selectedPayers,
+    required this.selectedPeople,
     required this.payerAmounts,
     required this.totalAmount,
-    required this.totalSelectedPeople,
-    required Null
-    Function(dynamic updatedPayers, dynamic updatedAmounts) onSelectionDone,
+    required this.userName, // Required user name
   });
 
   double _calculateAmountPerPerson() {
-    return totalAmount / (totalSelectedPeople + 1);
+    return totalAmount / (selectedPeople.length + 1); // Including "You"
   }
 
   @override
   Widget build(BuildContext context) {
     double amountPerPerson = _calculateAmountPerPerson();
+
+    // Create a list including the user
+    List<Map<String, dynamic>> allPeople = [
+      {"name": userName} // Add the user first
+    ]..addAll(selectedPeople); // Then add others
 
     return Scaffold(
       appBar: AppBar(
@@ -41,14 +44,14 @@ class FinalSplitScreen extends StatelessWidget {
 
             Expanded(
               child: ListView.builder(
-                itemCount: selectedPayers.length,
+                itemCount: allPeople.length,
                 itemBuilder: (context, index) {
-                  String payer = selectedPayers[index];
+                  String payer = allPeople[index]["name"];
                   double amountPaid = payerAmounts[payer] ?? 0.0;
                   double amountToPay = amountPerPerson - amountPaid;
 
                   return ListTile(
-                    title: Text(payer),
+                    title: Text(payer == userName ? "You ($payer)" : payer),
                     subtitle: Text("Paid: ₹${amountPaid.toStringAsFixed(2)}"),
                     trailing: Text(
                       amountToPay > 0
