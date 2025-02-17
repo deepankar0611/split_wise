@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:split_wise/profile_overview.dart';
 import 'package:split_wise/split/final_split_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:split_wise/Search/bottom_bar.dart';
@@ -19,11 +20,13 @@ void main() async {
 
   // Initialize Supabase (only for storing images)
   await Supabase.initialize(
-    url: 'https://your-project-id.supabase.co', // Replace with your Supabase project URL
-    anonKey: 'your-anon-key', // Replace with your Supabase anon key
+    url:
+        'https://xzoyevujxvqaumrdskhd.supabase.co', // Replace with your Supabase project URL
+    anonKey:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6b3lldnVqeHZxYXVtcmRza2hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMTE1MjMsImV4cCI6MjA1NDc4NzUyM30.mbV_Scy2fXbMalxVRGHNKOxYx0o6t-nUPmDLlH5Mr_U', // Replace with your Supabase anon key
   );
 
-  runApp(ProviderScope(child: MyApp()));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

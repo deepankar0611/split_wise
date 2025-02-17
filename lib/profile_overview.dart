@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileOverviewScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class ProfileOverviewScreen extends StatefulWidget {
 }
 
 class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
-  final String? userId = FirebaseAuth.instance.currentUser?.uid;
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId'; // Fetching user ID from FirebaseAuth
   final ImagePicker _picker = ImagePicker();
   final SupabaseClient supabase = Supabase.instance.client;
 
@@ -25,9 +26,6 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     "name": "User",
     "email": "",
     "profileImageUrl": "",
-    "dob": "",
-    "gender": "",
-    "bloodType": "",
     "totalBalance": 0.0,
     "amountOwed": 0.0,
     "amountLent": 0.0,
@@ -45,88 +43,97 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   Future<void> _fetchUserData() async {
     if (userId == null) return;
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
       if (doc.exists) {
-        setState(() {
-          userData = {
-            "name": doc['name'] ?? "User",
-            "email": doc['email'] ?? "",
-            "profileImageUrl": doc['profileImageUrl'] ?? "",
-            "dob": doc['dob'] ?? "",
-            "gender": doc['gender'] ?? "",
-            "bloodType": doc['bloodType'] ?? "",
-            "totalBalance": doc['totalBalance'] ?? 0.0,
-            "amountOwed": doc['amountOwed'] ?? 0.0,
-            "amountLent": doc['amountLent'] ?? 0.0,
-          };
-        });
+        final data = doc.data() ?? {}; // Ensure we get a non-null map
+        if (mounted) {
+          // Check if the widget is still mounted
+          setState(() {
+            userData = {
+              "name": data["name"] ?? "User",
+              "email": data["email"] ?? "",
+              "profileImageUrl": data.containsKey("profileImageUrl")
+                  ? data["profileImageUrl"]
+                  : "",
+              "totalBalance": data["totalBalance"] ?? 0.0,
+              "amountOwed": data["amountOwed"] ?? 0.0,
+              "amountLent": data["amountLent"] ?? 0.0,
+            };
+          });
+        }
       }
     } catch (e) {
       print("Error fetching user data: $e");
-      _showSnackBar("Failed to fetch user data.", context);
     }
   }
+
+
+  /// Helper to Show SnackBar
+
 
   /// Upload Image to Supabase and Update Firestore
   Future<void> _uploadProfileImage() async {
     try {
+      // Request permission to access gallery (runtime permission check)
+
+      // Pick the image from gallery
       final pickedFile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
-      if (pickedFile == null) return;
+      if (pickedFile == null) return; // If no image is picked
 
       setState(() => _isUploading = true);
 
-      final File imageFile = File(pickedFile.path);
-      final String fileName = 'profile_pictures/$userId-${basename(imageFile.path)}';
+      final File file = File(pickedFile.path);
+      final String fileName = 'profile_pictures/$userId-${basename(file.path)}';
 
       // Convert File to Uint8List
-      final Uint8List imageBytes = await imageFile.readAsBytes();
+      final Uint8List imageBytes = await file.readAsBytes();
 
-      // Upload to Supabase Storage
-      await supabase.storage.from('profile_pictures').uploadBinary(
-        fileName,
-        imageBytes,
-        fileOptions: const FileOptions(upsert: true),
-      );
+      // Upload to Supabase Storage (background thread)
+      await Future.delayed(Duration.zero, () async {
+        await supabase.storage.from('profile_pictures').uploadBinary(
+          fileName,
+          imageBytes,
+          fileOptions: const FileOptions(upsert: true),
+        );
 
-      // Get Public Image URL
-      final imageUrl = supabase.storage.from('profile_pictures').getPublicUrl(fileName);
+        // Get Public Image URL
+        final imageUrl = supabase.storage.from('profile_pictures').getPublicUrl(fileName);
 
-      // Update Firestore with new image URL
-      await FirebaseFirestore.instance.collection('users').doc(userId).update({
-        'profileImageUrl': imageUrl,
+        // Update Firestore with new image URL
+        await FirebaseFirestore.instance.collection('users').doc(userId).update({
+          'profileImageUrl': imageUrl,
+        });
+
+        setState(() {
+          userData['profileImageUrl'] = imageUrl;
+          _isUploading = false;
+        });
+
+
       });
-
-      setState(() {
-        userData['profileImageUrl'] = imageUrl;
-        _isUploading = false;
-      });
-
-      _showSnackBar("Profile image updated successfully!", context);
     } catch (e) {
       print("Error uploading image: $e");
       setState(() => _isUploading = false);
-      _showSnackBar("Image upload failed.", context);
+
     }
   }
 
-  /// Logout User
-  Future<void> _logout(context) async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.pushReplacementNamed(context, '/login');
-  }
 
-  /// Helper to Show SnackBar
-  void _showSnackBar(String message, context) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Profile Overview"),
-        backgroundColor: Colors.teal,
+        title: const Text(
+          "Profile Overview",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: Color(0xFF1A2E39),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -146,7 +153,6 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
             const SizedBox(height: 20),
             _buildProfileOptions(),
             const SizedBox(height: 20),
-            _buildLogoutButton(),
           ],
         ),
       ),
@@ -167,7 +173,8 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 radius: 50,
                 backgroundImage: userData["profileImageUrl"].isNotEmpty
                     ? NetworkImage(userData["profileImageUrl"])
-                    : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                    : const AssetImage('assets/logo/intro.jpeg')
+                as ImageProvider,
               ),
               if (_isUploading) const CircularProgressIndicator(),
               GestureDetector(
@@ -181,12 +188,12 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(userData["name"], style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold)),
-                Text(userData["email"], style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
-                const SizedBox(height: 10),
-                Text("DOB: ${userData["dob"]}", style: GoogleFonts.poppins(fontSize: 14)),
-                Text("Gender: ${userData["gender"]}", style: GoogleFonts.poppins(fontSize: 14)),
-                Text("Blood Type: ${userData["bloodType"]}", style: GoogleFonts.poppins(fontSize: 14)),
+                Text(userData["name"],
+                    style: GoogleFonts.poppins(
+                        fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(userData["email"],
+                    style:
+                    GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
               ],
             ),
           ),
@@ -204,8 +211,10 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildSummaryTile("Total Balance", "₹${userData["totalBalance"]}"),
-          _buildSummaryTile("Amount Owed", "₹${userData["amountOwed"]}", Colors.red),
-          _buildSummaryTile("Amount Lent", "₹${userData["amountLent"]}", Colors.green),
+          _buildSummaryTile(
+              "Amount Owed", "₹${userData["amountOwed"]}", Colors.red),
+          _buildSummaryTile(
+              "Amount Lent", "₹${userData["amountLent"]}", Colors.green),
         ],
       ),
     );
@@ -214,7 +223,11 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   Widget _buildSummaryTile(String label, String value, [Color? color]) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color ?? Colors.black87)),
+        Text(value,
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color ?? Colors.black87)),
         Text(label, style: const TextStyle(color: Colors.grey)),
       ],
     );
@@ -224,8 +237,10 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   Widget _buildProfileOptions() {
     return Column(
       children: [
-        _buildOptionTile(Icons.people, "Manage Friends", '/friendsList', context),
-        _buildOptionTile(Icons.history, "Expense History", '/expenseHistory', context),
+        _buildOptionTile(
+            Icons.people, "Manage Friends", '/friendsList', context),
+        _buildOptionTile(
+            Icons.history, "Expense History", '/expenseHistory', context),
         _buildOptionTile(Icons.settings, "Settings", '/settings', context),
       ],
     );
@@ -242,20 +257,13 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     );
   }
 
-  Widget _buildLogoutButton() {
-    return ElevatedButton.icon(
-      onPressed: () => _logout(context),
-      icon: const Icon(Icons.logout, color: Colors.white),
-      label: const Text("Logout"),
-      style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-    );
-  }
-
   BoxDecoration _cardDecoration() => BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(12),
-    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5, spreadRadius: 1)],
+    boxShadow: const [
+      BoxShadow(color: Colors.black12, blurRadius: 5, spreadRadius: 1)
+    ],
   );
 
-  Widget _editIcon() => const Icon(Icons.camera_alt, color: Colors.white);
+  Widget _editIcon() => const Icon(Icons.camera_alt, color: Colors.black);
 }

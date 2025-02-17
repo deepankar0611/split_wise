@@ -23,7 +23,7 @@ dependencies:
   supabase_flutter:
   shared_preferences:
   slider_button: ^2.1.0
-
+  permission_handler:
 
 dev_dependencies:
   flutter_test:

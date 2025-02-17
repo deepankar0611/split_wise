@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:split_wise/split/final_split_screen.dart';
 import 'payer_selection_sheet.dart';
 
 class AddExpenseScreen extends StatefulWidget {
@@ -170,7 +171,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
                 ),
-                onPressed: () {
+                onPressed: () {Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                    builder: (context) => FinalSplitScreen()));
                   if(selectedPeople.isNotEmpty) {
                     setState(() {
                       showExpenseDetails = true;
