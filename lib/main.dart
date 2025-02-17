@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:split_wise/get_started.dart';
 import 'package:split_wise/profile_overview.dart';
 import 'package:split_wise/split/final_split_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

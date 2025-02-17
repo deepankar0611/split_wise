@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:split_wise/login.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileOverviewScreen extends StatefulWidget {
@@ -149,7 +150,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
             const SizedBox(height: 20),
             _buildFinanceSummary(),
             const SizedBox(height: 20),
-            _buildProfileOptions(),
+            _buildProfileOptions(context),
             const SizedBox(height: 20),
           ],
         ),
@@ -232,16 +233,39 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   }
 
   // Profile Options
-  Widget _buildProfileOptions() {
+  Widget _buildProfileOptions(BuildContext context) {
     return Column(
       children: [
-        _buildOptionTile(
-            Icons.people, "Manage Friends", '/friendsList', context),
-        _buildOptionTile(
-            Icons.history, "Expense History", '/expenseHistory', context),
+        _buildOptionTile(Icons.people, "Manage Friends", '/friendsList', context),
+        _buildOptionTile(Icons.history, "Expense History", '/expenseHistory', context),
         _buildOptionTile(Icons.settings, "Settings", '/settings', context),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () => _logout(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red, // Red color for logout button
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+          ),
+          child: const Text(
+            "Logout",
+            style: TextStyle(fontSize: 16, color: Colors.white),
+          ),
+        ),
       ],
     );
+  }
+
+  /// **Logout Function**
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      Navigator.pushReplacementNamed(context, 'LoginScreen()'); // Redirect to login page
+    } catch (e) {
+      print("Logout failed: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error logging out: $e")),
+      );
+    }
   }
 
   Widget _buildOptionTile(IconData icon, String title, String route, context) {
