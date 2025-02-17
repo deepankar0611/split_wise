@@ -4,7 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:split_wise/Search/bottom_bar.dart';
 import 'package:split_wise/sign_up.dart';
 import 'home_screen.dart';
-import 'local.dart';
+import 'Helper/local.dart';
 
 class LoginPage extends StatefulWidget {
   LoginPage({Key? key, this.title}) : super(key: key);

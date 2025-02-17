@@ -77,56 +77,56 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search and Selected Friends Section
-          Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("With you and:",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                Wrap(
-                  spacing: 8.0,
-                  children: selectedPeople.map((friend) {
-                    return Chip(
-                      label: Text(friend['name']),
-                      avatar: CircleAvatar(
-                        backgroundImage: friend['profilePic'].isNotEmpty
-                            ? NetworkImage(friend['profilePic'])
-                            : null,
-                        backgroundColor: Colors.grey,
-                        child: friend['profilePic'].isEmpty
-                            ? Text(friend['name'][0])
-                            : null,
-                      ),
-                      deleteIcon: const Icon(Icons.close, size: 16),
-                      onDeleted: () => _toggleSelection(friend),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: "Search friends...",
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0)),
-                    prefixIcon: const Icon(Icons.search),
+      body: SingleChildScrollView(  // Wrap the entire body in a SingleChildScrollView
+        child: Column(
+          children: [
+            // Search and Selected Friends Section
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("With you and:",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Wrap(
+                    spacing: 8.0,
+                    children: selectedPeople.map((friend) {
+                      return Chip(
+                        label: Text(friend['name']),
+                        avatar: CircleAvatar(
+                          backgroundImage: friend['profilePic'].isNotEmpty
+                              ? NetworkImage(friend['profilePic'])
+                              : null,
+                          backgroundColor: Colors.grey,
+                          child: friend['profilePic'].isEmpty
+                              ? Text(friend['name'][0])
+                              : null,
+                        ),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        onDeleted: () => _toggleSelection(friend),
+                      );
+                    }).toList(),
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      searchQuery = value.toLowerCase();
-                    });
-                  },
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: "Search friends...",
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0)),
+                      prefixIcon: const Icon(Icons.search),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        searchQuery = value.toLowerCase();
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // Friends List from Firebase
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
+            // Friends List from Firebase
+            StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('users')
                   .doc(userId)
@@ -150,6 +150,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 }).toList();
 
                 return ListView(
+                  shrinkWrap: true, // Added shrinkWrap to prevent overflow
                   children: friends
                       .where((friend) =>
                       friend["name"].toLowerCase().contains(searchQuery))
@@ -158,42 +159,40 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 );
               },
             ),
-          ),
 
-
-          // Submit Button
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () {
-                if(selectedPeople.isNotEmpty) {
-                  setState(() {
-                    showExpenseDetails = true;
-                  });
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please select at least one person.')),
-                  );
-                }
-
-              },
-              child: const Center(
-                child: Text(
-                  "Next",
-                  style: TextStyle(fontSize: 18, color: Colors.white),
+            // Submit Button
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () {
+                  if(selectedPeople.isNotEmpty) {
+                    setState(() {
+                      showExpenseDetails = true;
+                    });
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please select at least one person.')),
+                    );
+                  }
+                },
+                child: const Center(
+                  child: Text(
+                    "Next",
+                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  ),
                 ),
               ),
             ),
-          ),
 
-          if (showExpenseDetails) _buildExpenseDetailsUI(),
-        ],
+            if (showExpenseDetails) _buildExpenseDetailsUI(),
+          ],
+        ),
       ),
     );
   }
@@ -250,7 +249,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   prefixIcon: const Icon(Icons.currency_rupee),
                 ),
                 keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  setState(() {
+                    totalAmount = double.tryParse(value) ?? 0.0;
+                  });
+                },
               ),
+
               const SizedBox(height: 10),
 
               // Category Dropdown
@@ -286,12 +291,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => PayerSelectionSheet(
-                            friends: selectedPeople, // Pass list containing both names & profilePic
+                            friends: selectedPeople,
                             selectedPayers: selectedPayers,
                             payerAmounts: payerAmounts,
-                            totalAmount: totalAmount,
+                            totalAmount: totalAmount,  // Ensure updated totalAmount is passed
                             onSelectionDone: (updatedPayers, updatedAmounts) {
                               setState(() {
+                                selectedPayers = updatedPayers;
                                 payerAmounts = updatedAmounts;
                               });
                             },

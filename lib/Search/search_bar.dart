@@ -36,6 +36,20 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     );
   }
 
+  /// Check if the user is already a friend
+  Future<bool> isAlreadyFriend(String friendUid) async {
+    String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
+
+    final friendDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserUid)
+        .collection('friends')
+        .doc(friendUid)
+        .get();
+
+    return friendDoc.exists;
+  }
+
   /// Send a friend request
   Future<void> sendFriendRequest(String friendUid) async {
     String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
@@ -59,8 +73,11 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Find Friends"),
-        backgroundColor: Colors.blue,
+        title: const Text(
+          "Find Friends",
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Color(0xFF234567),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -100,19 +117,34 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                 return Expanded(
                   child: ListView(
                     children: snapshot.data!.map((userData) {
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            child: Text(userData['name']?[0] ?? "?"), // First letter of name
-                          ),
-                          title: Text(userData['name'] ?? "Unknown"),
-                          subtitle: Text(userData['email'] ?? "No email"),
-                          trailing: ElevatedButton(
-                            onPressed: () => sendFriendRequest(userData['uid']),
-                            child: const Text("Add Friend"),
-                          ),
-                        ),
+                      return FutureBuilder<bool>(
+                        future: isAlreadyFriend(userData['uid']),
+                        builder: (context, isFriendSnapshot) {
+                          if (isFriendSnapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+
+                          bool isFriend = isFriendSnapshot.data ?? false;
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                child: Text(userData['name']?[0] ??
+                                    "?"), // First letter of name
+                              ),
+                              title: Text(userData['name'] ?? "Unknown"),
+                              subtitle: Text(userData['email'] ?? "No email"),
+                              trailing: isFriend
+                                  ? const Text("Friend")
+                                  : ElevatedButton(
+                                onPressed: () =>
+                                    sendFriendRequest(userData['uid']),
+                                child: const Text("Add Friend"),
+                              ),
+                            ),
+                          );
+                        },
                       );
                     }).toList(),
                   ),
