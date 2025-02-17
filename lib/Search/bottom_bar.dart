@@ -21,7 +21,7 @@ class _BottomBarState extends State<BottomBar> {
   final List<Widget> _screens = [
     const HomeScreen(),                // Home Screen
     const FriendsListScreen(),         // Friends Search/Request Screen
-    const AddExpenseScreen(),          // Expense Creation Screen
+    const AddExpenseScreen(payerAmounts: {},),          // Expense Creation Screen
     const ProfileOverviewScreen(),     // Profile Overview Screen
   ];
 

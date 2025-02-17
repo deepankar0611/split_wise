@@ -5,7 +5,7 @@ import 'package:split_wise/split/final_split_screen.dart';
 import 'payer_selection_sheet.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  const AddExpenseScreen({super.key, required Map<String, double> payerAmounts});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -73,7 +73,26 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         backgroundColor: Colors.teal,
         actions: [
           TextButton(
-            onPressed: () {}, // TODO: Implement Save logic
+            onPressed: () {
+
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FinalSplitScreen(
+                      selectedPayers: selectedPayers,
+                      payerAmounts: payerAmounts,
+                      totalAmount: totalAmount,
+                      totalSelectedPeople: selectedPeople.length, // Correctly passing the count
+                      onSelectionDone: (updatedPayers, updatedAmounts) {
+                        setState(() {
+                          selectedPayers = updatedPayers;
+                          payerAmounts = updatedAmounts;
+                        });
+                      },
+                    ),
+                  ));
+
+            }, // TODO: Implement Save logic
             child: const Text("Save", style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -171,10 +190,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
                 ),
-                onPressed: () {Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                    builder: (context) => FinalSplitScreen()));
+                onPressed: () {
                   if(selectedPeople.isNotEmpty) {
                     setState(() {
                       showExpenseDetails = true;

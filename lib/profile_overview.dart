@@ -71,8 +71,6 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   }
 
 
-  /// Helper to Show SnackBar
-
 
   /// Upload Image to Supabase and Update Firestore
   Future<void> _uploadProfileImage() async {

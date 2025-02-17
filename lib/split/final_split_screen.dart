@@ -1,129 +1,101 @@
 import 'package:flutter/material.dart';
-import 'package:slider_button/slider_button.dart';
 
-class FinalSplitScreen extends StatefulWidget {
-  const FinalSplitScreen({super.key});
+class FinalSplitScreen extends StatelessWidget {
+  final List<String> selectedPayers;
+  final Map<String, double> payerAmounts;
+  final double totalAmount;
+  final int totalSelectedPeople;
 
-  @override
-  State<FinalSplitScreen> createState() => _FinalSplitScreenState();
-}
+  const FinalSplitScreen({
+    super.key,
+    required this.selectedPayers,
+    required this.payerAmounts,
+    required this.totalAmount,
+    required this.totalSelectedPeople,
+    required Null
+    Function(dynamic updatedPayers, dynamic updatedAmounts) onSelectionDone,
+  });
 
-class _FinalSplitScreenState extends State<FinalSplitScreen> {
-  final List<Map<String, dynamic>> friends = [
-    {"name": "Lily Black", "amount": 2570, "isPositive": true},
-    {"name": "Shawn Mckinney", "amount": 625, "isPositive": true},
-    {"name": "Stella Cooper", "amount": 1180, "isPositive": false},
-    {"name": "Dwight Jones", "amount": 700, "isPositive": true},
-    {"name": "Eduardo Bell", "amount": 935, "isPositive": false},
-    {"name": "Philip Steward", "amount": 1460, "isPositive": true},
-    {"name": "Jenny Miles", "amount": 1257, "isPositive": true},
-    {"name": "Jacob Richards", "amount": 2935, "isPositive": false},
-  ];
-
-  double get totalReceive => friends.where((f) => f['isPositive']).fold(0.0, (sum, f) => sum + f['amount']);
-  double get totalPay => friends.where((f) => !f['isPositive']).fold(0.0, (sum, f) => sum + f['amount']);
+  double _calculateAmountPerPerson() {
+    return totalAmount / (totalSelectedPeople + 1);
+  }
 
   @override
   Widget build(BuildContext context) {
+    double amountPerPerson = _calculateAmountPerPerson();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Friends"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text(
-              "Cancel",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+        title: const Text("Final Split Details"),
+        backgroundColor: Colors.teal,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildBalanceCard("RECEIVE", "₹ ${totalReceive.toStringAsFixed(2)}", Colors.green),
-                _buildBalanceCard("PAY", "₹ ${totalPay.toStringAsFixed(2)}", Colors.red),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: friends.length,
-              itemBuilder: (context, index) {
-                final friend = friends[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.grey.shade300,
-                    child: Text(friend['name'][0]),
-                  ),
-                  title: Text(friend['name']),
-                  trailing: Text(
-                    "${friend['isPositive'] ? '+' : '-'} ₹${friend['amount']}",
-                    style: TextStyle(
-                      color: friend['isPositive'] ? Colors.green : Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Center(
-              child: SliderButton(
-                action: () async {
-                  /// Do something here OnSlide
-                  return true;
-                },
-                label: Text(
-                  "Slide to SettleUp",
-                  style: TextStyle(
-                    color: Color(0xff4a4a4a),
-                    fontWeight: FontWeight.w500,
-                    fontSize: 17,
-                  ),
-                ),
-                icon: Text(
-                  "x",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w400,
-                    fontSize: 44,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBalanceCard(String title, String amount, Color color) {
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(10.0),
-        ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text(
-              title,
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            const Text(
+              "Split Summary",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 5.0),
-            Text(
-              amount,
-              style: TextStyle(color: Colors.white, fontSize: 20.0, fontWeight: FontWeight.bold),
+            const SizedBox(height: 20),
+
+            Expanded(
+              child: ListView.builder(
+                itemCount: selectedPayers.length,
+                itemBuilder: (context, index) {
+                  String payer = selectedPayers[index];
+                  double amountPaid = payerAmounts[payer] ?? 0.0;
+                  double amountToPay = amountPerPerson - amountPaid;
+
+                  return ListTile(
+                    title: Text(payer),
+                    subtitle: Text("Paid: ₹${amountPaid.toStringAsFixed(2)}"),
+                    trailing: Text(
+                      amountToPay > 0
+                          ? "Owes ₹${amountToPay.toStringAsFixed(2)}"
+                          : "Receives ₹${(-amountToPay).toStringAsFixed(2)}",
+                      style: TextStyle(
+                        color: amountToPay > 0 ? Colors.red : Colors.green,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            Divider(),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Total Amount: ₹${totalAmount.toStringAsFixed(2)}",
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Each person's share: ₹${amountPerPerson.toStringAsFixed(2)}",
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text(
+                "Finalize",
+                style: TextStyle(fontSize: 18, color: Colors.white),
+              ),
             ),
           ],
         ),
