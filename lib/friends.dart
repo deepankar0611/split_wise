@@ -3,45 +3,36 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:split_wise/split/final_split_screen.dart';
 import 'payer_selection_sheet.dart';
-
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key, required Map<String, double> payerAmounts});
-
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
 }
-
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final String userId = FirebaseAuth.instance.currentUser!.uid;
-
   List<Map<String, dynamic>> friends = [];
   List<Map<String, dynamic>> selectedPeople = [];
   String searchQuery = "";
   bool showExpenseDetails = false;
-
   String selectedCategory = "Grocery";
   List<String> selectedPayers = ["You"];
   Map<String, double> payerAmounts = {};
   double totalAmount = 0.0;
-
   final List<String> categories = [
     "Grocery", "Medicine", "Food", "Rent", "Travel",
     "Shopping", "Entertainment", "Utilities", "Others"
   ];
-
   @override
   void initState() {
     super.initState();
     _fetchFriends();
   }
-
   void _fetchFriends() async {
     final snapshot = await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .collection('friends')
         .get();
-
     setState(() {
       friends = snapshot.docs.map((doc) {
         return {
@@ -52,7 +43,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       }).toList();
     });
   }
-
   void _toggleSelection(Map<String, dynamic> friend) {
     setState(() {
       bool isSelected = selectedPeople.any((p) => p['uid'] == friend['uid']);
@@ -63,7 +53,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       }
     });
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,19 +63,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         actions: [
           TextButton(
             onPressed: () {
-
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => FinalSplitScreen(
                     selectedPeople: selectedPeople, // Now passing selected people
                     payerAmounts: payerAmounts,
-                    totalAmount: totalAmount, userName: '',
+                    totalAmount: totalAmount,
                   ),
                 ),
               );
-
-
             }, // TODO: Implement Save logic
             child: const Text("Save", style: TextStyle(color: Colors.white)),
           ),
@@ -139,7 +125,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 ],
               ),
             ),
-
             // Friends List from Firebase
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -151,11 +136,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 if (snapshot.hasError) {
                   return Center(child: Text('Something went wrong: ${snapshot.error}'));
                 }
-
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
                 friends = snapshot.data!.docs.map((doc) {
                   return {
                     "uid": doc.id,
@@ -163,7 +146,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     "profilePic": doc["profilePic"] ?? "",
                   };
                 }).toList();
-
                 return ListView(
                   shrinkWrap: true, // Added shrinkWrap to prevent overflow
                   children: friends
@@ -174,7 +156,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 );
               },
             ),
-
             // Submit Button
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -204,14 +185,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 ),
               ),
             ),
-
             if (showExpenseDetails) _buildExpenseDetailsUI(),
           ],
         ),
       ),
     );
   }
-
   Widget _buildFriendItem(Map<String, dynamic> friend) {
     bool isSelected = selectedPeople.any((p) => p['uid'] == friend["uid"]);
     return ListTile(
@@ -229,7 +208,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           : null,
     );
   }
-
   Widget _buildExpenseDetailsUI() {
     return Column(
       children: [
@@ -270,9 +248,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   });
                 },
               ),
-
               const SizedBox(height: 10),
-
               // Category Dropdown
               DropdownButtonFormField<String>(
                 value: selectedCategory,
@@ -294,7 +270,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 },
               ),
               const SizedBox(height: 10),
-
               // Payer Selection
               Row(
                 children: [
@@ -320,7 +295,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         ),
                       );
                     },
-
                     child: Text(selectedPayers.join(", ")),
                   ),
                 ],

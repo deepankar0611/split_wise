@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:split_wise/friends.dart';
 import 'package:split_wise/split/summary_page.dart';
-
 class PayerSelectionSheet extends StatefulWidget {
   final List<Map<String, dynamic>> friends;
   final List<String> selectedPayers;
   final Map<String, double> payerAmounts;
   final double totalAmount;
   final Function(List<String>, Map<String, double>) onSelectionDone;
-
   const PayerSelectionSheet({
     super.key,
     required this.friends,
@@ -17,18 +15,15 @@ class PayerSelectionSheet extends StatefulWidget {
     required this.totalAmount,
     required this.onSelectionDone,
   });
-
   @override
   _PayerSelectionSheetState createState() => _PayerSelectionSheetState();
 }
-
 class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
   late List<String> selectedPayers;
   late Map<String, double> payerAmounts;
   double remainingAmount = 0.0;
   double enteredAmount = 0.0;
   Map<String, String?> errorMessages = {};
-
   @override
   void initState() {
     super.initState();
@@ -36,14 +31,12 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
     payerAmounts = Map.from(widget.payerAmounts);
     _updateRemainingAmount();
   }
-
   void _updateRemainingAmount() {
     double totalPaid = payerAmounts.values.fold(0.0, (sum, amount) => sum + amount);
     setState(() {
       remainingAmount = widget.totalAmount - totalPaid;
     });
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,7 +95,6 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
       ),
     );
   }
-
   Widget buildAmountEntry() {
     return Column(
       children: [
@@ -113,7 +105,6 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                 (f) => f["name"] == payer,
             orElse: () => {"profilePic": "", "name": payer},
           );
-
           return Material(
             child: ListTile(
               leading: CircleAvatar(
@@ -135,10 +126,8 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                     setState(() {
                       enteredAmount = double.tryParse(value) ?? 0.0;
                       double previousAmount = payerAmounts[payer] ?? 0.0;
-
                       // 🔹 First, remove the old amount from remaining calculation
                       double newRemainingAmount = remainingAmount + previousAmount - enteredAmount;
-
                       if (newRemainingAmount < 0) {
                         errorMessages[payer] = "Limit exceeded";
                         payerAmounts[payer] = enteredAmount;

@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:split_wise/login.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileOverviewScreen extends StatefulWidget {
