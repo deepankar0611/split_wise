@@ -24,6 +24,7 @@ dependencies:
   shared_preferences:
   slider_button: ^2.1.0
   permission_handler:
+  lottie:
 
 dev_dependencies:
   flutter_test:
@@ -37,3 +38,4 @@ flutter:
     - assets/logo/g1.png
     - assets/animation/56qRH8Xl3ih8DWE25i.mp4
     - assets/fonts/
+    - assets/animation/45.json
