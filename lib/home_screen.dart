@@ -122,6 +122,11 @@ class _HomeScreenState extends State<HomeScreen> {
       {"icon": LucideIcons.map, "title": "Adventures", "subtitle": "Shared group", "amount": "-\$15,99", "color": Colors.blue},
       {"icon": LucideIcons.film, "title": "Cinema", "subtitle": "He paid 40\$", "amount": "-\$20,00", "color": Colors.grey},
       {"icon": LucideIcons.gift, "title": "Present for Andy", "subtitle": "He paid 64,30\$", "amount": "-\$64,30", "color": Colors.pink},
+      {"icon": LucideIcons.car, "title": "Uber", "subtitle": "He paid 39,60\$", "amount": "-\$19,80", "color": Colors.green},
+      {"icon": LucideIcons.shoppingCart, "title": "Groceries", "subtitle": "You paid 124,16\$", "amount": "+\$62,08", "color": Colors.purple},
+      {"icon": LucideIcons.map, "title": "Adventures", "subtitle": "Shared group", "amount": "-\$15,99", "color": Colors.blue},
+      {"icon": LucideIcons.film, "title": "Cinema", "subtitle": "He paid 40\$", "amount": "-\$20,00", "color": Colors.grey},
+      {"icon": LucideIcons.gift, "title": "Present for Andy", "subtitle": "He paid 64,30\$", "amount": "-\$64,30", "color": Colors.pink},
     ];
 
     return ListView.builder(

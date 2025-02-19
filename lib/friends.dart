@@ -3,14 +3,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:split_wise/split/final_split_screen.dart';
 import 'payer_selection_sheet.dart';
+
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key, required Map<String, double> payerAmounts});
+  const AddExpenseScreen({super.key, required this.payerAmounts});
+  final Map<String, double> payerAmounts;
+
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
 }
+
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final String userId = FirebaseAuth.instance.currentUser!.uid;
   List<Map<String, dynamic>> friends = [];
+  List<Map<String, dynamic>> displayFriends = [];
   List<Map<String, dynamic>> selectedPeople = [];
   String searchQuery = "";
   bool showExpenseDetails = false;
@@ -20,17 +25,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   double totalAmount = 0.0;
   String expenseDescription = "";
 
-
   final List<String> categories = [
     "Grocery", "Medicine", "Food", "Rent", "Travel",
     "Shopping", "Entertainment", "Utilities", "Others"
   ];
+
   @override
   void initState() {
     super.initState();
     _fetchFriends();
   }
-  void _fetchFriends() async {
+
+  Future<void> _fetchFriends() async {
     final snapshot = await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
@@ -44,8 +50,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           "profilePic": doc["profilePic"] ?? "",
         };
       }).toList();
+      displayFriends = List.from(friends);
     });
   }
+
   void _toggleSelection(Map<String, dynamic> friend) {
     setState(() {
       bool isSelected = selectedPeople.any((p) => p['uid'] == friend['uid']);
@@ -56,42 +64,61 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       }
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Add an expense"),
-        backgroundColor: Colors.teal,
+        title: Text(
+          "Add an Expense",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Color(0xFF234567),
+        elevation: 4,
+        centerTitle: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
+        ),
         actions: [
           TextButton(
             onPressed: () {
-              if(totalAmount != 0 && expenseDescription.isNotEmpty){
+              if (totalAmount != 0 && expenseDescription.isNotEmpty) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => FinalSplitScreen(
-                      selectedPeople: selectedPeople, // Now passing selected people
+                      selectedPeople: selectedPeople,
                       payerAmounts: payerAmounts,
                       totalAmount: totalAmount,
                       expenseDescription: expenseDescription,
                     ),
                   ),
                 );
-              }else{
+              } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Please enter a valid amount and Description.')),
                 );
               }
-            }, // TODO: Implement Save logic
-            child: const Text("Save", style: TextStyle(color: Colors.white)),
+            },
+            child: Text(
+              "Save",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
-      body: SingleChildScrollView(  // Wrap the entire body in a SingleChildScrollView
+      body: SingleChildScrollView(
         child: Column(
           children: [
-            // Search and Selected Friends Section
             Padding(
               padding: const EdgeInsets.all(10.0),
               child: Column(
@@ -119,65 +146,72 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     }).toList(),
                   ),
                   const SizedBox(height: 10),
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: "Search friends...",
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0)),
-                      prefixIcon: const Icon(Icons.search),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(30.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 5,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value.toLowerCase();
-                      });
-                    },
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: "Search friends...",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                          borderSide: BorderSide.none,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Colors.grey[600],
+                        ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      onChanged: (value) {
+                        setState(() {
+                          searchQuery = value.toLowerCase();
+                        });
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
-            // Friends List from Firebase
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(userId)
-                  .collection('friends')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text('Something went wrong: ${snapshot.error}'));
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                friends = snapshot.data!.docs.map((doc) {
-                  return {
-                    "uid": doc.id,
-                    "name": doc["name"] ?? "Unknown",
-                    "profilePic": doc["profilePic"] ?? "",
-                  };
-                }).toList();
-                return ListView(
-                  shrinkWrap: true, // Added shrinkWrap to prevent overflow
-                  children: friends
-                      .where((friend) =>
-                      friend["name"].toLowerCase().contains(searchQuery))
-                      .map((friend) => _buildFriendItem(friend))
-                      .toList(),
-                );
-              },
+            SizedBox(
+              height: 200,
+              child: ListView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: displayFriends
+                    .where((friend) => friend["name"].toLowerCase().contains(searchQuery))
+                    .map((friend) => _buildFriendItem(friend))
+                    .toList(),
+              ),
             ),
-            // Submit Button
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: const Color(0xFF234567),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 100),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  elevation: 6,
+                  shadowColor: Colors.black.withOpacity(0.3),
+                  side: BorderSide(color: Colors.white, width: 2),
+                  minimumSize: Size(150, 60),
                 ),
                 onPressed: () {
-                  if(selectedPeople.isNotEmpty) {
+                  if (selectedPeople.isNotEmpty) {
                     setState(() {
                       showExpenseDetails = true;
                     });
@@ -187,20 +221,28 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     );
                   }
                 },
-                child: const Center(
-                  child: Text(
-                    "Next",
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                child: const Text(
+                  "Next",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2.0,
                   ),
                 ),
               ),
             ),
-            if (showExpenseDetails) _buildExpenseDetailsUI(),
+            AnimatedCrossFade(
+              firstChild: Container(),
+              secondChild: _buildExpenseDetailsUI(),
+              crossFadeState: showExpenseDetails ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 300),
+            ),
           ],
         ),
       ),
     );
   }
+
   Widget _buildFriendItem(Map<String, dynamic> friend) {
     bool isSelected = selectedPeople.any((p) => p['uid'] == friend["uid"]);
     return ListTile(
@@ -218,6 +260,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           : null,
     );
   }
+
   Widget _buildExpenseDetailsUI() {
     return Column(
       children: [
@@ -259,7 +302,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 },
               ),
               const SizedBox(height: 10),
-              // Category Dropdown
               DropdownButtonFormField<String>(
                 value: selectedCategory,
                 decoration: InputDecoration(
@@ -280,7 +322,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 },
               ),
               const SizedBox(height: 10),
-
               TextField(
                 decoration: InputDecoration(
                   hintText: "Add a description",
@@ -295,7 +336,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 },
               ),
               const SizedBox(height: 10),
-              // Payer Selection
               Row(
                 children: [
                   const Text("Multiple User Payment: ",
@@ -309,7 +349,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             friends: selectedPeople,
                             selectedPayers: selectedPayers,
                             payerAmounts: payerAmounts,
-                            totalAmount: totalAmount,  // Ensure updated totalAmount is passed
+                            totalAmount: totalAmount,
                             onSelectionDone: (updatedPayers, updatedAmounts) {
                               setState(() {
                                 selectedPayers = updatedPayers;

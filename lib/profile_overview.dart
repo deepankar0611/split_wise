@@ -132,7 +132,14 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
           "Profile Overview",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
         ),
-        backgroundColor: Color(0xFF1A2E39),
+        backgroundColor: const Color(0xFF234567),
+        elevation: 4, // Adds shadow for depth
+        centerTitle: true, // Centers the title
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        ), // Rounded bottom corners
+        toolbarHeight: 50,
+
         actions: [
           IconButton( // Edit Button in AppBar
             icon: const Icon(Icons.edit, color: Colors.white), // Ensure icon color is white for visibility
