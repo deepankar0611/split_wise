@@ -25,6 +25,7 @@ dependencies:
   slider_button: ^2.1.0
   permission_handler:
   lottie:
+  intl:
 
 dev_dependencies:
   flutter_test:

@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'editprofile.dart';
+
 class ProfileOverviewScreen extends StatefulWidget {
   const ProfileOverviewScreen({super.key});
 
@@ -132,11 +134,12 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         ),
         backgroundColor: Color(0xFF1A2E39),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
+          IconButton( // Edit Button in AppBar
+            icon: const Icon(Icons.edit, color: Colors.white), // Ensure icon color is white for visibility
             onPressed: () {
-              Navigator.pushNamed(context, '/editProfile');
+              Navigator.push(context, MaterialPageRoute(builder: (context) => EditProfileScreen()));// Navigate to Edit Profile Screen
             },
+            tooltip: 'Edit Profile', // Accessibility tooltip
           ),
         ],
       ),
