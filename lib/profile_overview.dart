@@ -1,11 +1,8 @@
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'editprofile.dart';
@@ -27,12 +24,11 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     "name": "User",
     "email": "",
     "profileImageUrl": "",
-    "totalBalance": 0.0,
-    "amountOwed": 0.0,
-    "amountLent": 0.0,
+    "phone_number": "",
+    "amountToPay": "",
+    "amountToReceive": "",
   };
 
-  bool _isUploading = false;
 
   @override
   void initState() {
@@ -59,9 +55,8 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
               "profileImageUrl": data.containsKey("profileImageUrl")
                   ? data["profileImageUrl"]
                   : "",
-              "totalBalance": data["totalBalance"] ?? 0.0,
-              "amountOwed": data["amountOwed"] ?? 0.0,
-              "amountLent": data["amountLent"] ?? 0.0,
+              "amountToPay": data["amountToPay"],
+              "amountToReceive": data["amountToReceive"],
             };
           });
         }
@@ -71,54 +66,6 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     }
   }
 
-
-
-  /// Upload Image to Supabase and Update Firestore
-  Future<void> _uploadProfileImage() async {
-    try {
-      // Request permission to access gallery (runtime permission check)
-
-      // Pick the image from gallery
-      final pickedFile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
-      if (pickedFile == null) return; // If no image is picked
-
-      setState(() => _isUploading = true);
-
-      final File file = File(pickedFile.path);
-      final String fileName = 'profile_pictures/$userId-${basename(file.path)}';
-
-      // Convert File to Uint8List
-      final Uint8List imageBytes = await file.readAsBytes();
-
-      // Upload to Supabase Storage (background thread)
-      await Future.delayed(Duration.zero, () async {
-        await supabase.storage.from('profile_pictures').uploadBinary(
-          fileName,
-          imageBytes,
-          fileOptions: const FileOptions(upsert: true),
-        );
-
-        // Get Public Image URL
-        final imageUrl = supabase.storage.from('profile_pictures').getPublicUrl(fileName);
-
-        // Update Firestore with new image URL
-        await FirebaseFirestore.instance.collection('users').doc(userId).update({
-          'profileImageUrl': imageUrl,
-        });
-
-        setState(() {
-          userData['profileImageUrl'] = imageUrl;
-          _isUploading = false;
-        });
-
-
-      });
-    } catch (e) {
-      print("Error uploading image: $e");
-      setState(() => _isUploading = false);
-
-    }
-  }
 
 
 
@@ -168,64 +115,86 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
 
   // Profile Header with Image and User Info
   Widget _buildProfileHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration(),
-      child: Row(
-        children: [
-          Stack(
-            alignment: Alignment.bottomRight,
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return Center(child: Text('No user data found'));
+        }
+
+        final userData = snapshot.data!.data() as Map<String, dynamic>;
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: _cardDecoration(),
+          child: Row(
             children: [
               CircleAvatar(
                 radius: 50,
-                backgroundImage: userData["profileImageUrl"].isNotEmpty
-                    ? NetworkImage(userData["profileImageUrl"])
-                    : const AssetImage('assets/logo/intro.jpeg')
-                as ImageProvider,
+                backgroundImage: userData.containsKey('profileImageUrl') && userData['profileImageUrl'].isNotEmpty
+                    ? NetworkImage(userData['profileImageUrl'] as String)
+                    : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
               ),
-              if (_isUploading) const CircularProgressIndicator(),
-              GestureDetector(
-                onTap: _uploadProfileImage,
-                child: _editIcon(),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(userData['name'] ?? 'User',
+                        style: GoogleFonts.poppins(
+                            fontSize: 22, fontWeight: FontWeight.bold)),
+                    Text(userData['email'] ?? '',
+                        style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
+                    Text(userData['phone'] ?? '',
+                        style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(userData["name"],
-                    style: GoogleFonts.poppins(
-                        fontSize: 22, fontWeight: FontWeight.bold)),
-                Text(userData["email"],
-                    style:
-                    GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   // Finance Summary
   Widget _buildFinanceSummary() {
+    // Convert values safely to double
+    double amountToPay = double.tryParse(userData["amountToPay"]?.toString() ?? "0") ?? 0;
+    double amountToReceive = double.tryParse(userData["amountToReceive"]?.toString() ?? "0") ?? 0;
+
+    // Calculate net balance: Positive means the user is owed, Negative means they owe others
+    double totalBalance = amountToReceive - amountToPay;
+
+    // Determine color based on total balance
+    Color balanceColor = totalBalance >= 0 ? Colors.green : Colors.red;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: _cardDecoration(),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryTile("Total Balance", "₹${userData["totalBalance"]}"),
-          _buildSummaryTile(
-              "Amount Owed", "₹${userData["amountOwed"]}", Colors.red),
-          _buildSummaryTile(
-              "Amount Lent", "₹${userData["amountLent"]}", Colors.green),
+          _buildSummaryTile("Total Balance", "₹${totalBalance.abs().toInt()}", balanceColor),
+          _buildSummaryTile("Pay", "₹${amountToPay.toInt()}", Colors.red),
+          _buildSummaryTile("Receive", "₹${amountToReceive.toInt()}", Colors.green),
         ],
       ),
     );
   }
+
+
+
+
+
 
   Widget _buildSummaryTile(String label, String value, [Color? color]) {
     return Column(

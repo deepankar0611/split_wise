@@ -65,34 +65,35 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
   }) async {
     FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-    DocumentReference payerRef = firestore
-        .collection('userbalance')
-        .doc(payerUid)
-        .collection('pay')
-        .doc(payerUid);
-
-    DocumentReference receiverRef = firestore
-        .collection('userbalance')
-        .doc(receiverUid)
-        .collection('receive')
-        .doc(receiverUid);
+    DocumentReference payerRef = firestore.collection('users').doc(payerUid);
+    DocumentReference receiverRef = firestore.collection('users').doc(receiverUid);
 
     try {
       await firestore.runTransaction((transaction) async {
         DocumentSnapshot payerSnapshot = await transaction.get(payerRef);
         DocumentSnapshot receiverSnapshot = await transaction.get(receiverRef);
 
-        double currentPayerAmount = payerSnapshot.exists ? (payerSnapshot.get('amount') ?? 0) : 0;
-        double currentReceiverAmount = receiverSnapshot.exists ? (receiverSnapshot.get('amount') ?? 0) : 0;
+        if (!payerSnapshot.exists) {
+          print("⚠️ Payer document does not exist!");
+          return;
+        }
+        if (!receiverSnapshot.exists) {
+          print("⚠️ Receiver document does not exist!");
+          return;
+        }
+
+        // ✅ Ensure correct type conversion
+        double currentPayerAmount = (payerSnapshot.data() as Map<String, dynamic>?)?['amountToPay']?.toDouble() ?? 0.0;
+        double currentReceiverAmount = (receiverSnapshot.data() as Map<String, dynamic>?)?['amountToReceive']?.toDouble() ?? 0.0;
 
         double updatedPayerAmount = currentPayerAmount + amount;
         double updatedReceiverAmount = currentReceiverAmount + amount;
 
-        transaction.set(payerRef, {'amount': updatedPayerAmount}, SetOptions(merge: true));
-        transaction.set(receiverRef, {'amount': updatedReceiverAmount}, SetOptions(merge: true));
+        transaction.update(payerRef, {'amountToPay': updatedPayerAmount});
+        transaction.update(receiverRef, {'amountToReceive': updatedReceiverAmount});
 
-        print("✅ Payer ($payerUid) pays Receiver ($receiverUid) amount: $amount");
-        print("🔄 Updated Payer Amount: $updatedPayerAmount | Updated Receiver Amount: $updatedReceiverAmount");
+        print("✅ Updated Payer ($payerUid) - Amount to Pay: $updatedPayerAmount");
+        print("✅ Updated Receiver ($receiverUid) - Amount to Receive: $updatedReceiverAmount");
       });
 
       print("🔥 User balances updated successfully!");
@@ -100,6 +101,8 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       print("⚠️ Error updating balance: $e");
     }
   }
+
+
 
 
 

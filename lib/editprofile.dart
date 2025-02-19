@@ -1,6 +1,17 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:math';
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import 'package:uuid/uuid.dart';
+
 
 class EditProfileScreen extends StatefulWidget {
   @override
@@ -9,13 +20,109 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  TextEditingController _nameController = TextEditingController();
-  TextEditingController _emailController = TextEditingController();
   TextEditingController _phoneController = TextEditingController();
   TextEditingController _addressController = TextEditingController();
   TextEditingController _oldPasswordController = TextEditingController();
   TextEditingController _newPasswordController = TextEditingController();
-  String? _profileImage;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  late TextEditingController _email = TextEditingController();
+  final supabase = Supabase.instance.client;
+  File? _image;
+  String? _imageUrl;
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId'; // Fetching user ID from FirebaseAuth
+
+  Map<String, dynamic> userData = {
+    "name": "User",
+    "email": "",
+    "profileImageUrl": "",
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    if (userId == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (doc.exists) {
+        final data = doc.data() ?? {}; // Ensure we get a non-null map
+        if (mounted) {
+          setState(() {
+            _nameController.text = data["name"] ?? "User";
+            _phoneController.text = data["phone"] ?? "";
+            _email = data["email"] ?? ""; // Since email is not editable, store it in a variable
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+    }
+  }
+
+
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+      await _uploadImage();
+    }
+  }
+
+  Future<void> _uploadImage() async {
+    if (_image == null) return;
+
+    try {
+      firebase_auth.User? user = firebase_auth.FirebaseAuth.instance.currentUser;
+
+      if (user == null) return;
+      final String filePath = 'profile_pictures/${user.uid}${DateTime.now()}.jpg';
+      await supabase.storage.from('profile_pictures').upload(filePath, _image!);
+      final String imageUrl =
+      supabase.storage.from('profile_pictures').getPublicUrl(filePath);
+
+
+
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'profileImageUrl': imageUrl,
+      });
+    } catch (e) {
+      print('Image upload failed: $e');
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    firebase_auth.User? user = firebase_auth.FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      try {
+        // Firestore update (only name and phone)
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'name': _nameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Profile updated successfully!')),
+        );
+
+        Navigator.pop(context); // Go back after saving
+      } catch (e) {
+        print('Error updating profile: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update profile. Try again.')),
+        );
+      }
+    }
+  }
+
 
   @override
   void dispose() {
@@ -27,6 +134,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _newPasswordController.dispose();
     super.dispose();
   }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getUserStream() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      throw Exception("User not logged in");
+    }
+    return FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +166,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           },
         ),
       ),
-      body: Stack( // Use Stack for background elements
+      body: Stack(
+        // Use Stack for background elements
         children: [
           Positioned.fill( // Background Lines and Circles
             child: Container(
@@ -72,128 +189,78 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
           ),
-          Form( // Foreground Form content
-            key: _formKey,
-            child: ListView(
-              padding: EdgeInsets.all(20),
-              children: <Widget>[
-                Center(
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade300, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 70,
-                          backgroundColor: Colors.white,
-                          backgroundImage: _profileImage != null
-                              ? AssetImage(_profileImage!) as ImageProvider<Object>?
-                              : NetworkImage('https://via.placeholder.com/150') ,
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 10,
-                        right: 0,
-                        child: CupertinoButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () {
-                            // TODO: Implement image selection logic
-                            setState(() {
-                              _profileImage = 'assets/temp_profile.png';
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Image selection functionality to be implemented')),
-                            );
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade300, width: 1),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            padding: EdgeInsets.all(8),
-                            child: Icon(CupertinoIcons.add, color: Colors.green, size: 25),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 30),
-                buildTextField("Name", "Annette Black", _nameController, CupertinoIcons.person_fill),
-                buildTextField("Email", "annette@gmail.com", _emailController, CupertinoIcons.mail_solid, keyboardType: TextInputType.emailAddress),
-                buildTextField("Phone", "(316) 555-0116", _phoneController, CupertinoIcons.phone_fill, keyboardType: TextInputType.phone),
-                buildTextField("Address", "New York, NVC", _addressController, CupertinoIcons.location_solid),
-                buildTextField("Old Password", "******", _oldPasswordController, CupertinoIcons.lock_fill, obscureText: true, suffixIcon: CupertinoIcons.eye_slash_fill ),
-                buildTextField("New Password", "New Password", _newPasswordController, CupertinoIcons.lock_fill, obscureText: true),
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: getUserStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return Center(child: Text("User data not found"));
+              }
 
-                SizedBox(height: 30),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Expanded(
-                      child: CupertinoButton(
-                        padding: EdgeInsets.symmetric(vertical: 15),
-                        color: Colors.grey.shade300,
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.black, fontSize: 14),
-                        ),
+              final userData = snapshot.data!.data();
+              final profileImageUrl = userData?['profileImageUrl'] ?? '';
+
+              return Form(
+                key: _formKey,
+                child: ListView(
+                  padding: EdgeInsets.all(20),
+                  children: <Widget>[
+                    Center(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.grey.shade300, width: 2),
+                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))],
+                            ),
+                            child: CircleAvatar(
+                              radius: 70,
+                              backgroundColor: Colors.white,
+                              backgroundImage: profileImageUrl.isNotEmpty
+                                  ? NetworkImage(profileImageUrl)
+                                  : AssetImage('assets/logo/intro.jpeg') as ImageProvider,
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 10,
+                            right: 0,
+                            child: CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: _pickImage,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.grey.shade300, width: 1),
+                                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+                                ),
+                                padding: EdgeInsets.all(8),
+                                child: Icon(CupertinoIcons.add, color: Colors.green, size: 25),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: CupertinoButton.filled(
-                        padding: EdgeInsets.symmetric(vertical: 15),
-                        focusColor: Color(0xFF3C7986),
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            String name = _nameController.text;
-                            String email = _emailController.text;
-                            String phone = _phoneController.text;
-                            String address = _addressController.text;
-                            String oldPassword = _oldPasswordController.text;
-                            String newPassword = _newPasswordController.text;
-
-
-                            print('Name: $name, Email: $email, Phone: $phone, Address: $address, Old Password: $oldPassword, New Password: $newPassword');
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Profile updated successfully! (Functionality to be implemented)')),
-                            );
-                          }
-                        },
-                        child: Text(
-                          'Save Update',
-                          style: TextStyle(color: Colors.white, fontSize: 14),
-                        ),
-                      ),
+                    SizedBox(height: 30),
+                    buildTextField("Name", "Enter your name", _nameController, CupertinoIcons.person_fill),
+                    buildTextField("Phone", "Enter your phone", _phoneController, CupertinoIcons.phone_fill, keyboardType: TextInputType.phone),
+                    SizedBox(height: 30),
+                    CupertinoButton.filled(
+                      padding: EdgeInsets.symmetric(vertical: 15),
+                      onPressed: _saveProfile,
+                      child: Text('Save Update'),
                     ),
                   ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
+
         ],
       ),
     );
