@@ -18,6 +18,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   List<String> selectedPayers = ["You"];
   Map<String, double> payerAmounts = {};
   double totalAmount = 0.0;
+  String expenseDescription = "";
+
+
   final List<String> categories = [
     "Grocery", "Medicine", "Food", "Rent", "Travel",
     "Shopping", "Entertainment", "Utilities", "Others"
@@ -63,7 +66,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              if(totalAmount != 0){
+              if(totalAmount != 0 && expenseDescription.isNotEmpty){
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -71,12 +74,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       selectedPeople: selectedPeople, // Now passing selected people
                       payerAmounts: payerAmounts,
                       totalAmount: totalAmount,
+                      expenseDescription: expenseDescription,
                     ),
                   ),
                 );
               }else{
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid amount.')),
+                  const SnackBar(content: Text('Please enter a valid amount and Description.')),
                 );
               }
             }, // TODO: Implement Save logic
@@ -276,10 +280,25 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 },
               ),
               const SizedBox(height: 10),
+
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "Add a description",
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0)),
+                  prefixIcon: const Icon(Icons.description),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    expenseDescription = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 10),
               // Payer Selection
               Row(
                 children: [
-                  const Text("Paid by: ",
+                  const Text("Multiple User Payment: ",
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   TextButton(
                     onPressed: () {
