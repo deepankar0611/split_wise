@@ -3,8 +3,11 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:slider_button/slider_button.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:lottie/lottie.dart';
-import 'dart:ui'; // Import dart:ui for ImageFilter
+import 'dart:math' as math;
+import 'dart:convert'; // Import for JSON decoding (if you still need it for other config)
+import 'package:flutter/services.dart'; // Import for asset loading
+import 'package:lottie/lottie.dart'; // Import the lottie package
+
 
 class FinalSplitScreen extends StatefulWidget {
   final List<Map<String, dynamic>> selectedPeople;
@@ -22,10 +25,40 @@ class FinalSplitScreen extends StatefulWidget {
   State<FinalSplitScreen> createState() => _FinalSplitScreenState();
 }
 
-class _FinalSplitScreenState extends State<FinalSplitScreen> {
+class _FinalSplitScreenState extends State<FinalSplitScreen> with SingleTickerProviderStateMixin {
   bool _paymentFinalized = false;
   bool _isDarkMode = false;
+  String _buttonText = "Slide to Finalize Payment";
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  // List<dynamic> _animationConfig = []; // No longer needed for Lottie approach
 
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _animation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
+        parent: _animationController, curve: Curves.easeInOutQuart
+    ));
+    // _loadAnimationConfig(); // No longer needed for Lottie approach
+  }
+
+  // Future<void> _loadAnimationConfig() async { // No longer needed for Lottie approach
+  //   final String response = await rootBundle.loadString('assets/animation/45.json'); // Path to your JSON file
+  //   final data = await json.decode(response);
+  //   setState(() {
+  //     _animationConfig = data;
+  //   });
+  // }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   double _calculateAmountPerPerson() {
     return widget.totalAmount / (widget.selectedPeople.length + 1);
@@ -34,38 +67,11 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
   void _handleFinalizePayment() {
     setState(() {
       _paymentFinalized = true;
+      _buttonText = "Payment Finalized!";
     });
-    // Navigator.pop(context); // Removed to keep animation on screen
+    _animationController.forward(); // Start animation on payment finalization
+    // No navigation to another page anymore
   }
-
-  // START OF ALGORITHM - _calculateTransactions function
-  List<Map<String, dynamic>> _calculateTransactions(List<Map<String, dynamic>> people, double amountPerPerson, Map<String, double> amounts) {
-    List<Map<String, dynamic>> transactions = [];
-    List<Map<String, dynamic>> balances = people.map((person) {
-      return {'name': person['name'], 'balance': (amounts[person['name']] ?? 0.0) - amountPerPerson};
-    }).toList();
-
-    balances.sort((a, b) => (a['balance'] as double).compareTo((b['balance'] as double)));
-
-    int i = 0, j = balances.length - 1;
-    while (i < j) {
-      double owe = -balances[i]['balance'];
-      double receive = balances[j]['balance'];
-
-      double amount = owe < receive ? owe : receive;
-      transactions.add({'from': balances[i]['name'], 'to': balances[j]['name'], 'amount': amount});
-
-      balances[i]['balance'] += amount;
-      balances[j]['balance'] -= amount;
-
-      if (balances[i]['balance'] == 0) i++;
-      if (balances[j]['balance'] == 0) j--;
-    }
-
-    return transactions;
-  }
-  // END OF ALGORITHM - _calculateTransactions function
-
 
   @override
   Widget build(BuildContext context) {
@@ -81,16 +87,12 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       {"name": "You"}
     ]..addAll(widget.selectedPeople);
 
-    List<Map<String, dynamic>> transactions =
-    _calculateTransactions(allPeople, amountPerPerson, finalPayerAmounts);
-
-    // Calculate what 'You' has to pay or receive
-    double userAmount = finalPayerAmounts["You"] ?? 0.0;
-    double userToPay = amountPerPerson - userAmount;
+    // Calculate who owes what to whom
+    List<Map<String, dynamic>> transactions = _calculateTransactions(
+        allPeople, amountPerPerson, finalPayerAmounts);
 
     return Scaffold(
-      backgroundColor: _isDarkMode ? const Color(0xFF121212) : const Color(
-          0xFFF5F5F5),
+      backgroundColor: _isDarkMode ? const Color(0xFF3C7986) : const Color(0xFF1A2E39),
       appBar: AppBar(
         title: const Text("Split Details"),
         titleTextStyle: TextStyle(
@@ -117,7 +119,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
           ),
         ],
       ),
-      body: Stack( // Wrapped body with Stack
+      body: Stack(
         children: [
           SingleChildScrollView(
             child: Padding(
@@ -128,79 +130,40 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildAmountBox(
-                            screenWidth,
-                            "RECEIVE",
-                            userToPay < 0 ? -userToPay : 0, // If user has paid more, they receive the excess
-                            Colors.green,
-                            Colors.green.shade900),
+                        child: _buildAmountBox(screenWidth, "RECEIVE", widget.totalAmount, Colors.green.shade400, Colors.green.shade100),
                       ),
                       Expanded(
-                        child: _buildAmountBox(
-                            screenWidth,
-                            "PAY",
-                            userToPay > 0 ? userToPay : 0, // If user owes money, this is the amount to pay
-                            Colors.redAccent.shade400,
-                            Colors.redAccent.shade100),
+                        child: _buildAmountBox(screenWidth, "PAY", amountPerPerson, Colors.redAccent.shade400, Colors.redAccent.shade100),
                       ),
                     ],
                   ),
                   SizedBox(height: screenHeight * 0.03),
                   Text("Split Summary",
-                      style: Theme
-                          .of(context)
+                      style: Theme.of(context)
                           .textTheme
                           .headlineMedium
-                          ?.copyWith(color: Colors.teal.shade300,
-                          fontWeight: FontWeight.bold,
-                          fontSize: screenWidth > 600 ? 32 : 28)),
+                          ?.copyWith(color: Colors.teal.shade300, fontWeight: FontWeight.bold, fontSize: screenWidth > 600 ? 32 : 28)),
                   SizedBox(height: screenHeight * 0.02),
-                  _buildListView(
-                      screenWidth, allPeople, finalPayerAmounts, amountPerPerson),
+                  _buildListView(screenWidth, allPeople, finalPayerAmounts, amountPerPerson),
                   SizedBox(height: screenHeight * 0.03),
                   Text("Transactions to Settle",
-                      style: Theme
-                          .of(context)
+                      style: Theme.of(context)
                           .textTheme
                           .headlineSmall
-                          ?.copyWith(color: Colors.teal.shade300,
-                          fontWeight: FontWeight.bold,
-                          fontSize: screenWidth > 600 ? 28 : 24)),
+                          ?.copyWith(color: Colors.teal.shade300, fontWeight: FontWeight.bold, fontSize: screenWidth > 600 ? 28 : 24)),
                   SizedBox(height: screenHeight * 0.015),
                   _buildListView(screenWidth, transactions, {}, 0),
                   SizedBox(height: screenHeight * 0.025),
-                  Divider(thickness: 1.3,
-                      color: _isDarkMode ? Colors.grey.shade600 : Colors.black26),
+                  Divider(thickness: 1.3, color: _isDarkMode ? Colors.grey.shade600 : Colors.black26),
                   SizedBox(height: screenHeight * 0.02),
                   _buildFinalizeButton(),
-                  SizedBox(height: screenHeight * 0.2), // Increased SizedBox height
+                  SizedBox(height: screenHeight * 0.02),
                 ],
               ),
             ),
           ),
-          Visibility( // Visibility widget for blur and animation
-            visible: _paymentFinalized,
-            child: Stack(
-              children: [
-                BackdropFilter( // Blur effect
-                  filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.5),
-                  ),
-                ),
-                Center( // Centered Lottie animation
-                  child: Lottie.asset(
-                    'assets/animation/45.json', // Path to your Lottie animation JSON file
-                    width: screenWidth * 0.8, // Adjust size as needed, full screen width - some padding
-                    height: screenWidth * 0.8, // Adjust size as needed,  full screen width - some padding
-                    repeat: false, // Play once
-                    reverse: false,
-                    animate: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          if (_paymentFinalized) // Conditionally show the animation
+            _buildFinalizationAnimation()
         ],
       ),
     );
@@ -265,8 +228,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     );
   }
 
-  Widget _buildListView(double width, List<Map<String, dynamic>> data,
-      Map<String, double> amounts, double amountPerPerson) {
+  Widget _buildListView(double width, List<Map<String, dynamic>> data, Map<String, double> amounts, double amountPerPerson) {
     return Container(
       padding: EdgeInsets.symmetric(vertical: width * 0.0375),
       decoration: BoxDecoration(
@@ -285,16 +247,13 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: data.length,
-        itemBuilder: (context, index) =>
-            _buildListTile(width, data[index], amounts, amountPerPerson, ),
+        itemBuilder: (context, index) => _buildListTile(width, data[index], amounts, amountPerPerson),
       ),
     );
   }
 
-
-  Widget _buildListTile(double width, Map<String, dynamic> item,
-      Map<String, double> amounts, double amountPerPerson) {
-    if (item.containsKey('name')) { // For Split Summary
+  Widget _buildListTile(double width, Map<String, dynamic> item, Map<String, double> amounts, double amountPerPerson) {
+    if (item.containsKey('name')) {  // For Split Summary
       String payer = item["name"];
       double amountPaid = amounts[payer] ?? 0.0;
       double amountToPay = amountPerPerson - amountPaid;
@@ -303,19 +262,14 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
 
       if (amountToPay > 0) {
         amountText = "-₹${amountToPay.toStringAsFixed(0)}";
-        amountStyle = TextStyle(color: Colors.redAccent.shade700,
-            fontWeight: FontWeight.w700,
-            fontSize: width > 600 ? 20 : 17);
+        amountStyle = TextStyle(color: Colors.redAccent.shade700, fontWeight: FontWeight.w700, fontSize: width > 600 ? 20 : 17);
       } else {
         amountText = "+₹${(-amountToPay).toStringAsFixed(0)}";
-        amountStyle = TextStyle(color: Colors.green.shade700,
-            fontWeight: FontWeight.w700,
-            fontSize: width > 600 ? 20 : 17);
+        amountStyle = TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w700, fontSize: width > 600 ? 20 : 17);
       }
 
       return Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: width * 0.0375, vertical: width * 0.02),
+        padding: EdgeInsets.symmetric(horizontal: width * 0.0375, vertical: width * 0.02),
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Container(
@@ -338,8 +292,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
           subtitle: Text("Paid: ₹${amountPaid.toStringAsFixed(2)}",
               style: TextStyle(
                   fontSize: width > 600 ? 18 : 15,
-                  color: _isDarkMode ? Colors.grey.shade400 : Colors.grey
-                      .shade600)),
+                  color: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600)),
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -348,15 +301,14 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
               Text(
                 amountToPay > 0 ? "To Pay" : "To Receive",
                 style: TextStyle(
-                    color: _isDarkMode ? Colors.grey.shade400 : Colors.grey
-                        .shade500,
+                    color: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
                     fontSize: width > 600 ? 16 : 13),
               ),
             ],
           ),
         ),
       );
-    } else { // For Transactions to Settle
+    } else {  // For Transactions to Settle
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: width * 0.0375, vertical: width * 0.025),
         child: ListTile(
@@ -370,30 +322,138 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
             child: Icon(LucideIcons.arrowRightCircle, color: Colors.teal.shade700, size: width * 0.065),
           ),
           title: Text(
-            "${item['from']} has to pay ₹${item['amount'].toStringAsFixed(2)} to ${item['to']}",
-            style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: width > 600 ? 20 : 17,
-                color: _isDarkMode ? Colors.white : Colors.black87
-            ),
-          ),
+              "${item['from']}  to  ${item['to']}",
+              style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: width > 600 ? 20 : 17,
+                  color: _isDarkMode ? Colors.white : Colors.black87)),
+          trailing: Text("₹${item['amount'].toStringAsFixed(2)}",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: width > 600 ? 20 : 17,
+                  color: _isDarkMode ? Colors.white : Colors.black87)),
         ),
       );
     }
   }
 
   Widget _buildFinalizeButton() {
-    return Center(
-      child: SliderButton(
-        action: () async {
-          _handleFinalizePayment();
-          return true;
-        },
-        label: const Text("Slide to Finalize Payment"),
-        buttonColor: Colors.teal.shade400,
+    var screenWidth = MediaQuery.of(context).size.width;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenWidth * 0.0625),
+      child: Shimmer.fromColors(
+        baseColor: _isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+        highlightColor: _isDarkMode ? Colors.grey.shade500 : Colors.grey.shade100,
+        enabled: !_paymentFinalized,
+        child: SliderButton(
+          backgroundColor: const Color(0xFF37474F),
+          action: () async {
+            ///Do something here OnSlide
+            _handleFinalizePayment();
+            return true;
+          },
+          label: Text(
+            _buttonText,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w500,
+                fontSize: screenWidth > 600 ? 22 : 19),
+          ),
+          icon: Icon(
+            LucideIcons.chevronRight,
+            color: Colors.black,
+            size: screenWidth * 0.075,
+          ),
+          buttonColor: Colors.teal.shade400,
+          shimmer: true,
+          highlightedColor: Colors.white30,
+          baseColor: Colors.white70,
+        ),
       ),
     );
   }
 
-// _buildFinalizedMessage removed, Lottie animation is used instead
+  Widget _buildFinalizationAnimation() {
+    var screenWidth = MediaQuery.of(context).size.width;
+    var screenHeight = MediaQuery.of(context).size.height;
+
+    return FadeTransition(
+      opacity: _animation,
+      child: Container(
+        color: _isDarkMode ? const Color(0xFF3C7986).withOpacity(0.95) : const Color(0xFF1A2E39).withOpacity(0.95),
+        width: screenWidth,
+        height: screenHeight,
+        child: Center(
+          child: Lottie.asset( // Use Lottie.asset to load the animation
+            'assets/animation/45.json', // Path to your Lottie file
+            width: screenWidth * 0.8, // Adjust size as needed
+            height: screenWidth * 0.8,
+            controller: _animationController, // Connect to the animation controller
+            onLoaded: (composition) {
+              // Optional: Control animation properties if needed after loading
+              _animationController.duration = composition.duration;
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _calculateTransactions(
+      List<Map<String, dynamic>> allPeople,
+      double amountPerPerson,
+      Map<String, double> finalPayerAmounts) {
+    List<Map<String, dynamic>> transactions = [];
+
+    // Sort by how much each person owes (or is owed)
+    List<Map<String, dynamic>> balances = allPeople.map((person) {
+      double balance = (finalPayerAmounts[person['name']] ?? 0.0) -
+          amountPerPerson;
+      return {'name': person['name'], 'balance': balance};
+    }).toList();
+
+    balances.sort((a, b) =>
+        (a['balance'] as double).compareTo(b['balance'] as double));
+
+    // Match people with negative balance (owes money) to those with positive balance (gets money)
+    int positiveIndex = 0,
+        negativeIndex = balances.length - 1;
+    while (positiveIndex < negativeIndex) {
+      double positiveBalance = balances[positiveIndex]['balance'] as double;
+      double negativeBalance = balances[negativeIndex]['balance'] as double;
+
+      if (positiveBalance > -negativeBalance) {
+        transactions.add({
+          'from': balances[negativeIndex]['name'],
+          'to': balances[positiveIndex]['name'],
+          'amount': -negativeBalance,
+        });
+        balances[positiveIndex]['balance'] += positiveBalance + negativeBalance;
+        balances[negativeIndex]['balance'] = 0;
+        negativeIndex--;
+      } else if (positiveBalance == -negativeBalance) {
+        transactions.add({
+          'from': balances[negativeIndex]['name'],
+          'to': balances[positiveIndex]['name'],
+          'amount': positiveBalance,
+        });
+        balances[positiveIndex]['balance'] = 0;
+        balances[negativeIndex]['balance'] = 0;
+        positiveIndex++;
+        negativeIndex--;
+      } else {
+        transactions.add({
+          'from': balances[negativeIndex]['name'],
+          'to': balances[positiveIndex]['name'],
+          'amount': positiveBalance,
+        });
+        balances[negativeIndex]['balance'] += negativeBalance + positiveBalance;
+        balances[positiveIndex]['balance'] = 0;
+        positiveIndex++;
+      }
+    }
+
+    return transactions;
+  }
 }

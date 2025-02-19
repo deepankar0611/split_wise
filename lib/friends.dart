@@ -63,16 +63,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => FinalSplitScreen(
-                    selectedPeople: selectedPeople, // Now passing selected people
-                    payerAmounts: payerAmounts,
-                    totalAmount: totalAmount,
+              if(totalAmount != 0){
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FinalSplitScreen(
+                      selectedPeople: selectedPeople, // Now passing selected people
+                      payerAmounts: payerAmounts,
+                      totalAmount: totalAmount,
+                    ),
                   ),
-                ),
-              );
+                );
+              }else{
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid amount.')),
+                );
+              }
             }, // TODO: Implement Save logic
             child: const Text("Save", style: TextStyle(color: Colors.white)),
           ),
