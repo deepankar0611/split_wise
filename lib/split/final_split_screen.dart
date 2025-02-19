@@ -1,8 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:slider_button/slider_button.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:lottie/lottie.dart';
 import 'dart:ui'; // Import dart:ui for ImageFilter
 
@@ -10,12 +11,14 @@ class FinalSplitScreen extends StatefulWidget {
   final List<Map<String, dynamic>> selectedPeople;
   final Map<String, double> payerAmounts;
   final double totalAmount;
+  final String expenseDescription;
 
   const FinalSplitScreen({
     super.key,
     required this.selectedPeople,
     required this.payerAmounts,
     required this.totalAmount,
+    required this.expenseDescription,
   });
 
   @override
@@ -23,6 +26,10 @@ class FinalSplitScreen extends StatefulWidget {
 }
 
 class _FinalSplitScreenState extends State<FinalSplitScreen> {
+
+
+
+
   bool _paymentFinalized = false;
   bool _isDarkMode = false;
 
@@ -35,14 +42,75 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     setState(() {
       _paymentFinalized = true;
     });
-    // Navigator.pop(context); // Removed to keep animation on screen
+
+    // ✅ Calculate transactions only once and pass them to _uploadSplitData()
+    List<Map<String, dynamic>> transactions = _calculateTransactions(
+        widget.selectedPeople,
+        _calculateAmountPerPerson(),
+        widget.payerAmounts);
+
+    _uploadSplitData(transactions); // ✅ Now only uploads ONCE!
+
+    Future.delayed(const Duration(milliseconds: 1400), () {
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    });
   }
 
+
+  Future<void> _uploadSplitData(List<Map<String, dynamic>> transactions) async {
+    try {
+      // Get Firestore instance
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+      User? user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        print("User not logged in");
+        return;
+      }
+
+      // Create the split document
+      DocumentReference splitRef = await firestore.collection('splits').add({
+        'createdBy': user.uid,
+        'description': widget.expenseDescription,
+        'totalAmount': widget.totalAmount,
+        'participants': ['You', ...widget.selectedPeople.map((p) => p['id'])], // Include "You"
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Upload transactions to the subcollection
+      for (var transaction in _calculateTransactions(widget.selectedPeople, _calculateAmountPerPerson(), widget.payerAmounts)) {
+        await splitRef.collection('transactions').add({
+          'from': transaction['from'], // User ID of the payer
+          'to': transaction['to'], // User ID of the receiver
+          'amount': transaction['amount'],
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+
+      print("Split and transactions uploaded successfully!");
+    } catch (e) {
+      print("Error uploading split data: $e");
+    }
+  }
+
+
+
+
+
   // START OF ALGORITHM - _calculateTransactions function
-  List<Map<String, dynamic>> _calculateTransactions(List<Map<String, dynamic>> people, double amountPerPerson, Map<String, double> amounts) {
+  List<Map<String, dynamic>> _calculateTransactions(
+      List<Map<String, dynamic>> allPeople,
+      double amountPerPerson,
+      Map<String, double> finalPayerAmounts) {
+
     List<Map<String, dynamic>> transactions = [];
+    List<Map<String, dynamic>> people = [{"name": "You"}]..addAll(widget.selectedPeople);
+
+    double amountPerPerson = _calculateAmountPerPerson();
     List<Map<String, dynamic>> balances = people.map((person) {
-      return {'name': person['name'], 'balance': (amounts[person['name']] ?? 0.0) - amountPerPerson};
+      return {'name': person['name'], 'balance': (widget.payerAmounts[person['name']] ?? 0.0) - amountPerPerson};
     }).toList();
 
     balances.sort((a, b) => (a['balance'] as double).compareTo((b['balance'] as double)));
@@ -51,8 +119,8 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     while (i < j) {
       double owe = -balances[i]['balance'];
       double receive = balances[j]['balance'];
-
       double amount = owe < receive ? owe : receive;
+
       transactions.add({'from': balances[i]['name'], 'to': balances[j]['name'], 'amount': amount});
 
       balances[i]['balance'] += amount;
@@ -62,7 +130,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       if (balances[j]['balance'] == 0) j--;
     }
 
-    return transactions;
+    return transactions; // ❌ No more Firestore writes here!
   }
   // END OF ALGORITHM - _calculateTransactions function
 
@@ -92,7 +160,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       backgroundColor: _isDarkMode ? const Color(0xFF121212) : const Color(
           0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text("Split Details"),
+        title: Text(widget.expenseDescription),
         titleTextStyle: TextStyle(
           color: Colors.white,
           fontSize: screenWidth > 600 ? 24 : 22,
@@ -181,21 +249,18 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
           Visibility( // Visibility widget for blur and animation
             visible: _paymentFinalized,
             child: Stack(
-              children: [
-                BackdropFilter( // Blur effect
-                  filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.5),
+                          children: [
+                          SingleChildScrollView(
+                          child: Column(
+                          children: [
+                          _buildFinalizeButton(),]
                   ),
                 ),
-                Center( // Centered Lottie animation
-                  child: Lottie.asset(
-                    'assets/animation/45.json', // Path to your Lottie animation JSON file
-                    width: screenWidth * 0.8, // Adjust size as needed, full screen width - some padding
-                    height: screenWidth * 0.8, // Adjust size as needed,  full screen width - some padding
-                    repeat: false, // Play once
-                    reverse: false,
-                    animate: true,
+                            if (_paymentFinalized)
+                              BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                                child: Center(
+                                  child: Lottie.asset('assets/animation/45.json', width: 200, height: 200),
                   ),
                 ),
               ],
@@ -390,10 +455,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
           return true;
         },
         label: const Text("Slide to Finalize Payment"),
-        buttonColor: Colors.teal.shade400,
       ),
     );
   }
-
-// _buildFinalizedMessage removed, Lottie animation is used instead
 }
