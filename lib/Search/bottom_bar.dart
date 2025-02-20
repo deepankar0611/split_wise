@@ -1,11 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:split_wise/Search/search_bar.dart';
+import 'package:split_wise/search_bar.dart';
 import 'package:split_wise/friends.dart';
 import 'package:split_wise/home_screen.dart';
 import 'package:split_wise/login.dart';
 import '../profile_overview.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 
 class BottomBar extends StatefulWidget {
   const BottomBar({super.key});
@@ -98,38 +99,20 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: CurvedNavigationBar(
         backgroundColor: Colors.white,
-        elevation: 8,
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
+        color: Color(0xFF1A2E39), // Color of the curved bar
+        buttonBackgroundColor: Color(0xFF1A2E39), // Color of the center button
+        height: 60,
+        animationCurve: Curves.easeInOut,
+        animationDuration: Duration(milliseconds: 300),
+        index: _selectedIndex,
         onTap: _onItemTapped,
-        selectedItemColor: const Color(0xFF1A2E39),
-        unselectedItemColor: Colors.grey[600],
-        selectedFontSize: 13,
-        unselectedFontSize: 12,
-        showUnselectedLabels: true,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.home),
-            activeIcon: Icon(CupertinoIcons.home, color: Color(0xFF1A2E39)),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.person_2),
-            activeIcon: Icon(CupertinoIcons.person_2_fill, color: Color(0xFF1A2E39)),
-            label: 'Friends',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.add_circled),
-            activeIcon: Icon(CupertinoIcons.add_circled_solid, color: Color(0xFF1A2E39)),
-            label: 'Create',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.profile_circled),
-            activeIcon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF1A2E39)),
-            label: 'Profile',
-          ),
+          Icon(CupertinoIcons.home, size: 30, color: Colors.white),
+          Icon(CupertinoIcons.person_2, size: 30, color: Colors.white),
+          Icon(CupertinoIcons.add_circled, size: 30, color: Colors.white),
+          Icon(CupertinoIcons.profile_circled, size: 30, color: Colors.white),
         ],
       ),
     );
