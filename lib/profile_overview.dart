@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:split_wise/login_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'editprofile.dart';
@@ -16,7 +17,6 @@ class ProfileOverviewScreen extends StatefulWidget {
 
 class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
-  final ImagePicker _picker = ImagePicker();
   final SupabaseClient supabase = Supabase.instance.client;
 
   Map<String, dynamic> userData = {
@@ -107,7 +107,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
             ),
             const SizedBox(height: 20),
             _buildProfileOptions(context),
-            const SizedBox(height: 30), // Increased spacing before logout
+            const SizedBox(height: 40), // Increased spacing before logout
             _buildLogoutButton(context), // Moved logout button here
             const SizedBox(height: 20),
           ],
@@ -176,25 +176,44 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   }
 
   Widget _buildFinanceSummary() {
-    double amountToPay = double.tryParse(userData["amountToPay"]?.toString() ?? "0") ?? 0;
-    double amountToReceive = double.tryParse(userData["amountToReceive"]?.toString() ?? "0") ?? 0;
-    double totalBalance = amountToReceive - amountToPay;
-    Color balanceColor = totalBalance >= 0 ? Colors.green : Colors.red;
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Center(child: Text('No financial data available'));
+        }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildSummaryTile("Total Balance", "₹${totalBalance.abs().toInt()}", balanceColor),
-          _buildSummaryTile("Pay", "₹${amountToPay.toInt()}", Colors.red),
-          _buildSummaryTile("Receive", "₹${amountToReceive.toInt()}", Colors.green),
-        ],
-      ),
+        final userData = snapshot.data!.data() as Map<String, dynamic>;
+        double amountToPay = double.tryParse(userData["amountToPay"]?.toString() ?? "0") ?? 0;
+        double amountToReceive = double.tryParse(userData["amountToReceive"]?.toString() ?? "0") ?? 0;
+        double totalBalance = amountToReceive - amountToPay;
+        Color balanceColor = totalBalance >= 0 ? Colors.green : Colors.red;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSummaryTile("Total Balance", "₹${totalBalance.abs().toInt()}", balanceColor),
+              _buildSummaryTile("Pay", "₹${amountToPay.toInt()}", Colors.red),
+              _buildSummaryTile("Receive", "₹${amountToReceive.toInt()}", Colors.green),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -267,28 +286,34 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
       elevation: 6,
       shadowColor: Colors.black26,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ElevatedButton(
-        onPressed: () => _logout(context),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF234567), // Matches AppBar color
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 20,),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          elevation: 0, // No additional elevation inside card
-          textStyle: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+      child: Container(
+        decoration:  BoxDecoration(
+          borderRadius: BorderRadius.circular(10)
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.logout, size: 10),
-            const SizedBox(width: 8),
-            const Text("Logout"),
-          ],
+        height: 60,
+        width: 160,
+        child: ElevatedButton(
+          onPressed: () => _logout(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF234567), // Matches AppBar color
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            elevation: 0, // No additional elevation inside card
+            textStyle: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.logout, size: 19, color: Colors.white,),
+              const SizedBox(width: 8),
+              const Text("Logout"),
+            ],
+          ),
         ),
       ),
     );
@@ -297,7 +322,11 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   Future<void> _logout(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
-      Navigator.pushReplacementNamed(context, 'LoginScreen()');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+
     } catch (e) {
       print("Logout failed: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -346,13 +375,5 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     );
   }
 
-  BoxDecoration _cardDecoration() => BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(12),
-    boxShadow: const [
-      BoxShadow(color: Colors.black12, blurRadius: 5, spreadRadius: 1)
-    ],
-  );
 
-  Widget _editIcon() => const Icon(Icons.camera_alt, color: Colors.black);
 }

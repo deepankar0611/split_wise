@@ -9,8 +9,6 @@ import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
-import 'package:uuid/uuid.dart';
 
 
 class EditProfileScreen extends StatefulWidget {

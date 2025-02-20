@@ -27,6 +27,7 @@ dependencies:
   lottie:
   intl:
   google_nav_bar:
+  curved_navigation_bar:
 
 dev_dependencies:
   flutter_test:

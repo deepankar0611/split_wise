@@ -1,10 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:split_wise/search_bar.dart';
+import 'package:split_wise/Search/search_bar.dart';
 import 'package:split_wise/friends.dart';
 import 'package:split_wise/home_screen.dart';
-import 'package:split_wise/login.dart';
 import '../profile_overview.dart';
 
 class BottomBar extends StatefulWidget {

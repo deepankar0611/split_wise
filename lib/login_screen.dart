@@ -169,7 +169,7 @@ class _LoginPageState extends State<LoginPage> {
       onTap: () {
         signInWithGoogle().then((value) {
           Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (context) => HomeScreen()));
+              context, MaterialPageRoute(builder: (context) => BottomBar()));
         });
       },
       child: Container(
