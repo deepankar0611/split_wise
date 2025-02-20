@@ -148,7 +148,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
+        backgroundColor: Color(0xFF234567),
         elevation: 0,
         title: Text(
           'Edit Profile',
@@ -165,6 +165,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             Navigator.pop(context);
           },
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        ), // Rounded bottom corners
+        toolbarHeight: 50, // Increased height for prominence
       ),
       body: Stack(
         // Use Stack for background elements
@@ -250,11 +254,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     buildTextField("Name", "Enter your name", _nameController, CupertinoIcons.person_fill),
                     buildTextField("Phone", "Enter your phone", _phoneController, CupertinoIcons.phone_fill, keyboardType: TextInputType.phone),
                     SizedBox(height: 30),
-                    CupertinoButton.filled(
-                      padding: EdgeInsets.symmetric(vertical: 15),
+                    CupertinoButton(
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+                      color: const Color(0xFF234567), // Custom color
                       onPressed: _saveProfile,
-                      child: Text('Save Update'),
+                      child: RichText(
+                        text: const TextSpan(
+                          text: 'Save ',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white, // Text color
+                          ),
+                          children: <TextSpan>[
+                            TextSpan(
+                              text: 'Update',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white, // Custom color for part of the text
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
+
                   ],
                 ),
               );
