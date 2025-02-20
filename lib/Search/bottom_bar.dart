@@ -6,7 +6,6 @@ import 'package:split_wise/friends.dart';
 import 'package:split_wise/home_screen.dart';
 import 'package:split_wise/login.dart';
 import '../profile_overview.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 
 class BottomBar extends StatefulWidget {
   const BottomBar({super.key});
@@ -99,20 +98,37 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
           );
         },
       ),
-      bottomNavigationBar: CurvedNavigationBar(
-        backgroundColor: Colors.white,
-        color: Color(0xFF1A2E39), // Color of the curved bar
-        buttonBackgroundColor: Color(0xFF1A2E39), // Color of the center button
-        height: 60,
-        animationCurve: Curves.easeInOut,
-        animationDuration: Duration(milliseconds: 300),
-        index: _selectedIndex,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF1A2E39), // Deep blue-gray for selected items
+        unselectedItemColor: Colors.grey[400], // Lighter gray for unselected
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        elevation: 8,
         items: const [
-          Icon(CupertinoIcons.home, size: 30, color: Colors.white),
-          Icon(CupertinoIcons.person_2, size: 30, color: Colors.white),
-          Icon(CupertinoIcons.add_circled, size: 30, color: Colors.white),
-          Icon(CupertinoIcons.profile_circled, size: 30, color: Colors.white),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.home, color: Color(0xFF0288D1)), // Rich Sky Blue
+            activeIcon: Icon(CupertinoIcons.home, color: Color(0xFF1A2E39)),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.person_2, color: Color(0xFF7B1FA2)), // Vibrant Purple
+            activeIcon: Icon(CupertinoIcons.person_2, color: Color(0xFF1A2E39)),
+            label: 'Friends',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.add_circled, color: Color(0xFFD81B60)), // Rich Pink
+            activeIcon: Icon(CupertinoIcons.add_circled, color: Color(0xFF1A2E39)),
+            label: 'Add',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF00897B)), // Deep Teal
+            activeIcon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF1A2E39)),
+            label: 'Profile',
+          ),
         ],
       ),
     );

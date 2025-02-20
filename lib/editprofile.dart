@@ -180,9 +180,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFFF0F9F4),
-                    Color(0xFFE0F2E9),
-                    Color(0xFFC8E6C9),
+                    Colors.white,
+                    Colors.white,
+                    Colors.white,
                     Colors.white,
                   ],
                   stops: [0.1, 0.3, 0.6, 0.9],
