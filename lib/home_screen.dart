@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:split_wise/notification.dart';
@@ -10,10 +12,141 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
+  List<Map<String, dynamic>> historyList = [];
+
+
+  Map<String, dynamic> userData = {
+    "profileImageUrl": "",
+    "amountToPay": "0",
+    "amountToReceive": "0",
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserHistory();
+    _fetchUserData();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchUserHistory() async {
+    try {
+      String? currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserUid == null) {
+        print("⚠ User is not logged in");
+        return [];
+      }
+
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('splits').get();
+      print("📌 Retrieved ${querySnapshot.docs.length} documents from Firestore");
+
+      List<Map<String, dynamic>> historyList = [];
+
+      for (QueryDocumentSnapshot doc in querySnapshot.docs) {
+        List<dynamic> participants = doc['participants'] ?? [];
+        print("📌 Document ID: ${doc.id}, Participants: $participants");
+
+        if (participants.contains(currentUserUid)) {
+          print("✅ User is a participant in: ${doc.id}");
+
+          historyList.add({
+            'description': doc['description'] ?? 'Unknown Bill',
+            'createdAt': (doc['createdAt'] as Timestamp).toDate().toString(),
+            'totalAmount': "\$${doc['totalAmount']?.toString() ?? '0.00'}",
+          });
+        }
+      }
+
+      print("✅ Final Fetched History List: $historyList");
+      return historyList;
+    } catch (e) {
+      print("❌ Error fetching history: $e");
+      return [];
+    }
+  }
+
+
+
+
+  Future<void> _fetchUserData() async {
+    if (userId == 'defaultUserId') return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        if (mounted) {
+          setState(() {
+            userData = {
+              "profileImageUrl": data.containsKey("profileImageUrl")
+                  ? data["profileImageUrl"]
+                  : "",
+              "amountToPay": data["amountToPay"]?.toString() ?? "0",
+              "amountToReceive": data["amountToReceive"]?.toString() ?? "0",
+            };
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+    }
+  }
+
+  Future<void> fetchUserSplits() async {
+    try {
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+      User? user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        print("⚠ User not logged in");
+        return;
+      }
+
+      // Fetch all splits where the current user is a participant
+      QuerySnapshot splitSnapshot = await firestore
+          .collection('splits')
+          .where('participants', arrayContains: user.uid)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      List<Map<String, dynamic>> splitsData = [];
+
+      for (var splitDoc in splitSnapshot.docs) {
+        String splitId = splitDoc.id;
+        Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
+
+        // Fetch transactions for this split
+        QuerySnapshot transactionSnapshot = await firestore
+            .collection('splits')
+            .doc(splitId)
+            .collection('transactions')
+            .orderBy('timestamp', descending: true)
+            .get();
+
+        List<Map<String, dynamic>> transactions = transactionSnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+
+        splitData['transactions'] = transactions;
+        splitsData.add(splitData);
+      }
+
+      print("✅ Data fetched successfully");
+      print(splitsData); // Print fetched data for debugging
+
+    } catch (e) {
+      print("❌ Error fetching data: $e");
+    }
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:  Colors.white,
+      backgroundColor: const Color(0xFF234567),
       body: CustomScrollView(
         slivers: <Widget>[
           SliverAppBar(
@@ -67,14 +200,14 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             leading: IconButton(
-              icon: const CircleAvatar(
-                radius: 20, // Adjust radius as needed
-                backgroundColor: Colors.grey, // Placeholder background color
-                child: Icon(LucideIcons.user, color: Colors.white), // Placeholder icon
+              icon: CircleAvatar(
+                radius: 20,
+                backgroundImage: userData["profileImageUrl"].isNotEmpty
+                    ? NetworkImage(userData["profileImageUrl"])
+                    : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
+                backgroundColor: Colors.grey,
               ),
-              onPressed: () {
-                // TODO: Open profile page or perform profile action
-              },
+              onPressed: () {},
             ),
             actions: [
               IconButton(
@@ -98,43 +231,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBodyCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color:  Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      padding: const EdgeInsets.only(top: 20.0),
-      child: Column(
-        children: [
-          _buildHistoryCardBox(),
-          const SizedBox(height: 20),
-          _buildActionButtons(),
-          const SizedBox(height: 20),
-          _buildTransactionList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildActionButton(LucideIcons.dollarSign, "Proceed to Payment"),
-        _buildActionButton(LucideIcons.send, "Send Reminder"),
-        _buildActionButton(LucideIcons.share, "Share Payment", onTap: () {
-          // Example onTap action, you can customize this
-        }),
-      ],
-    );
-  }
-
-
   Widget _buildReceiveCard() {
+    double amountToReceive = double.tryParse(userData["amountToReceive"]) ?? 0;
     return Container(
       width: 170,
-      height: 120, // Height is already increased to 120
+      height: 120,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -149,49 +250,49 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // Changed mainAxisSize to min
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Align(
             alignment: Alignment.topRight,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), // Further reduced padding
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               decoration: BoxDecoration(
                 color: Colors.green.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8), // Slightly smaller borderRadius
+                borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
                 "Receive",
                 style: TextStyle(
                   color: Colors.green,
                   fontWeight: FontWeight.w500,
-                  fontSize: 9, // Even smaller font size
+                  fontSize: 9,
                 ),
-                maxLines: 1, // Ensure single line
-                overflow: TextOverflow.ellipsis, // Handle overflow if it somehow occurs
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.only(left: 6.0),
             child: Text(
-              "₹266.67",
+              "₹${amountToReceive.toInt()}",
               style: const TextStyle(
-                fontSize: 26, // Further reduced font size
+                fontSize: 26,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: 6.0, bottom: 4.0),
+          const Padding(
+            padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
             child: Text(
               "will get",
               style: TextStyle(
-                color: Colors.green[700],
+                color: Colors.green,
                 fontWeight: FontWeight.w600,
-                fontSize: 13, // Further reduced font size
+                fontSize: 13,
               ),
             ),
           ),
@@ -201,121 +302,190 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPayCard() {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(userId).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data == null || !snapshot.data!.exists) {
+          return const Center(child: Text("No data available"));
+        }
+
+        final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+        double amountToPay = double.tryParse(data["amountToPay"]?.toString() ?? "0") ?? 0;
+
+        return Container(
+          width: 170,
+          height: 120,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2),
+                spreadRadius: 1,
+                blurRadius: 7,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Align(
+                alignment: Alignment.topRight,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    "Pay",
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 9,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 6.0),
+                child: Text(
+                  "₹${amountToPay.toInt()}",
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
+                child: Text(
+                  "will pay",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
+  // The rest of your code (e.g., _buildBodyCard, _buildHistoryCardBox, etc.) remains unchanged
+  // Add them here as they were in your original code...
+
+  Widget _buildBodyCard() {
     return Container(
-      width: 170,
-      height: 120, // Height is already increased to 120
-      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 7,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
+      padding: const EdgeInsets.only(top: 20.0),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // Changed mainAxisSize to min
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Align(
-            alignment: Alignment.topRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), // Further reduced padding
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8), // Slightly smaller borderRadius
-              ),
-              child: const Text(
-                "Pay",
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 9, // Even smaller font size
-                ),
-                maxLines: 1, // Ensure single line
-                overflow: TextOverflow.ellipsis, // Handle overflow if it somehow occurs
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 6.0),
-            child: Text(
-              "₹0",
-              style: const TextStyle(
-                fontSize: 26, // Further reduced font size
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 6.0, bottom: 4.0),
-            child: Text(
-              "will pay",
-              style: TextStyle(
-                color: Colors.red[700],
-                fontWeight: FontWeight.w600,
-                fontSize: 13, // Further reduced font size
-              ),
-            ),
-          ),
+          _buildHistoryCardBox(),
+          const SizedBox(height: 20),
+          _buildTransactionList(),
         ],
       ),
     );
   }
+
   Widget _buildHistoryCardBox() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Recent Priority Bills",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 7,
-                  offset: const Offset(0, 3),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('splits').snapshots(),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text("No recent priority bills."));
+        }
+
+        String? currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+        if (currentUserUid == null) {
+          return const Center(child: Text("User not logged in"));
+        }
+
+        // Filter splits where the current user is a participant
+        List<Map<String, dynamic>> historyList = snapshot.data!.docs
+            .where((doc) => (doc['participants'] as List<dynamic>?)?.contains(currentUserUid) ?? false)
+            .map((doc) => {
+          'description': doc['description'] ?? 'Unknown Bill',
+          'createdAt': (doc['createdAt'] as Timestamp).toDate().toString(),
+          'totalAmount': "₹${doc['totalAmount']?.toString() ?? '0.00'}",
+        })
+            .toList();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Recent Priority Bills",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
-              ],
-            ),
-            height: 120,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: 10,
-              itemBuilder: (context, index) {
-                return _buildHistoryItem(
-                  title: "Netflix",
-                  date: "Feb 20, 2025",
-                  amount: "-\$25.00",
-                  color: Colors.blueAccent,
-                  settled: index % 2 == 0,
-                );
-              },
-            ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      spreadRadius: 1,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                height: 120,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: historyList.length,
+                  itemBuilder: (context, index) {
+                    var history = historyList[index];
+                    return _buildHistoryItem(
+                      title: history['description'],
+                      date: history['createdAt'],
+                      amount: history['totalAmount'],
+                      color: Colors.blueAccent,
+                      settled: index % 2 == 0,
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
+
+
 
   Widget _buildHistoryItem({
     required String title,
@@ -324,6 +494,20 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color color,
     bool settled = false,
   }) {
+    // Convert the stored date string into DateTime object
+    DateTime createdAtDate = DateTime.parse(date);
+    Duration difference = DateTime.now().difference(createdAtDate);
+
+    // Determine the time display (e.g., "2 days ago", "1 week ago", "Just now")
+    String timeAgo;
+    if (difference.inDays > 0) {
+      timeAgo = "${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago";
+    } else if (difference.inHours > 0) {
+      timeAgo = "${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago";
+    } else {
+      timeAgo = "Just now";
+    }
+
     return Container(
       width: 140,
       margin: const EdgeInsets.only(right: 15),
@@ -351,11 +535,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            settled ? "settled" : date,
+            settled ? "Settled" : timeAgo,  // Updated this line
             style: TextStyle(
                 color: settled ? Colors.green[600] : Colors.grey[600],
                 fontSize: 11,
-                fontWeight: FontWeight.w500),
+                fontWeight: FontWeight.w500
+            ),
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
           ),
@@ -378,44 +563,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF234567),
-              size: 28,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-                color: Color(0xFF234567),
-                fontSize: 14,
-                fontWeight: FontWeight.w500),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildTransactionList() {
     final List<Map<String, dynamic>> transactions = [
-      {"icon": LucideIcons.car, "title": "Uber", "subtitle": "He paid \$39.60", "amount": "-\$19.80", "color": Colors.orange},
-      {"icon": LucideIcons.shoppingCart, "title": "Groceries", "subtitle": "You paid \$124.16", "amount": "+\$62.08", "color": Colors.teal},
-      {"icon": LucideIcons.mapPin, "title": "Adventures", "subtitle": "Shared group", "amount": "-\$15.99", "color": Colors.blueAccent},
-      {"icon": LucideIcons.film, "title": "Cinema", "subtitle": "He paid \$40.00", "amount": "-\$20.00", "color": Colors.purple},
-      {"icon": LucideIcons.gift, "title": "Present for Andy", "subtitle": "He paid \$64.30", "amount": "-\$64.30", "color": Colors.pinkAccent},
+      {"icon": LucideIcons.car, "title": "Uber", "subtitle": "He paid \₹39.60", "amount": "-\₹19.80", "color": Colors.orange},
+      {"icon": LucideIcons.shoppingCart, "title": "Groceries", "subtitle": "You paid \₹124.16", "amount": "+\₹62.08", "color": Colors.teal},
+      {"icon": LucideIcons.mapPin, "title": "Adventures", "subtitle": "Shared group", "amount": "-\₹15.99", "color": Colors.blueAccent},
+      {"icon": LucideIcons.film, "title": "Cinema", "subtitle": "He paid \₹40.00", "amount": "-\₹20.00", "color": Colors.purple},
+      {"icon": LucideIcons.gift, "title": "Present for Andy", "subtitle": "He paid \₹64.30", "amount": "-\₹64.30", "color": Colors.pinkAccent},
     ];
 
     return Padding(
@@ -423,7 +578,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
           const Text(
             "Overview",
             style: TextStyle(
@@ -432,36 +586,34 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.black87,
             ),
           ),
-          ListView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            itemCount: transactions.length,
-            itemBuilder: (context, index) => _buildTransactionItem(
-              transactions[index]['icon'],
-              transactions[index]['title'],
-              transactions[index]['subtitle'],
-              transactions[index]['amount'],
-              transactions[index]['color'],
-            ),
+          Column(
+            children: transactions.map((transaction) => _buildTransactionItem(
+              transaction['icon'],
+              transaction['title'],
+              transaction['subtitle'],
+              transaction['amount'],
+              transaction['color'],
+            )).toList(),
           ),
         ],
       ),
     );
   }
 
-
   Widget _buildTransactionItem(IconData icon, String title, String subtitle, String amount, Color color) {
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 10),
+      color: Colors.white,
+      margin: const EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
         child: ListTile(
+          contentPadding: EdgeInsets.zero,
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withOpacity(0.4),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 26),

@@ -19,14 +19,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   List<Map<String, dynamic>> selectedPeople = [];
   String searchQuery = "";
   bool showExpenseDetails = false;
-  String selectedCategory = "Grocery";
+  String selectedCategory = "Select Category";
   List<String> selectedPayers = ["You"];
   Map<String, double> payerAmounts = {};
   double totalAmount = 0.0;
   String expenseDescription = "";
 
   final List<String> categories = [
-    "Grocery", "Medicine", "Food", "Rent", "Travel",
+     "Select Category", "Grocery", "Medicine", "Food", "Rent", "Travel",
     "Shopping", "Entertainment", "Utilities", "Others"
   ];
 
@@ -96,15 +96,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       payerAmounts: payerAmounts,
                       totalAmount: totalAmount,
                       expenseDescription: expenseDescription,
+                      selectedCategory: selectedCategory, // ✅ Correctly passing the category
                     ),
                   ),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid amount and Description.')),
+                  const SnackBar(content: Text('Please enter a valid amount and description.')),
                 );
               }
             },
+
             child: Text(
               "Save",
               style: TextStyle(

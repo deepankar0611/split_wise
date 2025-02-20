@@ -1,9 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:split_wise/Search/search_bar.dart';
 import 'package:split_wise/friends.dart';
 import 'package:split_wise/home_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../profile_overview.dart';
 
 class BottomBar extends StatefulWidget {
@@ -16,7 +18,7 @@ class BottomBar extends StatefulWidget {
 class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
-  int _selectedIndex = 0;
+  int _selectedIndex = 0; // Directly initializing without SharedPreferences
 
   final List<Widget> _screens = [
     const HomeScreen(),
@@ -28,7 +30,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _loadSelectedIndex();
+    _fetchUserData();
     _controller = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -45,28 +47,60 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  void _loadSelectedIndex() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _selectedIndex = prefs.getInt('selectedIndex') ?? 0;
-    });
-  }
-
-  void _saveSelectedIndex(int index) async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setInt('selectedIndex', index);
-  }
-
   void _onItemTapped(int index) {
     if (_selectedIndex != index) {
       _controller.reset();
       setState(() {
         _selectedIndex = index;
-        _saveSelectedIndex(index);
       });
       _controller.forward();
     }
   }
+
+  //fetching profile details from firebase
+
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
+  final SupabaseClient supabase = Supabase.instance.client;
+
+  Map<String, dynamic> userData = {
+    "name": "User",
+    "email": "",
+    "profileImageUrl": "",
+    "phone_number": "",
+    "amountToPay": "",
+    "amountToReceive": "",
+  };
+
+
+  Future<void> _fetchUserData() async {
+    if (userId == 'defaultUserId') return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        if (mounted) {
+          setState(() {
+            userData = {
+              "name": data["name"] ?? "User",
+              "email": data["email"] ?? "",
+              "profileImageUrl": data.containsKey("profileImageUrl")
+                  ? data["profileImageUrl"]
+                  : "",
+              "amountToPay": data["amountToPay"],
+              "amountToReceive": data["amountToReceive"],
+            };
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {

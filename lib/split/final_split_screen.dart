@@ -5,20 +5,23 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:slider_button/slider_button.dart';
 import 'package:lottie/lottie.dart';
-import 'dart:ui'; // 
+import 'dart:ui';
 
 class FinalSplitScreen extends StatefulWidget {
   final List<Map<String, dynamic>> selectedPeople;
   final Map<String, double> payerAmounts;
   final double totalAmount;
   final String expenseDescription;
+  final String selectedCategory;
+
+
 
   const FinalSplitScreen({
     super.key,
     required this.selectedPeople,
     required this.payerAmounts,
     required this.totalAmount,
-    required this.expenseDescription,
+    required this.expenseDescription, required this.selectedCategory,
   });
 
   @override
@@ -119,12 +122,14 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         'createdBy': user.uid,
         'description': widget.expenseDescription,
         'totalAmount': widget.totalAmount,
+        'selectedCategory': widget.selectedCategory, // Include category
         'participants': [
           user.uid,
           ...widget.selectedPeople.map((p) => p['uid'] ?? "Unknown")
         ],
         'createdAt': FieldValue.serverTimestamp(),
       });
+
 
       print("✅ Split created with ID: ${splitRef.id}");
 

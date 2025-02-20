@@ -7,7 +7,6 @@ import 'package:split_wise/profile_overview.dart';
 import 'package:split_wise/split/final_split_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:split_wise/Search/bottom_bar.dart';
-import 'package:split_wise/search_bar.dart';
 import 'package:split_wise/friends.dart';
 import 'package:split_wise/login_screen.dart';
 import 'package:split_wise/sign_up.dart';
