@@ -71,6 +71,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
           "Find Friends",
@@ -94,11 +95,14 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
         child: Column(
           children: [
             Material(
-              elevation: 4,
-              borderRadius: BorderRadius.circular(30),
+              elevation: 4, // Keep elevation for shadow, adjust as needed
+              shadowColor: Colors.grey.withOpacity(0.5), // Add shadow color and opacity
+              borderRadius: BorderRadius.circular(15), // Adjust borderRadius for rounded rectangle corners
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
+                  fillColor: Colors.white,
+                  filled: true,
                   hintText: "Search by name...",
                   prefixIcon: const Icon(Icons.search, color: Colors.blueGrey),
                   border: InputBorder.none,
