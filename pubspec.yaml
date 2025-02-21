@@ -28,7 +28,13 @@ dependencies:
   intl:
   google_nav_bar:
   curved_navigation_bar:
-  animate_do:
+  animate_do:         # For smooth animations
+  flutter_animate: ^4.5.0      # Additional animation capabilities
+  flutter_neumorphic: ^3.2.0
+  rtf_textfield: ^1.0.0 # For neumorphic design elements
+  shimmer: ^3.0.0
+  flutter_quill: ^9.3.0
+
 
 dev_dependencies:
   flutter_test:
