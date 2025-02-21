@@ -80,7 +80,9 @@ class _FriendSplitsScreenState extends State<FriendSplitsScreen> {
                   ),
                 ),
                 const SizedBox(height: 15),
-                Expanded(
+                // Constrain the height of the horizontal ListView to prevent overflow
+                SizedBox(
+                  height: 120, // Fixed height to match "Recent Priority Bills" cards
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: splits.length,
@@ -138,11 +140,12 @@ class _FriendSplitsScreenState extends State<FriendSplitsScreen> {
     }
 
     return Container(
-      width: 140,
+      width: 140, // Matches the width in your screenshot
+      height: 100, // Fixed height to match "Recent Priority Bills" cards
       margin: const EdgeInsets.only(right: 15),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Colors.white, // Changed to white to match your screenshot
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -157,17 +160,11 @@ class _FriendSplitsScreenState extends State<FriendSplitsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-              if (settled) const Icon(Icons.flash_on, color: Colors.amber, size: 16), // Using Icons.flash_on as a substitute for LucideIcons.zap
-            ],
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
           const SizedBox(height: 4),
           Text(
