@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'login.dart';
-import 'login_screen.dart';
+import 'login signup/login.dart';
+import 'login signup/login_screen.dart';
 
 class GetStarted extends StatefulWidget {
   const GetStarted({super.key});

@@ -1,10 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:split_wise/Search/bottom_bar.dart';
+import 'package:split_wise/bottom_bar.dart';
 import 'package:split_wise/setting.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:split_wise/login_screen.dart';
+import 'package:split_wise/login%20signup/login_screen.dart';
 
 
 void main() async {
