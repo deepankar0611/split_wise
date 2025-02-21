@@ -9,10 +9,10 @@ import 'dart:ui';
 
 class FinalSplitScreen extends StatefulWidget {
   final List<Map<String, dynamic>> selectedPeople;
-  final Map<String, double> payerAmounts;
+  final Map<String, double> payerAmounts; // Now expects UID keys
   final double totalAmount;
   final String expenseDescription;
-  final String selectedCategory;
+  final String selectedCategory; // Added for consistency with HomeScreen
 
   const FinalSplitScreen({
     super.key,
@@ -29,29 +29,9 @@ class FinalSplitScreen extends StatefulWidget {
 
 class _FinalSplitScreenState extends State<FinalSplitScreen> {
   bool _paymentFinalized = false;
-  bool _isDarkMode = false;
-  String currentUserName = "You";
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchCurrentUserName();
-  }
-
-  Future<void> _fetchCurrentUserName() async {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(FirebaseAuth.instance.currentUser!.uid)
-        .get();
-    if (userDoc.exists) {
-      setState(() {
-        currentUserName = userDoc['name'] ?? "You";
-      });
-    }
-  }
 
   double _calculateAmountPerPerson() {
-    return widget.totalAmount / (widget.selectedPeople.length + 1);
+    return widget.totalAmount / (widget.selectedPeople.length + 1); // +1 for "You"
   }
 
   void _handleFinalizePayment() {
@@ -59,17 +39,31 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       _paymentFinalized = true;
     });
 
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Unified list of participants with UIDs
     List<Map<String, dynamic>> people = [
-      {"name": currentUserName}
+      {"name": "You", "uid": user.uid}
     ]..addAll(widget.selectedPeople);
 
-    Map<String, double> finalPayerAmounts = Map.from(widget.payerAmounts);
-    print("Final Payer Amounts: $finalPayerAmounts");
+    // Convert payerAmounts to UID-based map
+    Map<String, double> finalPayerAmounts = {};
+    for (var person in people) {
+      String uid = person['uid'];
+      String name = person['name'];
+      finalPayerAmounts[uid] = name == "You" && widget.payerAmounts.isEmpty
+          ? widget.totalAmount
+          : widget.payerAmounts[name] ?? 0.0;
+    }
 
-    List<Map<String, dynamic>> transactions =
-    _calculateTransactions(people, _calculateAmountPerPerson(), finalPayerAmounts);
+    List<Map<String, dynamic>> transactions = _calculateTransactions(
+      people,
+      _calculateAmountPerPerson(),
+      finalPayerAmounts,
+    );
 
-    _uploadSplitData(transactions);
+    _uploadSplitData(people, finalPayerAmounts, transactions);
 
     Future.delayed(const Duration(milliseconds: 1400), () {
       if (mounted) {
@@ -94,98 +88,59 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         DocumentSnapshot receiverSnapshot = await transaction.get(receiverRef);
 
         if (!payerSnapshot.exists || !receiverSnapshot.exists) {
-          print("⚠ Payer or Receiver document does not exist!");
+          print("⚠ User document missing!");
           return;
         }
 
-        double currentPayerAmount =
-            (payerSnapshot.data() as Map<String, dynamic>?)?['amountToPay']?.toDouble() ?? 0.0;
-        double currentReceiverAmount =
-            (receiverSnapshot.data() as Map<String, dynamic>?)?['amountToReceive']?.toDouble() ?? 0.0;
+        double currentPayerAmount = (payerSnapshot.data() as Map<String, dynamic>?)?['amountToPay']?.toDouble() ?? 0.0;
+        double currentReceiverAmount = (receiverSnapshot.data() as Map<String, dynamic>?)?['amountToReceive']?.toDouble() ?? 0.0;
 
-        double updatedPayerAmount = currentPayerAmount + amount;
-        double updatedReceiverAmount = currentReceiverAmount + amount;
-
-        transaction.update(payerRef, {'amountToPay': updatedPayerAmount});
-        transaction.update(receiverRef, {'amountToReceive': updatedReceiverAmount});
-
-        print("✅ Updated Payer ($payerUid) - Amount to Pay: $updatedPayerAmount");
-        print("✅ Updated Receiver ($receiverUid) - Amount to Receive: $updatedReceiverAmount");
+        transaction.update(payerRef, {'amountToPay': currentPayerAmount + amount});
+        transaction.update(receiverRef, {'amountToReceive': currentReceiverAmount + amount});
       });
-
-      print("🔥 User balances updated successfully!");
     } catch (e) {
       print("⚠ Error updating balance: $e");
     }
   }
 
-  Future<void> _uploadSplitData(List<Map<String, dynamic>> transactions) async {
+  Future<void> _uploadSplitData(
+      List<Map<String, dynamic>> people,
+      Map<String, double> finalPayerAmounts,
+      List<Map<String, dynamic>> transactions,
+      ) async {
     try {
       FirebaseFirestore firestore = FirebaseFirestore.instance;
       User? user = FirebaseAuth.instance.currentUser;
-
       if (user == null) {
         print("⚠ User not logged in");
         return;
       }
 
-      // Prepare paidBy map with UIDs as keys
+      // Prepare the paidBy map with UIDs
       Map<String, double> paidBy = {};
-      for (var payerName in widget.payerAmounts.keys) {
-        String? payerUid = (payerName == currentUserName)
-            ? user.uid
-            : widget.selectedPeople.firstWhere(
-              (p) => p['name'] == payerName,
-          orElse: () => {'uid': null},
-        )['uid'];
-        if (payerUid != null) {
-          paidBy[payerUid] = widget.payerAmounts[payerName] ?? 0.0;
-        }
+      for (var person in people) {
+        paidBy[person['uid']] = finalPayerAmounts[person['uid']] ?? 0.0;
       }
 
       DocumentReference splitRef = await firestore.collection('splits').add({
         'createdBy': user.uid,
         'description': widget.expenseDescription,
         'totalAmount': widget.totalAmount,
-        'participants': [
-          user.uid,
-          ...widget.selectedPeople.map((p) => p['uid'] ?? "Unknown")
-        ],
+        'participants': people.map((p) => p['uid']).toList(),
         'createdAt': FieldValue.serverTimestamp(),
-        'category': widget.selectedCategory,
-        'paidBy': paidBy, // Store total paid amounts by UID
+        'paidBy': paidBy, // Store paid amounts at split level
+        'category': widget.selectedCategory, // Include category
       });
 
-      print("✅ Split created with ID: ${splitRef.id}, paidBy: $paidBy");
+      print("✅ Split created with ID: ${splitRef.id}, PaidBy: $paidBy");
 
       for (var transaction in transactions) {
-        String? payerName = transaction['from'];
-        String? receiverName = transaction['to'];
+        String payerName = transaction['from'];
+        String receiverName = transaction['to'];
         double amount = transaction['amount'];
 
-        print("🔹 Transaction: $payerName → $receiverName, Amount: $amount");
-
-        String? payerUid = (payerName == currentUserName)
-            ? user.uid
-            : widget.selectedPeople.firstWhere(
-              (p) => p['name'] == payerName,
-          orElse: () => {'uid': null},
-        )['uid'];
-
-        String? receiverUid = (receiverName == currentUserName)
-            ? user.uid
-            : widget.selectedPeople.firstWhere(
-              (p) => p['name'] == receiverName,
-          orElse: () => {'uid': null},
-        )['uid'];
-
-        if (payerUid == null || receiverUid == null) {
-          print("⚠ Missing payer/receiver UID for transaction: $transaction");
-          continue;
-        }
-
-        // Use the transaction-specific amount
-        print("✅ Transaction Amount for $payerName ($payerUid): $amount");
+        String payerUid = people.firstWhere((p) => p['name'] == payerName)['uid'];
+        String receiverUid = people.firstWhere((p) => p['name'] == receiverName)['uid'];
 
         await splitRef.collection('transactions').add({
           'from': payerUid,
@@ -193,8 +148,6 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
           'amount': amount,
           'timestamp': FieldValue.serverTimestamp(),
         });
-
-        print("🔥 Transaction uploaded: $payerName pays ₹$amount to $receiverName");
 
         await updateUserBalance(
           payerUid: payerUid,
@@ -210,17 +163,19 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
   }
 
   List<Map<String, dynamic>> _calculateTransactions(
-      List<Map<String, dynamic>> people, double amountPerPerson, Map<String, double> finalPayerAmounts) {
+      List<Map<String, dynamic>> people,
+      double amountPerPerson,
+      Map<String, double> finalPayerAmounts,
+      ) {
     List<Map<String, dynamic>> transactions = [];
-
     List<Map<String, dynamic>> balances = people.map((person) {
       return {
         'name': person['name'],
-        'balance': (finalPayerAmounts[person['name']] ?? 0.0) - amountPerPerson
+        'balance': (finalPayerAmounts[person['uid']] ?? 0.0) - amountPerPerson,
       };
     }).toList();
 
-    balances.sort((a, b) => (a['balance'] as double).compareTo((b['balance'] as double)));
+    balances.sort((a, b) => (a['balance'] as double).compareTo(b['balance'] as double));
 
     int i = 0, j = balances.length - 1;
     while (i < j) {
@@ -253,22 +208,28 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     var screenWidth = MediaQuery.of(context).size.width;
     var screenHeight = MediaQuery.of(context).size.height;
 
-    Map<String, double> finalPayerAmounts = Map.from(widget.payerAmounts);
+    User? user = FirebaseAuth.instance.currentUser;
     List<Map<String, dynamic>> allPeople = [
-      {"name": currentUserName}
+      {"name": "You", "uid": user?.uid ?? ""}
     ]..addAll(widget.selectedPeople);
 
-    List<Map<String, dynamic>> transactions =
-    _calculateTransactions(allPeople, amountPerPerson, finalPayerAmounts);
+    Map<String, double> finalPayerAmounts = {};
+    for (var person in allPeople) {
+      String uid = person['uid'];
+      String name = person['name'];
+      finalPayerAmounts[uid] = name == "You" && widget.payerAmounts.isEmpty
+          ? widget.totalAmount
+          : widget.payerAmounts[name] ?? 0.0;
+    }
 
-    double userAmount = finalPayerAmounts[currentUserName] ?? 0.0;
+    List<Map<String, dynamic>> transactions = _calculateTransactions(allPeople, amountPerPerson, finalPayerAmounts);
+
+    double userAmount = finalPayerAmounts[user?.uid ?? ""] ?? 0.0;
     double userToPay = amountPerPerson - userAmount;
-    double userToReceive = userAmount;
 
     return Scaffold(
-      backgroundColor: _isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: Text(widget.expenseDescription),
+        title: Center(child: Text(widget.expenseDescription)),
         titleTextStyle: TextStyle(
           color: Colors.white,
           fontSize: screenWidth > 600 ? 24 : 22,
@@ -278,20 +239,9 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         centerTitle: true,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
-            child: CupertinoSwitch(
-              value: _isDarkMode,
-              onChanged: (value) {
-                setState(() {
-                  _isDarkMode = value;
-                });
-              },
-              activeColor: Colors.teal.shade400,
-            ),
-          ),
-        ],
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(17)),
+        ),
       ),
       body: Stack(
         children: [
@@ -326,23 +276,17 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                   SizedBox(height: screenHeight * 0.03),
                   Text("Split Summary",
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.teal.shade300,
-                          fontWeight: FontWeight.bold,
-                          fontSize: screenWidth > 600 ? 32 : 28)),
+                          color: Colors.teal.shade300, fontWeight: FontWeight.bold, fontSize: screenWidth > 600 ? 32 : 28)),
                   SizedBox(height: screenHeight * 0.02),
                   _buildListView(screenWidth, allPeople, finalPayerAmounts, amountPerPerson),
                   SizedBox(height: screenHeight * 0.03),
                   Text("Transactions to Settle",
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.teal.shade300,
-                          fontWeight: FontWeight.bold,
-                          fontSize: screenWidth > 600 ? 28 : 24)),
+                          color: Colors.teal.shade300, fontWeight: FontWeight.bold, fontSize: screenWidth > 600 ? 28 : 24)),
                   SizedBox(height: screenHeight * 0.015),
                   _buildListView(screenWidth, transactions, {}, 0),
                   SizedBox(height: screenHeight * 0.025),
-                  Divider(
-                      thickness: 1.3,
-                      color: _isDarkMode ? Colors.grey.shade600 : Colors.black26),
+                  const Divider(thickness: 1.3, color: Colors.black26),
                   SizedBox(height: screenHeight * 0.02),
                   _buildFinalizeButton(),
                   SizedBox(height: screenHeight * 0.2),
@@ -363,11 +307,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                   BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
                     child: Center(
-                      child: Lottie.asset(
-                        'assets/animation/45.json',
-                        width: 200,
-                        height: 200,
-                      ),
+                      child: Lottie.asset('assets/animation/45.json', width: 200, height: 200),
                     ),
                   ),
               ],
@@ -383,15 +323,10 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       padding: EdgeInsets.all(width * 0.05),
       margin: EdgeInsets.only(bottom: width * 0.04),
       decoration: BoxDecoration(
-        color: _isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
-            spreadRadius: 2,
-            blurRadius: 7,
-            offset: const Offset(0, 5),
-          ),
+          BoxShadow(color: Colors.grey.withOpacity(0.15), spreadRadius: 2, blurRadius: 7, offset: const Offset(0, 5)),
         ],
       ),
       child: Column(
@@ -399,39 +334,27 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         children: [
           Text(label,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w500,
-                  fontSize: width > 600 ? 20 : 18)),
+                  color: color, fontWeight: FontWeight.w500, fontSize: width > 600 ? 20 : 18)),
           Padding(
             padding: EdgeInsets.only(top: width * 0.015),
             child: Stack(
               children: [
                 Container(
                   height: width * 0.075,
-                  decoration: BoxDecoration(
-                    color: bgColor.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  decoration: BoxDecoration(color: bgColor.withOpacity(0.3), borderRadius: BorderRadius.circular(8)),
                 ),
                 ClipRect(
                   child: Container(
                     height: width * 0.075,
-                    width: width * 0.4 *
-                        (amount / (label == "RECEIVE" ? 30000 : 10000)),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    width: width * 0.4 * (amount / (label == "RECEIVE" ? 30000 : 10000)),
+                    decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.symmetric(
-                      vertical: width * 0.015, horizontal: width * 0.025),
+                  padding: EdgeInsets.symmetric(vertical: width * 0.015, horizontal: width * 0.025),
                   child: Text("₹${amount.toStringAsFixed(0)}",
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: width > 600 ? 26 : 22)),
+                          color: Colors.green.shade900, fontWeight: FontWeight.w700, fontSize: width > 600 ? 26 : 22)),
                 ),
               ],
             ),
@@ -446,15 +369,10 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     return Container(
       padding: EdgeInsets.symmetric(vertical: width * 0.0375),
       decoration: BoxDecoration(
-        color: _isDarkMode ? Colors.grey.shade800 : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
-            spreadRadius: 2,
-            blurRadius: 7,
-            offset: const Offset(0, 5),
-          ),
+          BoxShadow(color: Colors.grey.withOpacity(0.15), spreadRadius: 2, blurRadius: 7, offset: const Offset(0, 5)),
         ],
       ),
       child: ListView.builder(
@@ -468,28 +386,17 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
 
   Widget _buildListTile(double width, Map<String, dynamic> item,
       Map<String, double> amounts, double amountPerPerson) {
-    if (item.containsKey('name')) { // For Split Summary
-      String payer = item["name"];
-      double amountPaid = amounts[payer] ?? 0.0;
+    if (item.containsKey('name')) { // Split Summary
+      String name = item["name"];
+      String uid = item["uid"];
+      double amountPaid = amounts[uid] ?? 0.0;
       double amountToPay = amountPerPerson - amountPaid;
-      String amountText;
-      TextStyle amountStyle;
-
-      if (amountToPay > 0) {
-        amountText = "-₹${amountToPay.toStringAsFixed(0)}";
-        amountStyle = TextStyle(
-          color: Colors.redAccent.shade700,
-          fontWeight: FontWeight.w700,
-          fontSize: width > 600 ? 20 : 17,
-        );
-      } else {
-        amountText = "+₹${(-amountToPay).toStringAsFixed(0)}";
-        amountStyle = TextStyle(
-          color: Colors.green.shade700,
-          fontWeight: FontWeight.w700,
-          fontSize: width > 600 ? 20 : 17,
-        );
-      }
+      String amountText = amountToPay > 0 ? "-₹${amountToPay.toStringAsFixed(0)}" : "+₹${(-amountToPay).toStringAsFixed(0)}";
+      TextStyle amountStyle = TextStyle(
+        color: amountToPay > 0 ? Colors.redAccent.shade700 : Colors.green.shade700,
+        fontWeight: FontWeight.w700,
+        fontSize: width > 600 ? 20 : 17,
+      );
 
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: width * 0.0375, vertical: width * 0.02),
@@ -497,69 +404,41 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
           contentPadding: EdgeInsets.zero,
           leading: Container(
             padding: EdgeInsets.all(width * 0.025),
-            decoration: BoxDecoration(
-              color: Colors.teal.shade50,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              payer == currentUserName ? LucideIcons.user : LucideIcons.users,
-              color: Colors.teal.shade700,
-              size: width * 0.075,
-            ),
+            decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(12)),
+            child: Icon(name == "You" ? LucideIcons.user : LucideIcons.users, color: Colors.teal.shade700, size: width * 0.075),
           ),
-          title: Text(
-            payer == currentUserName ? "You" : payer,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: width > 600 ? 22 : 18,
-              color: _isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
+          title: Text(name == "You" ? "You" : name,
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: width > 600 ? 22 : 18, color: Colors.black87)),
           subtitle: Text("Paid: ₹${amountPaid.toStringAsFixed(2)}",
-              style: TextStyle(
-                fontSize: width > 600 ? 18 : 15,
-                color: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-              )),
+              style: TextStyle(fontSize: width > 600 ? 18 : 15, color: Colors.grey.shade600)),
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(amountText, style: amountStyle),
-              Text(
-                amountToPay > 0 ? "To Pay" : "To Receive",
-                style: TextStyle(
-                    color: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
-                    fontSize: width > 600 ? 16 : 13),
-              ),
+              Text(amountToPay > 0 ? "To Pay" : "To Receive",
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: width > 600 ? 16 : 13)),
             ],
           ),
         ),
       );
-    } else { // For Transactions to Settle
+    } else { // Transactions to Settle
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: width * 0.0375, vertical: width * 0.025),
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Container(
             padding: EdgeInsets.all(width * 0.02),
-            decoration: BoxDecoration(
-              color: Colors.teal.shade50,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              LucideIcons.arrowRightCircle,
-              color: Colors.teal.shade700,
-              size: width * 0.065,
-            ),
+            decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(12)),
+            child: Icon(LucideIcons.arrowRightCircle, color: Colors.teal.shade700, size: width * 0.065),
           ),
-          title: Text(
-            "${item['from']} has to pay ₹${item['amount'].toStringAsFixed(2)} to ${item['to']}",
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: width > 600 ? 20 : 17,
-              color: _isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
+          title: Text("${item['from']} to ${item['to']}",
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: width > 600 ? 20 : 17, color: Colors.black87)),
+          trailing: Text("₹${item['amount'].toStringAsFixed(2)}",
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: width > 600 ? 20 : 17,
+                  color: Colors.green.shade700)),
         ),
       );
     }
