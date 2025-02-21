@@ -24,9 +24,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Map<String, double> payerAmounts = {};
   double totalAmount = 0.0;
   String expenseDescription = "";
+  String currentUserName = "You"; // Default name for current user
 
   final List<String> categories = [
-     "Select Category", "Grocery", "Medicine", "Food", "Rent", "Travel",
+    "Select Category", "Grocery", "Medicine", "Food", "Rent", "Travel",
     "Shopping", "Entertainment", "Utilities", "Others"
   ];
 
@@ -34,6 +35,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   void initState() {
     super.initState();
     _fetchFriends();
+    _fetchCurrentUserName(); // Fetch current user's name
   }
 
   Future<void> _fetchFriends() async {
@@ -52,6 +54,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       }).toList();
       displayFriends = List.from(friends);
     });
+  }
+
+  Future<void> _fetchCurrentUserName() async {
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      setState(() {
+        currentUserName = userDoc['name'] ?? "You";
+      });
+    }
   }
 
   void _toggleSelection(Map<String, dynamic> friend) {
@@ -88,15 +99,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           TextButton(
             onPressed: () {
               if (totalAmount != 0 && expenseDescription.isNotEmpty) {
+                // If payerAmounts is null or empty, assign totalAmount to current user
+                Map<String, double> finalPayerAmounts = Map.from(payerAmounts);
+                if (finalPayerAmounts.isEmpty) {
+                  finalPayerAmounts[currentUserName] = totalAmount;
+                  selectedPayers = [currentUserName];
+                }
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => FinalSplitScreen(
                       selectedPeople: selectedPeople,
-                      payerAmounts: payerAmounts,
+                      payerAmounts: finalPayerAmounts, // Pass adjusted payerAmounts
                       totalAmount: totalAmount,
                       expenseDescription: expenseDescription,
-                      selectedCategory: selectedCategory, // ✅ Correctly passing the category
+                      selectedCategory: selectedCategory,
                     ),
                   ),
                 );
@@ -106,7 +124,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 );
               }
             },
-
             child: Text(
               "Save",
               style: TextStyle(
@@ -292,8 +309,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               TextField(
                 decoration: InputDecoration(
                   hintText: "₹ 0.00",
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
                   prefixIcon: const Icon(Icons.currency_rupee),
                 ),
                 keyboardType: TextInputType.number,
@@ -307,8 +323,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               DropdownButtonFormField<String>(
                 value: selectedCategory,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
                   prefixIcon: const Icon(Icons.category),
                 ),
                 items: categories.map((category) {
@@ -327,8 +342,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               TextField(
                 decoration: InputDecoration(
                   hintText: "Add a description",
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
                   prefixIcon: const Icon(Icons.description),
                 ),
                 onChanged: (value) {

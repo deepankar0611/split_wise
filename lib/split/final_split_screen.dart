@@ -14,14 +14,13 @@ class FinalSplitScreen extends StatefulWidget {
   final String expenseDescription;
   final String selectedCategory;
 
-
-
   const FinalSplitScreen({
     super.key,
     required this.selectedPeople,
     required this.payerAmounts,
     required this.totalAmount,
-    required this.expenseDescription, required this.selectedCategory,
+    required this.expenseDescription,
+    required this.selectedCategory,
   });
 
   @override
@@ -31,6 +30,25 @@ class FinalSplitScreen extends StatefulWidget {
 class _FinalSplitScreenState extends State<FinalSplitScreen> {
   bool _paymentFinalized = false;
   bool _isDarkMode = false;
+  String currentUserName = "You";
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentUserName();
+  }
+
+  Future<void> _fetchCurrentUserName() async {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid)
+        .get();
+    if (userDoc.exists) {
+      setState(() {
+        currentUserName = userDoc['name'] ?? "You";
+      });
+    }
+  }
 
   double _calculateAmountPerPerson() {
     return widget.totalAmount / (widget.selectedPeople.length + 1);
@@ -41,19 +59,17 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       _paymentFinalized = true;
     });
 
-    // Create a unified list for people including "You"
-    List<Map<String, dynamic>> people = [{"name": "You"}]..addAll(widget.selectedPeople);
+    List<Map<String, dynamic>> people = [
+      {"name": currentUserName}
+    ]..addAll(widget.selectedPeople);
 
-    // Apply the same fallback logic for payer amounts if empty
-    Map<String, double> finalPayerAmounts = widget.payerAmounts.isEmpty
-        ? {"You": widget.totalAmount}
-        : Map.from(widget.payerAmounts);
+    Map<String, double> finalPayerAmounts = Map.from(widget.payerAmounts);
+    print("Final Payer Amounts: $finalPayerAmounts");
 
-    // Calculate transactions using the unified people list
-    List<Map<String, dynamic>> transactions = _calculateTransactions(
-        people, _calculateAmountPerPerson(), finalPayerAmounts);
+    List<Map<String, dynamic>> transactions =
+    _calculateTransactions(people, _calculateAmountPerPerson(), finalPayerAmounts);
 
-    _uploadSplitData(transactions); // Now only uploads once!
+    _uploadSplitData(transactions);
 
     Future.delayed(const Duration(milliseconds: 1400), () {
       if (mounted) {
@@ -77,16 +93,11 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         DocumentSnapshot payerSnapshot = await transaction.get(payerRef);
         DocumentSnapshot receiverSnapshot = await transaction.get(receiverRef);
 
-        if (!payerSnapshot.exists) {
-          print("⚠ Payer document does not exist!");
-          return;
-        }
-        if (!receiverSnapshot.exists) {
-          print("⚠ Receiver document does not exist!");
+        if (!payerSnapshot.exists || !receiverSnapshot.exists) {
+          print("⚠ Payer or Receiver document does not exist!");
           return;
         }
 
-        // Ensure correct type conversion
         double currentPayerAmount =
             (payerSnapshot.data() as Map<String, dynamic>?)?['amountToPay']?.toDouble() ?? 0.0;
         double currentReceiverAmount =
@@ -118,22 +129,34 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         return;
       }
 
+      // Prepare paidBy map with UIDs as keys
+      Map<String, double> paidBy = {};
+      for (var payerName in widget.payerAmounts.keys) {
+        String? payerUid = (payerName == currentUserName)
+            ? user.uid
+            : widget.selectedPeople.firstWhere(
+              (p) => p['name'] == payerName,
+          orElse: () => {'uid': null},
+        )['uid'];
+        if (payerUid != null) {
+          paidBy[payerUid] = widget.payerAmounts[payerName] ?? 0.0;
+        }
+      }
+
       DocumentReference splitRef = await firestore.collection('splits').add({
         'createdBy': user.uid,
         'description': widget.expenseDescription,
         'totalAmount': widget.totalAmount,
-        'selectedCategory': widget.selectedCategory, // Include category
         'participants': [
           user.uid,
           ...widget.selectedPeople.map((p) => p['uid'] ?? "Unknown")
         ],
         'createdAt': FieldValue.serverTimestamp(),
+        'category': widget.selectedCategory,
+        'paidBy': paidBy, // Store total paid amounts by UID
       });
 
-
-      print("✅ Split created with ID: ${splitRef.id}");
-
-      print("📌 payerAmounts Map: ${widget.payerAmounts}");
+      print("✅ Split created with ID: ${splitRef.id}, paidBy: $paidBy");
 
       for (var transaction in transactions) {
         String? payerName = transaction['from'];
@@ -142,14 +165,14 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
 
         print("🔹 Transaction: $payerName → $receiverName, Amount: $amount");
 
-        String? payerUid = (payerName == "You")
+        String? payerUid = (payerName == currentUserName)
             ? user.uid
             : widget.selectedPeople.firstWhere(
               (p) => p['name'] == payerName,
           orElse: () => {'uid': null},
         )['uid'];
 
-        String? receiverUid = (receiverName == "You")
+        String? receiverUid = (receiverName == currentUserName)
             ? user.uid
             : widget.selectedPeople.firstWhere(
               (p) => p['name'] == receiverName,
@@ -161,25 +184,17 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
           continue;
         }
 
-        // Fetch correct paid amount for current user
-        double paidAmount;
-        if (payerName == "You") {
-          paidAmount = widget.payerAmounts[user.displayName] ?? 0.0;
-        } else {
-          paidAmount = widget.payerAmounts[payerName] ?? 0.0;
-        }
-
-        print("✅ Paid Amount for $payerName ($payerUid): $paidAmount");
+        // Use the transaction-specific amount
+        print("✅ Transaction Amount for $payerName ($payerUid): $amount");
 
         await splitRef.collection('transactions').add({
           'from': payerUid,
           'to': receiverUid,
           'amount': amount,
-          'paidAmount': paidAmount,
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-        print("🔥 Transaction uploaded: $payerName paid ₹$paidAmount to $receiverName");
+        print("🔥 Transaction uploaded: $payerName pays ₹$amount to $receiverName");
 
         await updateUserBalance(
           payerUid: payerUid,
@@ -194,14 +209,10 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     }
   }
 
-  // START OF ALGORITHM - _calculateTransactions function
   List<Map<String, dynamic>> _calculateTransactions(
-      List<Map<String, dynamic>> people,
-      double amountPerPerson,
-      Map<String, double> finalPayerAmounts) {
+      List<Map<String, dynamic>> people, double amountPerPerson, Map<String, double> finalPayerAmounts) {
     List<Map<String, dynamic>> transactions = [];
 
-    // Calculate balances using the provided list of people
     List<Map<String, dynamic>> balances = people.map((person) {
       return {
         'name': person['name'],
@@ -209,7 +220,6 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       };
     }).toList();
 
-    // Sort balances to determine who owes and who receives
     balances.sort((a, b) => (a['balance'] as double).compareTo((b['balance'] as double)));
 
     int i = 0, j = balances.length - 1;
@@ -236,7 +246,6 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     print("✅ Transactions: $transactions");
     return transactions;
   }
-  // END OF ALGORITHM - _calculateTransactions function
 
   @override
   Widget build(BuildContext context) {
@@ -244,18 +253,15 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     var screenWidth = MediaQuery.of(context).size.width;
     var screenHeight = MediaQuery.of(context).size.height;
 
-    Map<String, double> finalPayerAmounts = widget.payerAmounts.isEmpty
-        ? {"You": widget.totalAmount}
-        : Map.from(widget.payerAmounts);
-
-    // Create a unified list for people including "You"
-    List<Map<String, dynamic>> allPeople = [{"name": "You"}]..addAll(widget.selectedPeople);
+    Map<String, double> finalPayerAmounts = Map.from(widget.payerAmounts);
+    List<Map<String, dynamic>> allPeople = [
+      {"name": currentUserName}
+    ]..addAll(widget.selectedPeople);
 
     List<Map<String, dynamic>> transactions =
     _calculateTransactions(allPeople, amountPerPerson, finalPayerAmounts);
 
-    // Calculate what 'You' has to pay or receive
-    double userAmount = finalPayerAmounts["You"] ?? 0.0;
+    double userAmount = finalPayerAmounts[currentUserName] ?? 0.0;
     double userToPay = amountPerPerson - userAmount;
     double userToReceive = userAmount;
 
@@ -350,9 +356,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
               children: [
                 SingleChildScrollView(
                   child: Column(
-                    children: [
-                      _buildFinalizeButton(),
-                    ],
+                    children: [_buildFinalizeButton()],
                   ),
                 ),
                 if (_paymentFinalized)
@@ -498,13 +502,13 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              payer == "You" ? LucideIcons.user : LucideIcons.users,
+              payer == currentUserName ? LucideIcons.user : LucideIcons.users,
               color: Colors.teal.shade700,
               size: width * 0.075,
             ),
           ),
           title: Text(
-            payer == "You" ? "You" : payer,
+            payer == currentUserName ? "You" : payer,
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: width > 600 ? 22 : 18,

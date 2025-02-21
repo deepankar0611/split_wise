@@ -13,76 +13,54 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
-  List<Map<String, dynamic>> historyList = [];
-
-
   Map<String, dynamic> userData = {
     "profileImageUrl": "",
     "amountToPay": "0",
     "amountToReceive": "0",
   };
 
+  // Categories from AddExpenseScreen
+  final List<String> categories = [
+    "Grocery",
+    "Medicine",
+    "Food",
+    "Rent",
+    "Travel",
+    "Shopping",
+    "Entertainment",
+    "Utilities",
+    "Others",
+  ];
+
+  // Map categories to LucideIcons and colors
+  final Map<String, Map<String, dynamic>> categoryIcons = {
+    "Grocery": {"icon": LucideIcons.shoppingCart, "color": Colors.teal},
+    "Medicine": {"icon": LucideIcons.pill, "color": Colors.red},
+    "Food": {"icon": LucideIcons.utensils, "color": Colors.orange},
+    "Rent": {"icon": LucideIcons.home, "color": Colors.brown},
+    "Travel": {"icon": LucideIcons.car, "color": Colors.blueAccent},
+    "Shopping": {"icon": LucideIcons.gift, "color": Colors.pinkAccent},
+    "Entertainment": {"icon": LucideIcons.film, "color": Colors.purple},
+    "Utilities": {"icon": LucideIcons.lightbulb, "color": Colors.blueGrey},
+    "Others": {"icon": LucideIcons.circleDollarSign, "color": Colors.grey},
+  };
+
   @override
   void initState() {
     super.initState();
-    fetchUserHistory();
     _fetchUserData();
   }
-
-  Future<List<Map<String, dynamic>>> fetchUserHistory() async {
-    try {
-      String? currentUserUid = FirebaseAuth.instance.currentUser?.uid;
-      if (currentUserUid == null) {
-        print("⚠ User is not logged in");
-        return [];
-      }
-
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('splits').get();
-      print("📌 Retrieved ${querySnapshot.docs.length} documents from Firestore");
-
-      List<Map<String, dynamic>> historyList = [];
-
-      for (QueryDocumentSnapshot doc in querySnapshot.docs) {
-        List<dynamic> participants = doc['participants'] ?? [];
-        print("📌 Document ID: ${doc.id}, Participants: $participants");
-
-        if (participants.contains(currentUserUid)) {
-          print("✅ User is a participant in: ${doc.id}");
-
-          historyList.add({
-            'description': doc['description'] ?? 'Unknown Bill',
-            'createdAt': (doc['createdAt'] as Timestamp).toDate().toString(),
-            'totalAmount': "\$${doc['totalAmount']?.toString() ?? '0.00'}",
-          });
-        }
-      }
-
-      print("✅ Final Fetched History List: $historyList");
-      return historyList;
-    } catch (e) {
-      print("❌ Error fetching history: $e");
-      return [];
-    }
-  }
-
-
-
 
   Future<void> _fetchUserData() async {
     if (userId == 'defaultUserId') return;
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
       if (doc.exists) {
         final data = doc.data() ?? {};
         if (mounted) {
           setState(() {
             userData = {
-              "profileImageUrl": data.containsKey("profileImageUrl")
-                  ? data["profileImageUrl"]
-                  : "",
+              "profileImageUrl": data.containsKey("profileImageUrl") ? data["profileImageUrl"] : "",
               "amountToPay": data["amountToPay"]?.toString() ?? "0",
               "amountToReceive": data["amountToReceive"]?.toString() ?? "0",
             };
@@ -94,54 +72,44 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> fetchUserSplits() async {
-    try {
-      FirebaseFirestore firestore = FirebaseFirestore.instance;
-      User? user = FirebaseAuth.instance.currentUser;
+  // Stream of total paid amount and last involvement timestamp by category
+  Stream<Map<String, Map<String, dynamic>>> _streamTotalPaidByCategory() {
+    return FirebaseFirestore.instance
+        .collection('splits')
+        .where('participants', arrayContains: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((QuerySnapshot snapshot) {
+      Map<String, Map<String, dynamic>> categoryData = {};
 
-      if (user == null) {
-        print("⚠ User not logged in");
-        return;
-      }
-
-      // Fetch all splits where the current user is a participant
-      QuerySnapshot splitSnapshot = await firestore
-          .collection('splits')
-          .where('participants', arrayContains: user.uid)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      List<Map<String, dynamic>> splitsData = [];
-
-      for (var splitDoc in splitSnapshot.docs) {
-        String splitId = splitDoc.id;
+      for (var splitDoc in snapshot.docs) {
         Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
+        String category = splitData['category'] ?? 'Others';
+        Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
+        double userPaidAmount = paidBy[userId]?.toDouble() ?? 0.0;
+        Timestamp? createdAt = splitData['createdAt'] as Timestamp?;
 
-        // Fetch transactions for this split
-        QuerySnapshot transactionSnapshot = await firestore
-            .collection('splits')
-            .doc(splitId)
-            .collection('transactions')
-            .orderBy('timestamp', descending: true)
-            .get();
+        if (userPaidAmount > 0) {
+          if (!categoryData.containsKey(category)) {
+            categoryData[category] = {
+              'totalPaid': 0.0,
+              'lastInvolved': createdAt?.toDate(),
+            };
+          }
 
-        List<Map<String, dynamic>> transactions = transactionSnapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
-
-        splitData['transactions'] = transactions;
-        splitsData.add(splitData);
+          categoryData[category]!['totalPaid'] = (categoryData[category]!['totalPaid'] as double) + userPaidAmount;
+          if (createdAt != null &&
+              (categoryData[category]!['lastInvolved'] == null ||
+                  createdAt.toDate().isAfter(categoryData[category]!['lastInvolved'] as DateTime))) {
+            categoryData[category]!['lastInvolved'] = createdAt.toDate();
+          }
+        }
       }
 
-      print("✅ Data fetched successfully");
-      print(splitsData); // Print fetched data for debugging
-
-    } catch (e) {
-      print("❌ Error fetching data: $e");
-    }
+      print("✅ Real-Time Category Data: $categoryData");
+      return categoryData;
+    });
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -386,10 +354,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
-  // The rest of your code (e.g., _buildBodyCard, _buildHistoryCardBox, etc.) remains unchanged
-  // Add them here as they were in your original code...
-
   Widget _buildBodyCard() {
     return Container(
       decoration: BoxDecoration(
@@ -409,7 +373,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHistoryCardBox() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('splits').snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('splits')
+          .where('participants', arrayContains: userId)
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
       builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -423,16 +391,6 @@ class _HomeScreenState extends State<HomeScreen> {
         if (currentUserUid == null) {
           return const Center(child: Text("User not logged in"));
         }
-
-        // Filter splits where the current user is a participant
-        List<Map<String, dynamic>> historyList = snapshot.data!.docs
-            .where((doc) => (doc['participants'] as List<dynamic>?)?.contains(currentUserUid) ?? false)
-            .map((doc) => {
-          'description': doc['description'] ?? 'Unknown Bill',
-          'createdAt': (doc['createdAt'] as Timestamp).toDate().toString(),
-          'totalAmount': "₹${doc['totalAmount']?.toString() ?? '0.00'}",
-        })
-            .toList();
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -465,15 +423,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 120,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: historyList.length,
+                  itemCount: snapshot.data!.docs.length,
                   itemBuilder: (context, index) {
-                    var history = historyList[index];
+                    var splitDoc = snapshot.data!.docs[index];
+                    Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
+                    Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
+                    double userPaidAmount = paidBy[currentUserUid]?.toDouble() ?? 0.0;
+                    double totalAmount = splitData['totalAmount']?.toDouble() ?? 0.0;
+                    int participantCount = (splitData['participants'] as List<dynamic>?)?.length ?? 1;
+                    double userShare = totalAmount / participantCount;
+                    double netAmount = userShare - userPaidAmount;
+                    String displayAmount = netAmount >= 0
+                        ? "-₹${netAmount.toStringAsFixed(2)}"
+                        : "+₹${(-netAmount).toStringAsFixed(2)}";
+
+                    print("Split ${splitDoc.id}: Paid = $userPaidAmount, Share = $userShare, Net = $netAmount");
+
                     return _buildHistoryItem(
-                      title: history['description'],
-                      date: history['createdAt'],
-                      amount: history['totalAmount'],
+                      title: splitData['description'] ?? 'Unknown Bill',
+                      date: (splitData['createdAt'] as Timestamp?)?.toDate().toString() ??
+                          DateTime.now().toString(),
+                      amount: displayAmount,
                       color: Colors.blueAccent,
-                      settled: index % 2 == 0,
+                      settled: netAmount.abs() < 0.01,
                     );
                   },
                 ),
@@ -485,8 +457,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
-
   Widget _buildHistoryItem({
     required String title,
     required String date,
@@ -494,16 +464,16 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color color,
     bool settled = false,
   }) {
-    // Convert the stored date string into DateTime object
     DateTime createdAtDate = DateTime.parse(date);
     Duration difference = DateTime.now().difference(createdAtDate);
 
-    // Determine the time display (e.g., "2 days ago", "1 week ago", "Just now")
     String timeAgo;
     if (difference.inDays > 0) {
       timeAgo = "${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago";
     } else if (difference.inHours > 0) {
       timeAgo = "${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago";
+    } else if (difference.inMinutes > 0) {
+      timeAgo = "${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago";
     } else {
       timeAgo = "Just now";
     }
@@ -529,17 +499,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
-              if (settled)
-                const Icon(LucideIcons.zap, color: Colors.amber, size: 16),
+              if (settled) const Icon(LucideIcons.zap, color: Colors.amber, size: 16),
             ],
           ),
           const SizedBox(height: 4),
           Text(
-            settled ? "Settled" : timeAgo,  // Updated this line
+            settled ? "Settled" : timeAgo,
             style: TextStyle(
-                color: settled ? Colors.green[600] : Colors.grey[600],
-                fontSize: 11,
-                fontWeight: FontWeight.w500
+              color: settled ? Colors.green[600] : Colors.grey[600],
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
             ),
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
@@ -563,41 +532,76 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
   Widget _buildTransactionList() {
-    final List<Map<String, dynamic>> transactions = [
-      {"icon": LucideIcons.car, "title": "Uber", "subtitle": "He paid \₹39.60", "amount": "-\₹19.80", "color": Colors.orange},
-      {"icon": LucideIcons.shoppingCart, "title": "Groceries", "subtitle": "You paid \₹124.16", "amount": "+\₹62.08", "color": Colors.teal},
-      {"icon": LucideIcons.mapPin, "title": "Adventures", "subtitle": "Shared group", "amount": "-\₹15.99", "color": Colors.blueAccent},
-      {"icon": LucideIcons.film, "title": "Cinema", "subtitle": "He paid \₹40.00", "amount": "-\₹20.00", "color": Colors.purple},
-      {"icon": LucideIcons.gift, "title": "Present for Andy", "subtitle": "He paid \₹64.30", "amount": "-\₹64.30", "color": Colors.pinkAccent},
-    ];
+    return StreamBuilder<Map<String, Map<String, dynamic>>>(
+      stream: _streamTotalPaidByCategory(),
+      builder: (context, AsyncSnapshot<Map<String, Map<String, dynamic>>> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Overview",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.0),
+            child: Text(
+              "No payments recorded.",
+              style: TextStyle(fontSize: 16, color: Colors.black87),
             ),
+          );
+        }
+
+        final categoryData = snapshot.data!;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Overview",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              Column(
+                children: categories.map((category) {
+                  double totalPaid = categoryData[category]?['totalPaid']?.toDouble() ?? 0.0;
+                  DateTime? lastInvolved = categoryData[category]?['lastInvolved'] as DateTime?;
+                  if (totalPaid > 0) {
+                    String subtitle = lastInvolved != null
+                        ? _formatTimeAgo(lastInvolved)
+                        : "Unknown date";
+                    return _buildTransactionItem(
+                      categoryIcons[category]!['icon'],
+                      category,
+                      subtitle,
+                      "₹${totalPaid.toStringAsFixed(2)}",
+                      categoryIcons[category]!['color'],
+                    );
+                  }
+                  return Container();
+                }).toList(),
+              ),
+            ],
           ),
-          Column(
-            children: transactions.map((transaction) => _buildTransactionItem(
-              transaction['icon'],
-              transaction['title'],
-              transaction['subtitle'],
-              transaction['amount'],
-              transaction['color'],
-            )).toList(),
-          ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  String _formatTimeAgo(DateTime date) {
+    Duration difference = DateTime.now().difference(date);
+    if (difference.inDays > 0) {
+      return "${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago";
+    } else if (difference.inHours > 0) {
+      return "${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago";
+    } else if (difference.inMinutes > 0) {
+      return "${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago";
+    } else {
+      return "Just now";
+    }
   }
 
   Widget _buildTransactionItem(IconData icon, String title, String subtitle, String amount, Color color) {
@@ -622,10 +626,10 @@ class _HomeScreenState extends State<HomeScreen> {
           subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
           trailing: Text(
             amount,
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: amount.startsWith('+') ? Colors.green : Colors.red,
+              color: Colors.green,
             ),
           ),
         ),
