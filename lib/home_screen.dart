@@ -82,12 +82,14 @@ class _HomeScreenState extends State<HomeScreen> {
         .map((QuerySnapshot snapshot) {
       Map<String, Map<String, dynamic>> categoryData = {};
 
+      print("🔍 All Splits for user $userId:");
       for (var splitDoc in snapshot.docs) {
         Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
         String category = splitData['category'] ?? 'Others';
         Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
         double userPaidAmount = paidBy[userId]?.toDouble() ?? 0.0;
         Timestamp? createdAt = splitData['createdAt'] as Timestamp?;
+        print("  Split ${splitDoc.id}: Category = $category, PaidBy[$userId] = $userPaidAmount, CreatedAt = ${createdAt?.toDate()}");
 
         if (userPaidAmount > 0) {
           if (!categoryData.containsKey(category)) {
@@ -540,17 +542,25 @@ class _HomeScreenState extends State<HomeScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.0),
-            child: Text(
-              "No payments recorded.",
-              style: TextStyle(fontSize: 16, color: Colors.black87),
-            ),
-          );
-        }
+        final categoryData = snapshot.hasData ? snapshot.data! : {};
 
-        final categoryData = snapshot.data!;
+        // Convert categories to a sorted list, including all categories
+        List<MapEntry<String, Map<String, dynamic>>> sortedCategories = categories
+            .map<MapEntry<String, Map<String, dynamic>>>((category) {
+          return MapEntry(
+            category,
+            categoryData[category] ?? {'totalPaid': 0.0, 'lastInvolved': null},
+          );
+        })
+            .toList()
+          ..sort((a, b) {
+            DateTime? timeA = a.value['lastInvolved'] as DateTime?;
+            DateTime? timeB = b.value['lastInvolved'] as DateTime?;
+            if (timeA == null && timeB == null) return 0;
+            if (timeA == null) return 1; // Nulls at the end
+            if (timeB == null) return -1;
+            return timeB.compareTo(timeA); // Most recent first
+          });
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -566,22 +576,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Column(
-                children: categories.map((category) {
-                  double totalPaid = categoryData[category]?['totalPaid']?.toDouble() ?? 0.0;
-                  DateTime? lastInvolved = categoryData[category]?['lastInvolved'] as DateTime?;
-                  if (totalPaid > 0) {
-                    String subtitle = lastInvolved != null
-                        ? _formatTimeAgo(lastInvolved)
-                        : "Unknown date";
-                    return _buildTransactionItem(
-                      categoryIcons[category]!['icon'],
-                      category,
-                      subtitle,
-                      "₹${totalPaid.toStringAsFixed(2)}",
-                      categoryIcons[category]!['color'],
-                    );
-                  }
-                  return Container();
+                children: sortedCategories.map((entry) {
+                  String category = entry.key;
+                  double totalPaid = entry.value['totalPaid']?.toDouble() ?? 0.0;
+                  DateTime? lastInvolved = entry.value['lastInvolved'] as DateTime?;
+                  String subtitle = lastInvolved != null ? _formatTimeAgo(lastInvolved) : "Never";
+                  return _buildTransactionItem(
+                    categoryIcons[category]!['icon'],
+                    category,
+                    subtitle,
+                    "₹${totalPaid.toStringAsFixed(2)}",
+                    categoryIcons[category]!['color'],
+                  );
                 }).toList(),
               ),
             ],
