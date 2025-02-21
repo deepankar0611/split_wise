@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:split_wise/Profile/manage_friends.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../Search/search_bar.dart';
@@ -321,7 +322,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min, // Ensures the row sizes to its content
               children: const [
-                Icon(Icons.logout, size: 19, color: Colors.black),
+                Icon(LucideIcons.logOut, size: 19, color: Colors.black),
                 SizedBox(width: 8),
                 Text("Logout", style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600, fontFamily: 'Poppins')),
               ],

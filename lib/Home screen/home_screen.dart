@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:split_wise/Home%20screen/notification.dart';
 
 import 'split details.dart';
@@ -71,6 +72,47 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print("Error fetching user data: $e");
+    }
+  }
+  Future<bool> _isSplitSettled(String splitId) async {
+    try {
+      // Check if there’s a split-level settled status
+      DocumentSnapshot splitSettleDoc = await FirebaseFirestore.instance
+          .collection('splits')
+          .doc(splitId)
+          .collection('settle')
+          .doc(userId)
+          .get();
+
+      if (splitSettleDoc.exists) {
+        bool splitSettled = splitSettleDoc.get('settled') as bool? ?? false;
+        print("Split-level settle status for $splitId, user $userId: $splitSettled");
+        return splitSettled;
+      }
+
+      // If no split-level status, check transaction-level settle status
+      QuerySnapshot transactionSettleSnapshot = await FirebaseFirestore.instance
+          .collection('splits')
+          .doc(splitId)
+          .collection('settle')
+          .doc(userId)
+          .collection('transactions')
+          .get();
+
+      if (transactionSettleSnapshot.docs.isEmpty) {
+        print("No transaction settle data found for split $splitId, user $userId");
+        return false;
+      }
+
+      // Check if ALL transactions are settled (settled: true)
+      bool allSettled = transactionSettleSnapshot.docs.every((doc) =>
+      doc.get('settled') as bool? ?? false);
+
+      print("Transaction-level settle status for split $splitId, user $userId: allSettled=$allSettled");
+      return allSettled;
+    } catch (e) {
+      print("Error checking settle status for split $splitId, user $userId: $e");
+      return false; // Default to false if there’s an error
     }
   }
 
@@ -438,7 +480,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         date: (splitData['createdAt'] as Timestamp?)?.toDate().toString() ?? DateTime.now().toString(),
                         amount: displayAmount,
                         color: Colors.blueAccent,
-                        settled: netAmount.abs() < 0.01,
+                        settled: netAmount.abs() < 0.01, splitId: splitDoc.id,
                       ),
                     );
                   },
@@ -456,8 +498,95 @@ class _HomeScreenState extends State<HomeScreen> {
     required String date,
     required String amount,
     required Color color,
+    required String splitId, // Added splitId parameter to fetch settle status
     bool settled = false,
   }) {
+    final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
+
+    return FutureBuilder<bool>(
+      future: _isSplitSettled(splitId), // Use the same logic as ExpenseHistoryDetailedScreen
+      builder: (context, settleSnapshot) {
+        if (settleSnapshot.connectionState == ConnectionState.waiting) {
+          return Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: Container(
+              width: 140,
+              margin: const EdgeInsets.only(right: 15),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+        if (settleSnapshot.hasError) {
+          print("Settle status error for split $splitId: ${settleSnapshot.error}");
+          return _buildUnsettledHistoryItem(title, date, amount, color, settled); // Fallback to unsettled view
+        }
+
+        bool isSettled = settleSnapshot.data ?? false;
+        print("Detailed settle status for split $splitId, user $userId: isSettled=$isSettled");
+
+        return Container(
+          width: 140,
+          margin: const EdgeInsets.only(right: 15),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                  if (isSettled) const Icon(LucideIcons.zap, color: Colors.amber, size: 16),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isSettled ? "Settled" : "Unsettled", // Show "Settled" if true, otherwise "Unsettled" or timeAgo
+                style: TextStyle(
+                  color: isSettled ? Colors.green[600] : Colors.grey[600],
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              if (!isSettled)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6.0),
+                  child: Text(
+                    amount,
+                    style: TextStyle(
+                      color: amount.startsWith('+') ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+// Helper method to build the unsettled history item (used during errors or for consistency)
+  Widget _buildUnsettledHistoryItem(String title, String date, String amount, Color color, bool settled) {
     DateTime createdAtDate = DateTime.parse(date);
     Duration difference = DateTime.now().difference(createdAtDate);
 
