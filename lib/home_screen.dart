@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:split_wise/notification.dart';
 
+import 'Helper/split details.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -384,7 +386,6 @@ class _HomeScreenState extends State<HomeScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(child: Text("No recent priority bills."));
         }
@@ -399,28 +400,14 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Recent Priority Bills",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
+              const Text("Recent Priority Bills", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      spreadRadius: 1,
-                      blurRadius: 7,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3))],
                 ),
                 height: 120,
                 child: ListView.builder(
@@ -435,19 +422,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     int participantCount = (splitData['participants'] as List<dynamic>?)?.length ?? 1;
                     double userShare = totalAmount / participantCount;
                     double netAmount = userShare - userPaidAmount;
-                    String displayAmount = netAmount >= 0
-                        ? "-₹${netAmount.toStringAsFixed(2)}"
-                        : "+₹${(-netAmount).toStringAsFixed(2)}";
+                    String displayAmount = netAmount >= 0 ? "-₹${netAmount.toStringAsFixed(2)}" : "+₹${(-netAmount).toStringAsFixed(2)}";
 
-                    print("Split ${splitDoc.id}: Paid = $userPaidAmount, Share = $userShare, Net = $netAmount");
-
-                    return _buildHistoryItem(
-                      title: splitData['description'] ?? 'Unknown Bill',
-                      date: (splitData['createdAt'] as Timestamp?)?.toDate().toString() ??
-                          DateTime.now().toString(),
-                      amount: displayAmount,
-                      color: Colors.blueAccent,
-                      settled: netAmount.abs() < 0.01,
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SplitDetailScreen(splitId: splitDoc.id),
+                          ),
+                        );
+                      },
+                      child: _buildHistoryItem(
+                        title: splitData['description'] ?? 'Unknown Bill',
+                        date: (splitData['createdAt'] as Timestamp?)?.toDate().toString() ?? DateTime.now().toString(),
+                        amount: displayAmount,
+                        color: Colors.blueAccent,
+                        settled: netAmount.abs() < 0.01,
+                      ),
                     );
                   },
                 ),

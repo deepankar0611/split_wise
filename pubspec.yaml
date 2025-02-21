@@ -28,6 +28,7 @@ dependencies:
   intl:
   google_nav_bar:
   curved_navigation_bar:
+  animate_do:
 
 dev_dependencies:
   flutter_test:

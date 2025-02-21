@@ -1,16 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:split_wise/get_started.dart';
-import 'package:split_wise/profile_overview.dart';
-import 'package:split_wise/split/final_split_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:split_wise/Search/bottom_bar.dart';
-import 'package:split_wise/friends.dart';
+import 'package:split_wise/setting.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:split_wise/login_screen.dart';
-import 'package:split_wise/sign_up.dart';
-import 'package:split_wise/splash_screen.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,7 +38,7 @@ class MyApp extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasData) {
-            return const BottomBar(); // User is logged in
+            return  BottomBar(); // User is logged in
           } else {
             return LoginPage(); // User is not logged in, show login page
           }
