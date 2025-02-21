@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:split_wise/home_screen.dart';
+import 'package:split_wise/Home%20screen/home_screen.dart';
 
 class Notificationn extends StatefulWidget {
   const Notificationn({super.key});

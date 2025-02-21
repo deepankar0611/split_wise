@@ -2,11 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:split_wise/friends.dart';
-import 'package:split_wise/home_screen.dart';
+import 'package:split_wise/split/friends.dart';
+import 'package:split_wise/Home%20screen/home_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../profile_overview.dart';
-import '../search_bar.dart';
+import 'Profile/profile_overview.dart';
+import 'Search/search_bar.dart';
 
 class BottomBar extends StatefulWidget {
   const BottomBar({super.key});

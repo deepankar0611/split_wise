@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:split_wise/login_screen.dart';
+import 'package:split_wise/login%20signup/login_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   @override

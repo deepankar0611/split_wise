@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:split_wise/welcome.dart'; // Import your destination page
+import 'package:split_wise/Home%20screen/welcome.dart'; // Import your destination page
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);

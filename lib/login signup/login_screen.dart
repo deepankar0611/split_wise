@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:split_wise/Search/bottom_bar.dart';
-import 'package:split_wise/sign_up.dart';
-import 'home_screen.dart';
-import 'Helper/local.dart';
+import 'package:split_wise/bottom_bar.dart';
+import 'package:split_wise/login%20signup/sign_up.dart';
+import '../Home screen/home_screen.dart';
+import '../Helper/local.dart';
 
 class LoginPage extends StatefulWidget {
   LoginPage({Key? key, this.title}) : super(key: key);

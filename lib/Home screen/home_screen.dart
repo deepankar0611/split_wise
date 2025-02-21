@@ -2,9 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:split_wise/notification.dart';
+import 'package:split_wise/Home%20screen/notification.dart';
 
-import 'Helper/split details.dart';
+import 'split details.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
