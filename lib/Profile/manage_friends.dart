@@ -5,8 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import 'frind split screen.dart';
- // Ensure this import is correct
+import 'all expense history detals.dart';
+
 
 class FriendsList extends StatefulWidget {
   const FriendsList({super.key});
@@ -115,10 +115,10 @@ class _FriendsListState extends State<FriendsList> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => FriendSplitsScreen(friendUid: friendUid),
+                        builder: (context) => ExpenseHistoryDetailedScreen(friendUid: friendUid),
                       ),
                     ).then((value) {
-                      print("Returned from FriendSplitsScreen"); // Debug return
+                      print("Returned from ExpenseHistoryDetailedScreen"); // Debug return
                     }).catchError((error) {
                       print("Navigation error: $error"); // Debug errors
                     });
