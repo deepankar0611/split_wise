@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:split_wise/Profile/manage_friends.dart';
+import 'package:split_wise/Profile/setting.dart'; // Add this import
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../Search/search_bar.dart';
 import '../login signup/login_screen.dart';
 import 'all expense history detals.dart';
-import 'editprofile.dart'; // Ensure this import is present
+import 'editprofile.dart';
+
 class ProfileOverviewScreen extends StatefulWidget {
   const ProfileOverviewScreen({super.key});
 
@@ -245,9 +247,9 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     var screenHeight = MediaQuery.of(context).size.height;
 
     return SizedBox(
-      height: 300, // Adjust height as needed to accommodate all cards
+      height: 300,
       child: ListView.builder(
-        itemCount: 3, // Three options: Manage Friends, Expense History, Settings
+        itemCount: 3,
         itemBuilder: (context, index) {
           switch (index) {
             case 0:
@@ -272,7 +274,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ExpenseHistoryDetailedScreen()),
+                    MaterialPageRoute(builder: (context) => const ExpenseHistoryDetailedScreen(showFilter: '',)),
                   );
                 },
                 iconColor: const Color(0xFF7B1FA2),
@@ -285,7 +287,10 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 icon: Icons.settings,
                 title: "Settings",
                 onTap: () {
-                  Navigator.pushNamed(context, '/settings');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  );
                 },
                 iconColor: const Color(0xFF00897B),
                 backgroundColor: Colors.white,
@@ -315,16 +320,21 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
           borderRadius: BorderRadius.circular(15),
         ),
         child: Padding(
-          padding: EdgeInsets.all(screenWidth * 0.04), // Match padding with other cards
+          padding: EdgeInsets.all(screenWidth * 0.04),
           child: GestureDetector(
             onTap: () => _logout(context),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min, // Ensures the row sizes to its content
+              mainAxisSize: MainAxisSize.min,
               children: const [
                 Icon(LucideIcons.logOut, size: 19, color: Colors.black),
                 SizedBox(width: 8),
-                Text("Logout", style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600, fontFamily: 'Poppins')),
+                Text("Logout",
+                    style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Poppins')),
               ],
             ),
           ),

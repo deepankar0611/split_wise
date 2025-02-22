@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:split_wise/Home%20screen/notification.dart';
-
 import '../Helper/spendanalyser.dart';
+import '../Profile/all expense history detals.dart';
 import 'split details.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -287,140 +287,96 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildReceiveCard() {
     double amountToReceive = double.tryParse(userData["amountToReceive"]) ?? 0;
-    return Container(
-      width: 170,
-      height: 120,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 7,
-            offset: const Offset(0, 3),
+    return GestureDetector(
+      onTap: () {
+        print("Tapped Receive Card, navigating to splits where user is receiver in transactions");
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExpenseHistoryDetailedScreen(isReceiver: true, showFilter: '',),
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Align(
-            alignment: Alignment.topRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                "Receive",
-                style: TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 9,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+        );
+      },
+      child: Container(
+        width: 170,
+        height: 120,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3))],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                child: const Text("Receive", style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: 9)),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 6.0),
-            child: Text(
-              "₹${amountToReceive.toInt()}",
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+            Padding(
+              padding: const EdgeInsets.only(left: 6.0),
+              child: Text("₹${amountToReceive.toInt()}", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black)),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
-            child: Text(
-              "will get",
-              style: TextStyle(
-                color: Colors.green,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
+            const Padding(
+              padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
+              child: Text("will get", style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13)),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPayCard() {
     double amountToPay = double.tryParse(userData["amountToPay"]) ?? 0;
-    return Container(
-      width: 170,
-      height: 120,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 7,
-            offset: const Offset(0, 3),
+    return GestureDetector(
+      onTap: () {
+        print("Tapped Pay Card, navigating to splits where user is payer in transactions");
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExpenseHistoryDetailedScreen(isPayer: true, showFilter: '',),
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Align(
-            alignment: Alignment.topRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                "Pay",
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 9,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+        );
+      },
+      child: Container(
+        width: 170,
+        height: 120,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3))],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(color: Colors.red.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                child: const Text("Pay", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: 9)),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 6.0),
-            child: Text(
-              "₹${amountToPay.toInt()}",
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+            Padding(
+              padding: const EdgeInsets.only(left: 6.0),
+              child: Text("₹${amountToPay.toInt()}", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black)),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
-            child: Text(
-              "will pay",
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
+            const Padding(
+              padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
+              child: Text("will pay", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 13)),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -551,9 +507,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 return GestureDetector( // Wrap Container with GestureDetector
                   onTap: index == 0 ? () { // Condition to check for the first image (index 0)
                     Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const SpendAnalyzerScreen()), // Navigate to SpendAnalyzerScreen
-                    );
+                        context,
+                        MaterialPageRoute(builder: (context) => const SpendAnalyzerScreen()));
                   } : null, // No action for other images
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 8),

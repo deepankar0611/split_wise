@@ -2,13 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
-import 'package:split_wise/split/friends.dart';
 import 'package:split_wise/Home%20screen/home_screen.dart';
+import 'package:split_wise/Profile/profile_overview.dart';
+import 'package:split_wise/Search/search_bar.dart';
+import 'package:split_wise/split/friends.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'Profile/profile_overview.dart';
-import 'Search/search_bar.dart';
 
 class BottomBar extends StatefulWidget {
   const BottomBar({super.key});
@@ -21,7 +20,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   late AnimationController _controller;
   late Animation<double> _animation;
   int _selectedIndex = 0;
-
   final ScrollController _scrollController = ScrollController();
   bool _isBottomBarVisible = true;
   bool _handlingScroll = false;
@@ -42,7 +40,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
     ));
 
     _screens.addAll([
-      HomeScreen(scrollController: _scrollController),
+      HomeScreen(scrollController: _scrollController), // Pass ScrollController here
       const FriendsListScreen(),
       const AddExpenseScreen(payerAmounts: {}),
       const ProfileOverviewScreen(),
@@ -61,27 +59,25 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   void _onScrollDirectionChange() {
     if (_handlingScroll) return;
 
-    print("Scroll direction changed!"); // ADD THIS LINE
-
+    print("Scroll direction changed!");
     if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
-      print("Scrolling DOWN"); // ADD THIS LINE
+      print("Scrolling DOWN");
       if (_isBottomBarVisible) {
         _hideBottomBar();
       }
     }
     if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
-      print("Scrolling UP"); // ADD THIS LINE
+      print("Scrolling UP");
       if (!_isBottomBarVisible) {
         _showBottomBar();
       }
     }
   }
 
-
   void _hideBottomBar() {
     _handlingScroll = true;
     if (_isBottomBarVisible) {
-      print("Hiding Bottom Bar FUNCTION CALLED"); // ADD THIS LINE
+      print("Hiding Bottom Bar FUNCTION CALLED");
       setState(() {
         _isBottomBarVisible = false;
       });
@@ -94,7 +90,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   void _showBottomBar() {
     _handlingScroll = true;
     if (!_isBottomBarVisible) {
-      print("Showing Bottom Bar FUNCTION CALLED"); // ADD THIS LINE
+      print("Showing Bottom Bar FUNCTION CALLED");
       setState(() {
         _isBottomBarVisible = true;
       });
@@ -103,7 +99,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
       _handlingScroll = false;
     });
   }
-
 
   void _onItemTapped(int index) {
     if (_selectedIndex != index) {
@@ -118,9 +113,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
     }
   }
 
-
-  //fetching profile details from firebase
-
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
   final SupabaseClient supabase = Supabase.instance.client;
 
@@ -133,35 +125,26 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
     "amountToReceive": "",
   };
 
-
   Future<void> _fetchUserData() async {
     if (userId == 'defaultUserId') return;
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-      if (doc.exists) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (doc.exists && mounted) {
         final data = doc.data() ?? {};
-        if (mounted) {
-          setState(() {
-            userData = {
-              "name": data["name"] ?? "User",
-              "email": data["email"] ?? "",
-              "profileImageUrl": data.containsKey("profileImageUrl")
-                  ? data["profileImageUrl"]
-                  : "",
-              "amountToPay": data["amountToPay"],
-              "amountToReceive": data["amountToReceive"],
-            };
-          });
-        }
+        setState(() {
+          userData = {
+            "name": data["name"] ?? "User",
+            "email": data["email"] ?? "",
+            "profileImageUrl": data.containsKey("profileImageUrl") ? data["profileImageUrl"] : "",
+            "amountToPay": data["amountToPay"]?.toString() ?? "0",
+            "amountToReceive": data["amountToReceive"]?.toString() ?? "0",
+          };
+        });
       }
     } catch (e) {
       print("Error fetching user data: $e");
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +177,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
       ),
       bottomNavigationBar: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        height: _isBottomBarVisible ? kBottomNavigationBarHeight : 0.0, // Animate height
+        height: _isBottomBarVisible ? kBottomNavigationBarHeight : 0.0,
         curve: Curves.easeInOut,
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,

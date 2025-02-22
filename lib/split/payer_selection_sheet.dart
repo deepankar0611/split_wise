@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PayerSelectionSheet extends StatefulWidget {
   final List<Map<String, dynamic>> friends;
@@ -25,6 +27,9 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
   late Map<String, double> payerAmounts;
   double remainingAmount = 0.0;
   Map<String, String?> errorMessages = {};
+  String? currentUserProfilePic; // State variable for current user's profile picture
+
+  final String userId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState() {
@@ -32,6 +37,31 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
     selectedPayers = List.from(widget.selectedPayers);
     payerAmounts = Map.from(widget.payerAmounts);
     _updateRemainingAmount();
+    _fetchCurrentUserProfilePic(); // Fetch current user's profile picture
+  }
+
+  Future<void> _fetchCurrentUserProfilePic() async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        String? profileUrl = data['profileImageUrl'] as String?; // Explicitly cast to String?
+        print("Current user profile picture URL: $profileUrl"); // Debug print to verify URL
+        setState(() {
+          currentUserProfilePic = profileUrl?.isNotEmpty == true ? profileUrl : ""; // Set only if non-empty
+        });
+      } else {
+        print("User document does not exist for UID: $userId");
+        setState(() {
+          currentUserProfilePic = ""; // Default to empty string if user doc doesn’t exist
+        });
+      }
+    } catch (e) {
+      print("Error fetching current user's profile picture: $e");
+      setState(() {
+        currentUserProfilePic = ""; // Default to empty string on error
+      });
+    }
   }
 
   void _updateRemainingAmount() {
@@ -46,7 +76,7 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 50, // Increased toolbarHeight for a more prominent AppBar
-        backgroundColor: Color(0xFF1A2E39), // Teal AppBar color
+        backgroundColor: const Color(0xFF1A2E39), // Teal AppBar color
         shape: const RoundedRectangleBorder( // Rounded bottom corners for AppBar
           borderRadius: BorderRadius.only(
             bottomLeft: Radius.circular(25),
@@ -96,11 +126,14 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                               children: [
                                 CircleAvatar(
                                   radius: 25,
-                                  backgroundImage: friend["profilePic"]?.isNotEmpty == true
+                                  backgroundImage: friend["name"] == "You" && currentUserProfilePic != null && currentUserProfilePic!.isNotEmpty
+                                      ? NetworkImage(currentUserProfilePic!)
+                                      : friend["profilePic"]?.isNotEmpty == true
                                       ? NetworkImage(friend["profilePic"])
                                       : null,
                                   backgroundColor: Colors.grey.shade300,
-                                  child: (friend["profilePic"]?.isEmpty ?? true)
+                                  child: (friend["name"] == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
+                                      (friend["profilePic"]?.isEmpty ?? true)
                                       ? Text(
                                     friend["name"][0].toUpperCase(),
                                     style: const TextStyle(
@@ -248,9 +281,12 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                 children: [
                   CircleAvatar(
                     radius: 22,
-                    backgroundImage: friend["profilePic"].isNotEmpty ? NetworkImage(friend["profilePic"]) : null,
+                    backgroundImage: payer == "You" && currentUserProfilePic != null && currentUserProfilePic!.isNotEmpty
+                        ? NetworkImage(currentUserProfilePic!)
+                        : friend["profilePic"].isNotEmpty ? NetworkImage(friend["profilePic"]) : null,
                     backgroundColor: Colors.grey.shade300,
-                    child: friend["profilePic"].isEmpty
+                    child: (payer == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
+                        friend["profilePic"].isEmpty
                         ? Text(payer[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
                         : null,
                   ),
@@ -273,14 +309,14 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                     child: TextField(
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.right,
-                      style: TextStyle(fontSize: 16, color: Colors.black87), // **Contrast color for input text**
+                      style: TextStyle(fontSize: 16, color: Colors.black87), // Contrast color for input text
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
                         prefixText: "₹ ",
-                        prefixStyle: TextStyle(color: Colors.teal.shade900, fontWeight: FontWeight.bold), // **Contrast color for prefix**
+                        prefixStyle: TextStyle(color: Colors.teal.shade900, fontWeight: FontWeight.bold), // Contrast color for prefix
                         hintText: "0.00",
-                        hintStyle: TextStyle(color: Colors.grey[500]), // **Slightly darker hint color**
+                        hintStyle: TextStyle(color: Colors.grey[500]), // Slightly darker hint color
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -328,12 +364,12 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
               children: [
                 Text(
                   "Total Paid: ₹ ${payerAmounts.values.fold(0.0, (sum, amount) => sum + amount).toStringAsFixed(2)} of ₹ ${widget.totalAmount.toStringAsFixed(2)}",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87), // **Contrast color for Total Paid**
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87), // Contrast color for Total Paid
                 ),
                 Text(
                   remainingAmount <= 0 ? "₹ 0.00 left" : "₹ ${remainingAmount.toStringAsFixed(2)} left",
                   style: TextStyle(
-                    color: remainingAmount <= 0 ? Colors.green.shade900 : Colors.red.shade900, // **Darker contrast color for "left" text**
+                    color: remainingAmount <= 0 ? Colors.green.shade900 : Colors.red.shade900, // Darker contrast color for "left" text
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
