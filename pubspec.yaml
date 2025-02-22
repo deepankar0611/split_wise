@@ -33,7 +33,7 @@ dependencies:
   flutter_neumorphic: ^3.2.0
   rtf_textfield: ^1.0.0 # For neumorphic design elements
   shimmer: ^3.0.0
-  flutter_quill: ^9.3.0
+  fl_chart: ^0.68.0
 
 
 dev_dependencies:

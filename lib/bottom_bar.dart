@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:split_wise/split/friends.dart';
 import 'package:split_wise/Home%20screen/home_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,14 +20,13 @@ class BottomBar extends StatefulWidget {
 class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
-  int _selectedIndex = 0; // Directly initializing without SharedPreferences
+  int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const FriendsListScreen(),
-    const AddExpenseScreen(payerAmounts: {}),
-    const ProfileOverviewScreen(),
-  ];
+  final ScrollController _scrollController = ScrollController();
+  bool _isBottomBarVisible = true;
+  bool _handlingScroll = false;
+
+  final List<Widget> _screens = [];
 
   @override
   void initState() {
@@ -39,23 +40,84 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
       parent: _controller,
       curve: Curves.easeInOut,
     ));
+
+    _screens.addAll([
+      HomeScreen(scrollController: _scrollController),
+      const FriendsListScreen(),
+      const AddExpenseScreen(payerAmounts: {}),
+      const ProfileOverviewScreen(),
+    ]);
+
+    _scrollController.addListener(_onScrollDirectionChange);
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
+
+  void _onScrollDirectionChange() {
+    if (_handlingScroll) return;
+
+    print("Scroll direction changed!"); // ADD THIS LINE
+
+    if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
+      print("Scrolling DOWN"); // ADD THIS LINE
+      if (_isBottomBarVisible) {
+        _hideBottomBar();
+      }
+    }
+    if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
+      print("Scrolling UP"); // ADD THIS LINE
+      if (!_isBottomBarVisible) {
+        _showBottomBar();
+      }
+    }
+  }
+
+
+  void _hideBottomBar() {
+    _handlingScroll = true;
+    if (_isBottomBarVisible) {
+      print("Hiding Bottom Bar FUNCTION CALLED"); // ADD THIS LINE
+      setState(() {
+        _isBottomBarVisible = false;
+      });
+    }
+    Future.delayed(const Duration(milliseconds: 200), () {
+      _handlingScroll = false;
+    });
+  }
+
+  void _showBottomBar() {
+    _handlingScroll = true;
+    if (!_isBottomBarVisible) {
+      print("Showing Bottom Bar FUNCTION CALLED"); // ADD THIS LINE
+      setState(() {
+        _isBottomBarVisible = true;
+      });
+    }
+    Future.delayed(const Duration(milliseconds: 200), () {
+      _handlingScroll = false;
+    });
+  }
+
 
   void _onItemTapped(int index) {
     if (_selectedIndex != index) {
       _controller.reset();
       setState(() {
         _selectedIndex = index;
+        _showBottomBar();
       });
       _controller.forward();
+    } else {
+      _showBottomBar();
     }
   }
+
 
   //fetching profile details from firebase
 
@@ -101,7 +163,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   }
 
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -131,38 +192,43 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF1A2E39), // Deep blue-gray for selected items
-        unselectedItemColor: Colors.grey[400], // Lighter gray for unselected
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        elevation: 8,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.home, color: Color(0xFF0288D1)), // Rich Sky Blue
-            activeIcon: Icon(CupertinoIcons.home, color: Color(0xFF1A2E39)),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.person_2, color: Color(0xFF7B1FA2)), // Vibrant Purple
-            activeIcon: Icon(CupertinoIcons.person_2, color: Color(0xFF1A2E39)),
-            label: 'Friends',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.add_circled, color: Color(0xFFD81B60)), // Rich Pink
-            activeIcon: Icon(CupertinoIcons.add_circled, color: Color(0xFF1A2E39)),
-            label: 'Add',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF00897B)), // Deep Teal
-            activeIcon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF1A2E39)),
-            label: 'Profile',
-          ),
-        ],
+      bottomNavigationBar: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        height: _isBottomBarVisible ? kBottomNavigationBarHeight : 0.0, // Animate height
+        curve: Curves.easeInOut,
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: const Color(0xFF1A2E39),
+          unselectedItemColor: Colors.grey[400],
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          elevation: 8,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.home, color: Color(0xFF0288D1)),
+              activeIcon: Icon(CupertinoIcons.home, color: Color(0xFF1A2E39)),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.person_2, color: Color(0xFF7B1FA2)),
+              activeIcon: Icon(CupertinoIcons.person_2, color: Color(0xFF1A2E39)),
+              label: 'Friends',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.add_circled, color: Color(0xFFD81B60)),
+              activeIcon: Icon(CupertinoIcons.add_circled, color: Color(0xFF1A2E39)),
+              label: 'Add',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF00897B)),
+              activeIcon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF1A2E39)),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }

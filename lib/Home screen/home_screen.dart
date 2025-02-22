@@ -5,10 +5,13 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:split_wise/Home%20screen/notification.dart';
 
+import '../Helper/spendanalyser.dart';
 import 'split details.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, required this.scrollController, });
+
+  final ScrollController scrollController; // Receive scrollController
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -46,6 +49,15 @@ class _HomeScreenState extends State<HomeScreen> {
     "Entertainment": {"icon": LucideIcons.film, "color": Colors.purple},
     "Utilities": {"icon": LucideIcons.lightbulb, "color": Colors.blueGrey},
     "Others": {"icon": LucideIcons.circleDollarSign, "color": Colors.grey},
+  };
+
+  // Map for service logos and colors (based on the screenshot)
+  final Map<String, Map<String, dynamic>> serviceIcons = {
+    "Swiggy": {"icon": LucideIcons.fastForward, "color": Colors.orange}, // Example icon
+    "Zepto": {"icon": LucideIcons.zap, "color": Colors.purple}, // Example icon
+    "Instamart": {"icon": LucideIcons.shoppingBag, "color": Colors.deepPurple}, // Example icon
+    "Blinkit": {"icon": LucideIcons.clock, "color": Colors.yellow}, // Example icon
+    "Zomato": {"icon": LucideIcons.utensils, "color": Colors.red}, // Example icon
   };
 
   @override
@@ -187,8 +199,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF234567),
+
       body: CustomScrollView(
+        controller: widget.scrollController, // Use widget.scrollController here
         slivers: <Widget>[
           SliverAppBar(
             pinned: true,
@@ -206,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   background: Padding(
                     padding: const EdgeInsets.only(top: 90.0),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
                       child: Transform.translate(
                         offset: Offset(0, cardAnimationProgress * 70),
                         child: Transform.scale(
@@ -423,6 +436,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHistoryCardBox(),
           const SizedBox(height: 20),
+          _buildExclusiveFeatureCard(), // New stack card for "Auto-fetch & Split Bills"
+          const SizedBox(height: 20),
           _buildTransactionList(),
         ],
       ),
@@ -506,6 +521,69 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildExclusiveFeatureCard() {
+    final List<String> card = [
+      "assets/logo/spend.jpg",
+      "assets/images/expense.png",
+      "assets/images/expense.png",
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "EXCLUSIVE FEATURE",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.2, // Reduced to 20% of screen height
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: card.length,
+              itemBuilder: (context, index) {
+                return GestureDetector( // Wrap Container with GestureDetector
+                  onTap: index == 0 ? () { // Condition to check for the first image (index 0)
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SpendAnalyzerScreen()), // Navigate to SpendAnalyzerScreen
+                    );
+                  } : null, // No action for other images
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    width: MediaQuery.of(context).size.width * 0.9, // Width set to 90% of screen width for each card
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      image: DecorationImage(
+                        image: AssetImage(card[index]), // Use the dynamic path from the list
+                        fit: BoxFit.cover,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2), // Fixed typo: withOpacity instead of withValues
+                          spreadRadius: 1,
+                          blurRadius: 7,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   Widget _buildHistoryItem({
     required String title,
     required String date,
@@ -546,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
         print("Real-time settle status for split $splitId, user $userId: isSettled=$isSettled");
 
         return Container(
-          width: 140,
+          width: 100,
           margin: const EdgeInsets.only(right: 15),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
