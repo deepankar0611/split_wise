@@ -249,12 +249,15 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                           ? FirebaseFirestore.instance
                           .collection('splits')
                           .where('participants', arrayContainsAny: [userId, widget.friendUid!])
+                          .orderBy('createdAt', descending: true) // Sort by createdAt in descending order
                           .snapshots()
                           : FirebaseFirestore.instance
                           .collection('splits')
                           .where('participants', arrayContains: userId)
+                          .orderBy('createdAt', descending: true) // Sort by createdAt in descending order
                           .snapshots(),
                       builder: (context, snapshot) {
+                        print("Snapshot connection state: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, hasError: ${snapshot.hasError}, error: ${snapshot.error}"); // Debug print
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return _buildShimmerGrid(screenWidth, screenHeight);
                         }
@@ -268,6 +271,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                           );
                         }
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          print("No data or empty snapshot: friendUid=${widget.friendUid}, userId=$userId"); // Debug print
                           return Center(
                             child: Text(
                               widget.friendUid != null
@@ -279,6 +283,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                         }
 
                         var splits = snapshot.data!.docs;
+                        print("Found ${splits.length} splits"); // Debug print
                         List<QueryDocumentSnapshot> filteredSplits = splits.where((splitDoc) {
                           Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
                           List<dynamic> participants = splitData['participants'] as List<dynamic>;
@@ -302,6 +307,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                         }).toList();
 
                         if (filteredSplits.isEmpty) {
+                          print("Filtered splits empty: searchQuery=$searchQuery, showSettled=$showSettled"); // Debug print
                           return Center(
                             child: Text(
                               widget.friendUid != null
@@ -335,9 +341,12 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                             String? creatorId = splitData['createdBy'] as String?; // Get the creator ID
                             String createdTime = (splitData['createdAt'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? "Unknown";
 
-                            return FutureBuilder<bool>(
-                              future: _isSplitSettled(splitId), // Check if all transactions are settled
+                            return StreamBuilder<bool>(
+                              stream: _isSplitSettledStream(splitId), // Use stream for real-time updates
                               builder: (context, settleSnapshot) {
+                                print("Settle snapshot for split $splitId: connectionState=${settleSnapshot.connectionState}, "
+                                    "hasData=${settleSnapshot.hasData}, hasError=${settleSnapshot.hasError}, "
+                                    "data=${settleSnapshot.data}"); // Debug print
                                 if (settleSnapshot.connectionState == ConnectionState.waiting) {
                                   return _buildShimmerCard(screenWidth, screenHeight); // Show shimmer while loading settle status
                                 }
@@ -349,13 +358,13 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                                     createdTime,
                                     userPaidAmount.toStringAsFixed(2),
                                     totalAmount.toStringAsFixed(2),
-                                    displayAmount,
+                                    displayAmount, // Show netAmount on error
                                     isSettledFinancially,
                                   );
                                 }
 
-                                bool isSettled = settleSnapshot.data ?? false;
-                                print("Detailed settle status for split $splitId: isSettled=$isSettled, "
+                                bool isSettled = settleSnapshot.data ?? false; // Default to false if data is null
+                                print("Real-time settle status for split $splitId: isSettled=$isSettled, "
                                     "financiallySettled=$isSettledFinancially, "
                                     "user=$userId"); // Debug print
 
@@ -368,7 +377,10 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                                         MaterialPageRoute(
                                           builder: (context) => SplitDetailScreen(splitId: splitId),
                                         ),
-                                      );
+                                      ).then((_) {
+                                        // Force refresh after returning from SplitDetailScreen
+                                        setState(() {});
+                                      });
                                     },
                                     child: Stack(
                                       children: [
@@ -378,8 +390,8 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                                           createdTime,
                                           userPaidAmount.toStringAsFixed(2),
                                           totalAmount.toStringAsFixed(2),
-                                          isSettled ? "Settled" : displayAmount, // Show "Settled" only if all transactions are settled
-                                          isSettledFinancially || isSettled, // Update settled status to include manual settlement
+                                          isSettled ? "Settled" : displayAmount, // Show "Settled" or netAmount
+                                          isSettledFinancially || isSettled, // Update settled status
                                         ),
                                         Positioned(
                                           top: 8,
@@ -654,23 +666,49 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
     );
   }
 
-  Future<bool> _isSplitSettled(String splitId) async {
+  // Method for real-time settle status using a stream
+  Stream<bool> _isSplitSettledStream(String splitId) {
+    return FirebaseFirestore.instance
+        .collection('splits')
+        .doc(splitId)
+        .collection('settle')
+        .doc(userId)
+        .snapshots()
+        .map((snapshot) {
+      // Handle both existing and non-existent documents
+      bool isSettled = snapshot.exists ? (snapshot.get('settled') as bool? ?? false) : false;
+      print("Stream settle status for split $splitId, user $userId: exists=${snapshot.exists}, isSettled=$isSettled");
+      return isSettled;
+    }).handleError((error, stackTrace) {
+      print("Error in stream for split $splitId, user $userId: $error");
+      return false; // Default to false on error, ensuring unsettled state
+    });
+  }
+
+  // Helper method to check if all transactions are settled (updated for efficiency)
+  Future<bool> _checkTransactionSettledStatus(String splitId) async {
     try {
-      // Check if there’s a split-level settled status
-      DocumentSnapshot splitSettleDoc = await FirebaseFirestore.instance
+      // Check if the settle document exists to avoid unnecessary transaction queries
+      DocumentSnapshot settleDoc = await FirebaseFirestore.instance
           .collection('splits')
           .doc(splitId)
           .collection('settle')
           .doc(userId)
           .get();
 
-      if (splitSettleDoc.exists) {
-        bool splitSettled = splitSettleDoc.get('settled') as bool? ?? false;
+      if (!settleDoc.exists) {
+        print("No settle document found for split $splitId, user $userId, defaulting to unsettled");
+        return false; // No settle data means unsettled
+      }
+
+      // If split-level settled exists, use it
+      bool? splitSettled = settleDoc.get('settled') as bool?;
+      if (splitSettled != null) {
         print("Split-level settle status for $splitId, user $userId: $splitSettled");
         return splitSettled;
       }
 
-      // If no split-level status, check transaction-level settle status
+      // Otherwise, check transaction-level settle status
       QuerySnapshot transactionSettleSnapshot = await FirebaseFirestore.instance
           .collection('splits')
           .doc(splitId)
@@ -691,8 +729,8 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
       print("Transaction-level settle status for split $splitId, user $userId: allSettled=$allSettled");
       return allSettled;
     } catch (e) {
-      print("Error checking settle status for split $splitId, user $userId: $e");
-      return false; // Default to false if there’s an error
+      print("Error checking transaction settle status for split $splitId, user $userId: $e");
+      return false; // Default to false if there’s an error, ensuring unsettled state
     }
   }
 }
