@@ -68,12 +68,9 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
   void _calculateBalances() {
     totalReceive = 0.0;
     totalPay = 0.0;
-    Map<String, dynamic> paidBy =
-        splitData!['paidBy'] as Map<String, dynamic>? ?? {};
-    List<String> participants =
-    List<String>.from(splitData!['participants']);
-    double splitAmount =
-        (splitData!['totalAmount'] as num).toDouble() / participants.length;
+    Map<String, dynamic> paidBy = splitData!['paidBy'] as Map<String, dynamic>? ?? {};
+    List<String> participants = List<String>.from(splitData!['participants']);
+    double splitAmount = (splitData!['totalAmount'] as num).toDouble() / participants.length;
 
     if (participants.contains(userId)) {
       double paidAmount = (paidBy[userId] as num?)?.toDouble() ?? 0.0;
@@ -91,12 +88,42 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
 
   Future<String> _getUserName(String uid) async {
     try {
-      DocumentSnapshot userDoc =
-      await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      return (userDoc.data() as Map<String, dynamic>?)?['name'] ??
-          "Unknown ($uid)";
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      return (userDoc.data() as Map<String, dynamic>?)?['name'] ?? "Unknown ($uid)";
     } catch (e) {
       return "Unknown ($uid)";
+    }
+  }
+
+  Future<void> _sendReminder() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('splits')
+          .doc(widget.splitId)
+          .collection('reminders')
+          .add({
+        'sentBy': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'participants': splitData!['participants'],
+        'splitTitle': splitData!['title'] ?? 'Split Payment',
+        'splitId': widget.splitId,
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Reminder sent successfully!", style: GoogleFonts.poppins()),
+          backgroundColor: Colors.green.shade600,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print("Error sending reminder: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to send reminder: $e", style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
     }
   }
 
@@ -111,12 +138,15 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           ? const Center(child: CircularProgressIndicator(color: Colors.grey))
           : splitData == null
           ? const Center(
-          child: Text("Split not found",
-              style: TextStyle(fontSize: 20, color: Colors.grey)))
+        child: Text(
+          "Split not found",
+          style: TextStyle(fontSize: 20, color: Colors.grey),
+        ),
+      )
           : Stack(
         children: [
           Container(
-            margin: EdgeInsets.only(bottom: screenHeight * 0.02),
+            margin: EdgeInsets.only(top: screenHeight * 0.02),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
@@ -130,22 +160,17 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.05,
-                        vertical: screenHeight * 0.01),
+                      horizontal: screenWidth * 0.05,
+                      vertical: screenHeight * 0.01,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        FadeInUp(
-                            child: _buildSummaryCard(
-                                screenWidth, screenHeight)),
+                        FadeInUp(child: _buildSummaryCard(screenWidth, screenHeight)),
                         SizedBox(height: screenHeight * 0.02),
-                        FadeInUp(
-                            child: _buildParticipantsCard(
-                                screenWidth)),
+                        FadeInUp(child: _buildParticipantsCard(screenWidth)),
                         SizedBox(height: screenHeight * 0.02),
-                        FadeInUp(
-                            child: _buildTransactionsCard(
-                                screenWidth)),
+                        FadeInUp(child: _buildTransactionsCard(screenWidth)),
                         SizedBox(height: screenHeight * 0.02),
                       ],
                     ),
@@ -174,24 +199,22 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       backgroundColor: Colors.white,
       flexibleSpace: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-          final collapseProgress = (screenHeight * 0.28 - constraints.biggest.height) /
-              (screenHeight * 0.28 - kToolbarHeight);
+          final collapseProgress =
+              (screenHeight * 0.28 - constraints.biggest.height) / (screenHeight * 0.28 - kToolbarHeight);
           final cardAnimationProgress = collapseProgress.clamp(0.0, 1.0);
 
           return FlexibleSpaceBar(
-            titlePadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
+            titlePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
             title: null,
             background: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF234567),
-              ),
+              decoration: const BoxDecoration(color: Color(0xFF234567)),
               child: Padding(
                 padding: EdgeInsets.only(top: screenHeight * 0.1),
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.08,
-                      vertical: screenHeight * 0.01),
+                    horizontal: screenWidth * 0.08,
+                    vertical: screenHeight * 0.01,
+                  ),
                   child: Transform.translate(
                     offset: Offset(0, cardAnimationProgress * screenHeight * 0.06),
                     child: Transform.scale(
@@ -219,17 +242,14 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       color: Colors.white,
       child: Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.04, vertical: screenHeight * 0.02),
+        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.02),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               "Total Amount",
-              style: TextStyle(
-                  fontSize: screenWidth > 600 ? 20 : 16,
-                  color: Colors.grey.shade700),
+              style: TextStyle(fontSize: screenWidth > 600 ? 20 : 16, color: Colors.grey.shade700),
             ),
             Text(
               "₹${(splitData!['totalAmount'] as num?)?.toStringAsFixed(2) ?? '0.00'}",
@@ -245,20 +265,15 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
               children: [
                 Column(
                   children: [
-                    Text("Receive",
-                        style:
-                        TextStyle(fontSize: 14, color: Colors.green.shade700)),
+                    Text("Receive", style: TextStyle(fontSize: 14, color: Colors.green.shade700)),
                     Text("₹${totalPay.toStringAsFixed(2)}",
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
                 ),
-                Container(
-                    height: 20,
-                    child: VerticalDivider(color: Colors.grey.shade300)),
+                Container(height: 20, child: VerticalDivider(color: Colors.grey.shade300)),
                 Column(
                   children: [
-                    Text("Pay",
-                        style: TextStyle(fontSize: 14, color: Colors.red.shade700)),
+                    Text("Pay", style: TextStyle(fontSize: 14, color: Colors.red.shade700)),
                     Text("₹${totalReceive.toStringAsFixed(2)}",
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
@@ -278,8 +293,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         : "Unknown Date";
 
     double totalAmount = (splitData!['totalAmount'] as num).toDouble();
-    int participantCount =
-        (splitData!['participants'] as List<dynamic>).length;
+    int participantCount = (splitData!['participants'] as List<dynamic>).length;
     double amountPerPerson = totalAmount / participantCount;
 
     return Card(
@@ -287,23 +301,21 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       shadowColor: Colors.grey.shade200.withOpacity(0.3),
       color: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(25), bottomRight: Radius.circular(25)),
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(25), bottomRight: Radius.circular(25)),
       ),
       child: Padding(
         padding: EdgeInsets.all(screenWidth * 0.04),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildCardHeader(
-                screenWidth, LucideIcons.info, "Summary", null),
+            _buildCardHeader(screenWidth, LucideIcons.info, "Summary", null),
             SizedBox(height: screenWidth * 0.03),
             _buildSummaryRow("Category", splitData!['category'] ?? "Others",
                 Colors.grey.shade600, LucideIcons.tag),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: _buildEnhancedSummaryRow("Created By",
-                  userNames[splitData!['createdBy']] ?? "Unknown", LucideIcons.user),
+              child: _buildEnhancedSummaryRow(
+                  "Created By", userNames[splitData!['createdBy']] ?? "Unknown", LucideIcons.user),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -311,16 +323,52 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
             ),
             _buildSummaryRow("Participants", "${splitData!['participants'].length}",
                 Colors.grey.shade600, LucideIcons.users),
-            _buildSummaryRow("Amount Per Person",
-                "₹${amountPerPerson.toStringAsFixed(2)}", Colors.grey.shade600, LucideIcons.dollarSign),
+            _buildSummaryRow("Amount Per Person", "₹${amountPerPerson.toStringAsFixed(2)}",
+                Colors.grey.shade600, LucideIcons.dollarSign),
+            SizedBox(height: screenWidth * 0.03),
+            Center(child: _buildSendReminderButton(screenWidth)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSummaryRow(
-      String label, String value, Color color, IconData iconData) {
+  Widget _buildSendReminderButton(double screenWidth) {
+    return GestureDetector(
+      onTap: splitData!['participants'].length > 1 ? _sendReminder : null,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenWidth * 0.02),
+        decoration: BoxDecoration(
+          color: const Color(0xFF234567),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade200.withOpacity(0.5),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(LucideIcons.bell, color: Colors.white, size: screenWidth * 0.05),
+            SizedBox(width: screenWidth * 0.015),
+            Text(
+              "Send Reminder",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: screenWidth * 0.04,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value, Color color, IconData iconData) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -332,10 +380,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
             flex: 1,
             child: Text(
               label,
-              style: TextStyle(
-                  fontSize: 16,
-                  color: color,
-                  fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 16, color: color, fontWeight: FontWeight.w500),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -344,9 +389,10 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
             child: Text(
               value,
               style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
             ),
@@ -356,8 +402,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     );
   }
 
-  Widget _buildEnhancedSummaryRow(
-      String label, String value, IconData iconData) {
+  Widget _buildEnhancedSummaryRow(String label, String value, IconData iconData) {
     List<String> dateTimeParts = value.split(', ');
     String datePart = dateTimeParts.isNotEmpty ? dateTimeParts[0] : "";
     String timePart = dateTimeParts.length > 1 ? dateTimeParts[1] : "";
@@ -369,10 +414,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade700,
-              fontWeight: FontWeight.w500),
+          style: TextStyle(fontSize: 16, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
         ),
         const Spacer(),
         RichText(
@@ -380,15 +422,10 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           text: TextSpan(
             style: const TextStyle(fontSize: 16, color: Colors.black87),
             children: <TextSpan>[
-              TextSpan(
-                  text: datePart,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              TextSpan(text: datePart, style: const TextStyle(fontWeight: FontWeight.w600)),
               if (timePart.isNotEmpty)
-                TextSpan(
-                    text: ', ', style: TextStyle(color: Colors.grey.shade700)),
-              TextSpan(
-                  text: timePart,
-                  style: TextStyle(color: Colors.grey.shade700)),
+                TextSpan(text: ', ', style: TextStyle(color: Colors.grey.shade700)),
+              TextSpan(text: timePart, style: TextStyle(color: Colors.grey.shade700)),
             ],
           ),
         ),
@@ -397,10 +434,8 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
   }
 
   Widget _buildParticipantsCard(double screenWidth) {
-    Map<String, dynamic> paidBy =
-        splitData!['paidBy'] as Map<String, dynamic>? ?? {};
-    List<String> participants =
-    List<String>.from(splitData!['participants']);
+    Map<String, dynamic> paidBy = splitData!['paidBy'] as Map<String, dynamic>? ?? {};
+    List<String> participants = List<String>.from(splitData!['participants']);
 
     return Card(
       elevation: 10,
@@ -412,8 +447,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildCardHeader(
-                screenWidth, LucideIcons.users, "Participants", null),
+            _buildCardHeader(screenWidth, LucideIcons.users, "Participants", null),
             SizedBox(height: screenWidth * 0.03),
             ...participants.asMap().entries.map((entry) {
               int index = entry.key;
@@ -442,20 +476,13 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     );
   }
 
-  Widget _buildParticipantRow(
-      double screenWidth,
-      String uid,
-      String name,
-      double paidAmount,
-      double share,
-      String? profileImageUrl,
-      ) {
+  Widget _buildParticipantRow(double screenWidth, String uid, String name, double paidAmount,
+      double share, String? profileImageUrl) {
     double netAmount = share - paidAmount;
-    Color amountColor =
-    netAmount > 0 ? Colors.red.shade600 : Colors.green.shade600;
+    Color amountColor = netAmount > 0 ? Colors.red.shade600 : Colors.green.shade600;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(top: 8),
       padding: EdgeInsets.all(screenWidth * 0.03),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -473,7 +500,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           CircleAvatar(
             radius: screenWidth * 0.06,
             backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
-                ? NetworkImage(profileImageUrl!)
+                ? NetworkImage(profileImageUrl)
                 : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
             backgroundColor: Colors.grey.shade200,
             onBackgroundImageError: (exception, stackTrace) {
@@ -488,9 +515,10 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                 Text(
                   name,
                   style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
                 Text(
                   "Paid: ₹${paidAmount.toStringAsFixed(2)}",
@@ -503,11 +531,12 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                netAmount > 0
-                    ? "-₹${netAmount.toStringAsFixed(2)}"
-                    : "+₹${(-netAmount).toStringAsFixed(2)}",
+                netAmount > 0 ? "-₹${netAmount.toStringAsFixed(2)}" : "+₹${(-netAmount).toStringAsFixed(2)}",
                 style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold, color: amountColor),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: amountColor,
+                ),
               ),
               Text(
                 netAmount > 0 ? "Owes" : "Gets",
@@ -549,8 +578,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     );
   }
 
-  Widget _buildCardHeader(
-      double screenWidth, IconData icon, String title, Widget? trailing) {
+  Widget _buildCardHeader(double screenWidth, IconData icon, String title, Widget? trailing) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -558,11 +586,10 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           children: [
             _buildIconContainer(screenWidth, icon),
             SizedBox(width: screenWidth * 0.02),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
           ],
         ),
         if (trailing != null) trailing,
@@ -580,6 +607,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       child: Icon(icon, color: Colors.black87, size: 24),
     );
   }
+
   StreamBuilder<DocumentSnapshot<Object?>> _buildSettleButton() {
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
@@ -596,25 +624,21 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           return const SizedBox.shrink();
         }
         return GestureDetector(
-          onTap: isSplitSettled || !isUserInvolvedInTransactions()
-              ? null
-              : () => _settleSplit(isSplitSettled),
+          onTap: isSplitSettled || !isUserInvolvedInTransactions() ? null : () => _settleSplit(isSplitSettled),
           child: Text(
             isSplitSettled ? "Settled" : "Settle",
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: isSplitSettled || !isUserInvolvedInTransactions()
-                  ? Colors.grey
-                  : Colors.blue,
+              color: isSplitSettled || !isUserInvolvedInTransactions() ? Colors.grey : Colors.blue,
             ),
           ),
         );
       },
     );
   }
-  StreamBuilder<QuerySnapshot<Object?>> _buildTransactionsList(
-      double screenWidth) {
+
+  StreamBuilder<QuerySnapshot<Object?>> _buildTransactionsList(double screenWidth) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('splits')
@@ -624,8 +648,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator(color: Colors.grey));
+          return const Center(child: CircularProgressIndicator(color: Colors.grey));
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return _buildEmptyTransactions();
@@ -637,18 +660,24 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
             final fromName = userNames[data['from']] ?? "Unknown";
             final toName = userNames[data['to']] ?? "Unknown";
             final amount = (data['amount'] as num).toDouble();
-            final isUserInvolved =
-                data['from'] == userId || data['to'] == userId;
+            final isUserInvolved = data['from'] == userId || data['to'] == userId;
 
             return FadeInUp(
               child: _buildTransactionRow(
-                  screenWidth, fromName, toName, amount, transactionId, isUserInvolved),
+                screenWidth,
+                fromName,
+                toName,
+                amount,
+                transactionId,
+                isUserInvolved,
+              ),
             );
           }).toList(),
         );
       },
     );
   }
+
   Container _buildEmptyTransactions() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -663,10 +692,11 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       ),
     );
   }
-  Widget _buildTransactionRow(double screenWidth, String fromName, String toName,
-      double amount, String transactionId, bool isUserInvolved) {
+
+  Widget _buildTransactionRow(double screenWidth, String fromName, String toName, double amount,
+      String transactionId, bool isUserInvolved) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(top: 8),
       padding: EdgeInsets.all(screenWidth * 0.03),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -687,13 +717,18 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(fromName,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87)),
-                Text("to $toName",
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                Text(
+                  fromName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  "to $toName",
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
               ],
             ),
           ),
@@ -702,54 +737,53 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       ),
     );
   }
+
   Widget _buildSettleStatus(String transactionId, bool isUserInvolved, double amount) {
     return isUserInvolved
         ? FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance
-            .collection('splits')
-            .doc(widget.splitId)
-            .collection('settle')
-            .doc(userId)
-            .collection('transactions')
-            .doc(transactionId)
-            .get(),
-        builder: (context, settleSnapshot) {
-          String settleStatus = "";
-          if (settleSnapshot.connectionState == ConnectionState.waiting) {
-            settleStatus = "Loading...";
-          } else if (settleSnapshot.hasError) {
-            settleStatus = "Error";
-          } else if (settleSnapshot.hasData && settleSnapshot.data!.exists) {
-            settleStatus = (settleSnapshot.data!.get('settled') as bool? ?? false)
-                ? "Settled"
-                : "";
-          }
-          return _buildAmountAndSettleStatusColumn(amount, settleStatus);
-        })
+      future: FirebaseFirestore.instance
+          .collection('splits')
+          .doc(widget.splitId)
+          .collection('settle')
+          .doc(userId)
+          .collection('transactions')
+          .doc(transactionId)
+          .get(),
+      builder: (context, settleSnapshot) {
+        String settleStatus = "";
+        if (settleSnapshot.connectionState == ConnectionState.waiting) {
+          settleStatus = "Loading...";
+        } else if (settleSnapshot.hasError) {
+          settleStatus = "Error";
+        } else if (settleSnapshot.hasData && settleSnapshot.data!.exists) {
+          settleStatus = (settleSnapshot.data!.get('settled') as bool? ?? false) ? "Settled" : "";
+        }
+        return _buildAmountAndSettleStatusColumn(amount, settleStatus);
+      },
+    )
         : _buildAmountAndSettleStatusColumn(amount, "");
   }
+
   Column _buildAmountAndSettleStatusColumn(double amount, String settleStatus) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text("₹${amount.toStringAsFixed(2)}",
-            style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87)),
+        Text(
+          "₹${amount.toStringAsFixed(2)}",
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
         if (settleStatus.isNotEmpty)
-          Text(settleStatus,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: settleStatus == "Settled" || settleStatus == "Error"
-                    ? Colors.green
-                    : Colors.blue,
-              )),
+          Text(
+            settleStatus,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: settleStatus == "Settled" || settleStatus == "Error" ? Colors.green : Colors.blue,
+            ),
+          ),
       ],
     );
   }
-
 
   Future<void> _settleSplit(bool isSplitSettled) async {
     try {
@@ -764,22 +798,12 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       }, SetOptions(merge: true));
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Split settled successfully",
-            style: GoogleFonts.poppins(),
-          ),
-        ),
+        SnackBar(content: Text("Split settled successfully", style: GoogleFonts.poppins())),
       );
     } catch (e) {
       print("Error settling split: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Failed to settle split: $e",
-            style: GoogleFonts.poppins(),
-          ),
-        ),
+        SnackBar(content: Text("Failed to settle split: $e", style: GoogleFonts.poppins())),
       );
     }
   }

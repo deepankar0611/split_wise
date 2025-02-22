@@ -115,7 +115,7 @@ class _FriendsListState extends State<FriendsList> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ExpenseHistoryDetailedScreen(friendUid: friendUid, showFilter: '',),
+                        builder: (context) => ExpenseHistoryDetailedScreen(friendUid: friendUid, showFilter: '', splitId: '', isReceiver: false, isPayer: false,),
                       ),
                     ).then((value) {
                       print("Returned from ExpenseHistoryDetailedScreen"); // Debug return

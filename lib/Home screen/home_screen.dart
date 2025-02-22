@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:split_wise/Home%20screen/notification.dart';
-import '../Helper/spendanalyser.dart';
+import 'package:split_wise/Home%20screen/spendanalyser.dart';
 import '../Profile/all expense history detals.dart';
 import 'split details.dart';
 
@@ -293,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ExpenseHistoryDetailedScreen(isReceiver: true, showFilter: '',),
+            builder: (context) => ExpenseHistoryDetailedScreen(isReceiver: true, showFilter: '', splitId: '',  ),
           ),
         );
       },
@@ -341,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ExpenseHistoryDetailedScreen(isPayer: true, showFilter: '',),
+            builder: (context) => ExpenseHistoryDetailedScreen(isPayer: false, showFilter: '', splitId: '', friendUid: '',),
           ),
         );
       },
@@ -434,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3))],
                 ),
-                height: 120,
+                height: 138,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: snapshot.data!.docs.length,
@@ -505,10 +505,14 @@ class _HomeScreenState extends State<HomeScreen> {
               itemCount: card.length,
               itemBuilder: (context, index) {
                 return GestureDetector( // Wrap Container with GestureDetector
-                  onTap: index == 0 ? () { // Condition to check for the first image (index 0)
+                  onTap: index == 0 ? () {
+                    // Condition to check for the first image (index 0)
                     Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const SpendAnalyzerScreen()));
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SpendAnalyzerScreen(),
+                      ),
+                    );
                   } : null, // No action for other images
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -544,48 +548,56 @@ class _HomeScreenState extends State<HomeScreen> {
     required String date,
     required String amount,
     required Color color,
-    required String splitId, // Added splitId parameter to fetch settle status
+    required String splitId,
     bool settled = false,
   }) {
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
 
+    // Convert date to "time ago" format
+    DateTime createdAtDate = DateTime.parse(date);
+    Duration difference = DateTime.now().difference(createdAtDate);
+    String timeAgo;
+    if (difference.inDays > 0) {
+      timeAgo = "${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago";
+    } else if (difference.inHours > 0) {
+      timeAgo = "${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago";
+    } else if (difference.inMinutes > 0) {
+      timeAgo = "${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago";
+    } else {
+      timeAgo = "Just now";
+    }
+
     return StreamBuilder<bool>(
-      stream: _isSplitSettledStream(splitId), // Use stream for real-time settle status
+      stream: _isSplitSettledStream(splitId),
       builder: (context, settleSnapshot) {
         print("Settle snapshot for split $splitId: connectionState=${settleSnapshot.connectionState}, "
             "hasData=${settleSnapshot.hasData}, hasError=${settleSnapshot.hasError}, "
-            "data=${settleSnapshot.data}"); // Debug print
+            "data=${settleSnapshot.data}");
         if (settleSnapshot.connectionState == ConnectionState.waiting) {
           return Shimmer.fromColors(
             baseColor: Colors.grey[300]!,
             highlightColor: Colors.grey[100]!,
             child: Container(
-              width: 140,
+              width: 150,
               margin: const EdgeInsets.only(right: 15),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(12)),
             ),
           );
         }
         if (settleSnapshot.hasError) {
           print("Settle status error for split $splitId: ${settleSnapshot.error}");
-          return _buildUnsettledHistoryItem(title, date, amount, color, settled); // Fallback to unsettled view
+          return _buildUnsettledHistoryItem(title, date, amount, color, settled);
         }
 
-        bool isSettled = settleSnapshot.data ?? false; // Default to false if data is null
+        bool isSettled = settleSnapshot.data ?? false;
         print("Real-time settle status for split $splitId, user $userId: isSettled=$isSettled");
 
         return Container(
-          width: 100,
+          width: 150,
           margin: const EdgeInsets.only(right: 15),
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
+          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -593,23 +605,21 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis, maxLines: 1),
                   if (isSettled) const Icon(LucideIcons.zap, color: Colors.amber, size: 16),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
-                isSettled ? "Settled" : "Unsettled", // Show "Settled" if true, otherwise "Unsettled"
-                style: TextStyle(
-                  color: isSettled ? Colors.green[600] : Colors.grey[600],
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
+                timeAgo, // Always show the timestamp
+                style: TextStyle(color: Colors.grey[600], fontSize: 11, fontWeight: FontWeight.w500),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isSettled ? "Settled" : "Unsettled",
+                style: TextStyle(color: isSettled ? Colors.green[600] : Colors.grey[600], fontSize: 11, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
@@ -618,11 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.only(top: 6.0),
                   child: Text(
                     amount,
-                    style: TextStyle(
-                      color: amount.startsWith('+') ? Colors.green : Colors.red,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: amount.startsWith('+') ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),

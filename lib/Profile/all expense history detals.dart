@@ -12,7 +12,7 @@ class ExpenseHistoryDetailedScreen extends StatefulWidget {
   final bool? isPayer; // Flag for payer transactions
   final bool? isReceiver; // New flag for receiver transactions
 
-  const ExpenseHistoryDetailedScreen({super.key, this.friendUid, this.category, this.isPayer, this.isReceiver, required String showFilter});
+  const ExpenseHistoryDetailedScreen({super.key, this.friendUid, this.category, this.isPayer, this.isReceiver, required String showFilter, required String splitId});
 
   @override
   State<ExpenseHistoryDetailedScreen> createState() => _ExpenseHistoryDetailedScreenState();

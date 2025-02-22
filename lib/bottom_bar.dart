@@ -40,7 +40,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
     ));
 
     _screens.addAll([
-      HomeScreen(scrollController: _scrollController), // Pass ScrollController here
+      HomeScreen(scrollController: _scrollController),
       const FriendsListScreen(),
       const AddExpenseScreen(payerAmounts: {}),
       const ProfileOverviewScreen(),
@@ -177,9 +177,10 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
       ),
       bottomNavigationBar: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        height: _isBottomBarVisible ? kBottomNavigationBarHeight : 0.0,
+        height: _isBottomBarVisible ? 80.0 : 0.0, // Increased height to accommodate content
         curve: Curves.easeInOut,
-        child: BottomNavigationBar(
+        child: _isBottomBarVisible
+            ? BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
           type: BottomNavigationBarType.fixed,
@@ -187,8 +188,9 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
           selectedItemColor: const Color(0xFF1A2E39),
           unselectedItemColor: Colors.grey[400],
           selectedFontSize: 12,
-          unselectedFontSize: 12,
+          unselectedFontSize: 10, // Reduced unselected font size
           elevation: 8,
+          iconSize: 24, // Reduced icon size
           items: const [
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.home, color: Color(0xFF0288D1)),
@@ -211,7 +213,8 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
               label: 'Profile',
             ),
           ],
-        ),
+        )
+            : null, // Avoid rendering BottomNavigationBar when height is 0
       ),
     );
   }
