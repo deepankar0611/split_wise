@@ -653,7 +653,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: netAmountOrSettled == "Settled"
-                        ? Colors.grey // Neutral color for settled status
+                        ? Colors.green // Neutral color for settled status
                         : netAmountOrSettled.startsWith('+') ? Colors.green : Colors.red,
                   ),
                 ),
