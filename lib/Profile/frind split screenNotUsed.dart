@@ -64,7 +64,20 @@ class _FriendSplitsScreenState extends State<FriendSplitsScreen> {
             );
           }
 
-          var splits = snapshot.data!.docs;
+          var splits = snapshot.data!.docs.where((splitDoc) {
+            Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
+            List<dynamic> participants = splitData['participants'] as List<dynamic>;
+            return participants.contains(userId) && participants.contains(widget.friendUid);
+          }).toList();
+
+          if (splits.isEmpty) {
+            return Center(
+              child: Text(
+                "No splits with this friend yet.",
+                style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey.shade600),
+              ),
+            );
+          }
 
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenHeight * 0.02),
@@ -81,9 +94,16 @@ class _FriendSplitsScreenState extends State<FriendSplitsScreen> {
                 ),
                 const SizedBox(height: 15),
                 Expanded(
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const BouncingScrollPhysics(),
                     itemCount: splits.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, // Two columns as in your code
+                      mainAxisSpacing: 8, // Adjusted spacing for better layout
+                      crossAxisSpacing: 10, // Adjusted spacing for better layout
+                      mainAxisExtent: 120, // Fixed height for each card to match your design
+                    ),
                     itemBuilder: (context, index) {
                       var splitDoc = splits[index];
                       Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
@@ -103,7 +123,6 @@ class _FriendSplitsScreenState extends State<FriendSplitsScreen> {
                       return FadeInUp(
                         delay: Duration(milliseconds: 100 * index), // Optional animation for a smooth entrance
                         child: _buildSplitCard(
-                          screenWidth,
                           splitData['description'] ?? 'Unknown Split',
                           (splitData['createdAt'] as Timestamp?)?.toDate().toString() ?? DateTime.now().toString(),
                           displayAmount,
@@ -122,7 +141,7 @@ class _FriendSplitsScreenState extends State<FriendSplitsScreen> {
     );
   }
 
-  Widget _buildSplitCard(double width, String title, String date, String amount, Color color, bool settled) {
+  Widget _buildSplitCard(String title, String date, String amount, Color color, bool settled) {
     DateTime createdAtDate = DateTime.parse(date);
     Duration difference = DateTime.now().difference(createdAtDate);
 
@@ -137,64 +156,66 @@ class _FriendSplitsScreenState extends State<FriendSplitsScreen> {
       timeAgo = "Just now";
     }
 
-    return Container(
-      width: 140,
-      margin: const EdgeInsets.only(right: 15),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 7,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-              if (settled) const Icon(Icons.flash_on, color: Colors.amber, size: 16), // Using Icons.flash_on as a substitute for LucideIcons.zap
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            settled ? "Settled" : timeAgo,
-            style: TextStyle(
-              color: settled ? Colors.green[600] : Colors.grey[600],
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Container(
+        margin: const EdgeInsets.only(right: 0), // Removed right margin for grid layout
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[100], // Matches your provided design
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 1,
+              blurRadius: 7,
+              offset: const Offset(0, 3),
             ),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
-          if (!settled)
-            Padding(
-              padding: const EdgeInsets.only(top: 6.0),
-              child: Text(
-                amount,
-                style: TextStyle(
-                  color: amount.startsWith('+') ? Colors.green : Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
+                if (settled) const Icon(Icons.flash_on, color: Colors.amber, size: 16), // Using Icons.flash_on as a substitute for LucideIcons.zap
+              ],
             ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              settled ? "Settled" : timeAgo,
+              style: TextStyle(
+                color: settled ? Colors.green[600] : Colors.grey[600],
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+            if (!settled)
+              Padding(
+                padding: const EdgeInsets.only(top: 6.0),
+                child: Text(
+                  amount,
+                  style: TextStyle(
+                    color: amount.startsWith('+') ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

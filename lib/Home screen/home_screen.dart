@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:split_wise/Home%20screen/notification.dart';
 
 import 'split details.dart';
@@ -113,6 +114,74 @@ class _HomeScreenState extends State<HomeScreen> {
       print("✅ Real-Time Category Data: $categoryData");
       return categoryData;
     });
+  }
+
+  // Method for real-time settle status using a stream
+  Stream<bool> _isSplitSettledStream(String splitId) {
+    return FirebaseFirestore.instance
+        .collection('splits')
+        .doc(splitId)
+        .collection('settle')
+        .doc(userId)
+        .snapshots()
+        .map((snapshot) {
+      // Handle both existing and non-existent documents
+      bool isSettled = snapshot.exists ? (snapshot.get('settled') as bool? ?? false) : false;
+      print("Stream settle status for split $splitId, user $userId: exists=${snapshot.exists}, isSettled=$isSettled");
+      return isSettled;
+    }).handleError((error, stackTrace) {
+      print("Error in stream for split $splitId, user $userId: $error");
+      return false; // Default to false on error, ensuring unsettled state
+    });
+  }
+
+  // Helper method to check if all transactions are settled (updated for efficiency)
+  Future<bool> _checkTransactionSettledStatus(String splitId) async {
+    try {
+      // Check if the settle document exists to avoid unnecessary transaction queries
+      DocumentSnapshot settleDoc = await FirebaseFirestore.instance
+          .collection('splits')
+          .doc(splitId)
+          .collection('settle')
+          .doc(userId)
+          .get();
+
+      if (!settleDoc.exists) {
+        print("No settle document found for split $splitId, user $userId, defaulting to unsettled");
+        return false; // No settle data means unsettled
+      }
+
+      // If split-level settled exists, use it
+      bool? splitSettled = settleDoc.get('settled') as bool?;
+      if (splitSettled != null) {
+        print("Split-level settle status for $splitId, user $userId: $splitSettled");
+        return splitSettled;
+      }
+
+      // Otherwise, check transaction-level settle status
+      QuerySnapshot transactionSettleSnapshot = await FirebaseFirestore.instance
+          .collection('splits')
+          .doc(splitId)
+          .collection('settle')
+          .doc(userId)
+          .collection('transactions')
+          .get();
+
+      if (transactionSettleSnapshot.docs.isEmpty) {
+        print("No transaction settle data found for split $splitId, user $userId");
+        return false;
+      }
+
+      // Check if ALL transactions are settled (settled: true)
+      bool allSettled = transactionSettleSnapshot.docs.every((doc) =>
+      doc.get('settled') as bool? ?? false);
+
+      print("Transaction-level settle status for split $splitId, user $userId: allSettled=$allSettled");
+      return allSettled;
+    } catch (e) {
+      print("Error checking transaction settle status for split $splitId, user $userId: $e");
+      return false; // Default to false if there’s an error, ensuring unsettled state
+    }
   }
 
   @override
@@ -274,87 +343,72 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPayCard() {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').doc(userId).snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data == null || !snapshot.data!.exists) {
-          return const Center(child: Text("No data available"));
-        }
-
-        final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
-        double amountToPay = double.tryParse(data["amountToPay"]?.toString() ?? "0") ?? 0;
-
-        return Container(
-          width: 170,
-          height: 120,
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
-                spreadRadius: 1,
-                blurRadius: 7,
-                offset: const Offset(0, 3),
-              ),
-            ],
+    double amountToPay = double.tryParse(userData["amountToPay"]) ?? 0;
+    return Container(
+      width: 170,
+      height: 120,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 7,
+            offset: const Offset(0, 3),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    "Pay",
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 9,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 6.0),
-                child: Text(
-                  "₹${amountToPay.toInt()}",
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
+              child: const Text(
+                "Pay",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 9,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const Padding(
-                padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
-                child: Text(
-                  "will pay",
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        );
-      },
+          Padding(
+            padding: const EdgeInsets.only(left: 6.0),
+            child: Text(
+              "₹${amountToPay.toInt()}",
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
+            child: Text(
+              "will pay",
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -438,6 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         date: (splitData['createdAt'] as Timestamp?)?.toDate().toString() ?? DateTime.now().toString(),
                         amount: displayAmount,
                         color: Colors.blueAccent,
+                        splitId: splitDoc.id, // Pass the split ID for real-time settle status
                         settled: netAmount.abs() < 0.01,
                       ),
                     );
@@ -456,8 +511,98 @@ class _HomeScreenState extends State<HomeScreen> {
     required String date,
     required String amount,
     required Color color,
+    required String splitId, // Added splitId parameter to fetch settle status
     bool settled = false,
   }) {
+    final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
+
+    return StreamBuilder<bool>(
+      stream: _isSplitSettledStream(splitId), // Use stream for real-time settle status
+      builder: (context, settleSnapshot) {
+        print("Settle snapshot for split $splitId: connectionState=${settleSnapshot.connectionState}, "
+            "hasData=${settleSnapshot.hasData}, hasError=${settleSnapshot.hasError}, "
+            "data=${settleSnapshot.data}"); // Debug print
+        if (settleSnapshot.connectionState == ConnectionState.waiting) {
+          return Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: Container(
+              width: 140,
+              margin: const EdgeInsets.only(right: 15),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+        if (settleSnapshot.hasError) {
+          print("Settle status error for split $splitId: ${settleSnapshot.error}");
+          return _buildUnsettledHistoryItem(title, date, amount, color, settled); // Fallback to unsettled view
+        }
+
+        bool isSettled = settleSnapshot.data ?? false; // Default to false if data is null
+        print("Real-time settle status for split $splitId, user $userId: isSettled=$isSettled");
+
+        return Container(
+          width: 140,
+          margin: const EdgeInsets.only(right: 15),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                  if (isSettled) const Icon(LucideIcons.zap, color: Colors.amber, size: 16),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isSettled ? "Settled" : "Unsettled", // Show "Settled" if true, otherwise "Unsettled"
+                style: TextStyle(
+                  color: isSettled ? Colors.green[600] : Colors.grey[600],
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              if (!isSettled)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6.0),
+                  child: Text(
+                    amount,
+                    style: TextStyle(
+                      color: amount.startsWith('+') ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Helper method to build the unsettled history item (used during errors or for consistency)
+  Widget _buildUnsettledHistoryItem(String title, String date, String amount, Color color, bool settled) {
     DateTime createdAtDate = DateTime.parse(date);
     Duration difference = DateTime.now().difference(createdAtDate);
 
