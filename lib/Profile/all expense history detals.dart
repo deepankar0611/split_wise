@@ -9,10 +9,18 @@ import 'package:split_wise/Home%20screen/split%20details.dart';
 class ExpenseHistoryDetailedScreen extends StatefulWidget {
   final String? friendUid;
   final String? category;
-  final bool? isPayer; // Flag for payer transactions
-  final bool? isReceiver; // New flag for receiver transactions
+  final bool? isPayer;
+  final bool? isReceiver;
 
-  const ExpenseHistoryDetailedScreen({super.key, this.friendUid, this.category, this.isPayer, this.isReceiver, required String showFilter, required String splitId});
+  const ExpenseHistoryDetailedScreen({
+    super.key,
+    this.friendUid,
+    this.category,
+    this.isPayer,
+    this.isReceiver,
+    required String showFilter,
+    required String splitId,
+  });
 
   @override
   State<ExpenseHistoryDetailedScreen> createState() => _ExpenseHistoryDetailedScreenState();
@@ -375,28 +383,22 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
       double netAmount = sharePerPerson - userPaidAmount;
       bool isSettled = (splitData['paidBy'] as Map<String, dynamic>?)?.entries.every((entry) => (entry.value as num?)?.toDouble() == totalAmount / participants.length) ?? false;
 
-      // Apply friend filter
       if (widget.friendUid != null && !participants.contains(widget.friendUid)) continue;
 
-      // Apply category filter
       if (widget.category != null && splitCategory != widget.category) continue;
 
-      // Apply payer filter
       if (widget.isPayer == true) {
         bool isPayer = await _isUserPayerInTransactions(splitDoc.id);
         if (!isPayer) continue;
       }
 
-      // Apply receiver filter
       if (widget.isReceiver == true) {
         bool isReceiver = await _isUserReceiverInTransactions(splitDoc.id);
         if (!isReceiver) continue;
       }
 
-      // Apply settled filter
       if (!showSettled && isSettled) continue;
 
-      // Apply search filter
       if (searchQuery.isNotEmpty) {
         String description = splitData['description']?.toString().toLowerCase() ?? '';
         if (!description.contains(searchQuery.toLowerCase())) continue;

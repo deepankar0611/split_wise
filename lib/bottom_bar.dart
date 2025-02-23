@@ -1,13 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:split_wise/Home%20screen/home_screen.dart';
 import 'package:split_wise/Profile/profile_overview.dart';
 import 'package:split_wise/Search/search_bar.dart';
 import 'package:split_wise/split/friends.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BottomBar extends StatefulWidget {
   const BottomBar({super.key});
@@ -58,15 +57,12 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   void _onScrollDirectionChange() {
     if (_handlingScroll) return;
 
-    print("Scroll direction changed!");
     if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
-      print("Scrolling DOWN");
       if (_isBottomBarVisible) {
         _hideBottomBar();
       }
     }
     if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
-      print("Scrolling UP");
       if (!_isBottomBarVisible) {
         _showBottomBar();
       }
@@ -76,7 +72,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   void _hideBottomBar() {
     _handlingScroll = true;
     if (_isBottomBarVisible) {
-      print("Hiding Bottom Bar FUNCTION CALLED");
       setState(() {
         _isBottomBarVisible = false;
       });
@@ -89,7 +84,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   void _showBottomBar() {
     _handlingScroll = true;
     if (!_isBottomBarVisible) {
-      print("Showing Bottom Bar FUNCTION CALLED");
       setState(() {
         _isBottomBarVisible = true;
       });
@@ -155,45 +149,70 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
       ),
       bottomNavigationBar: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        height: _isBottomBarVisible ? 80.0 : 0.0, // Increased height to accommodate content
+        height: _isBottomBarVisible ? 85.0 : 0.0, // Increased height to 85.0
         curve: Curves.easeInOut,
-        child: _isBottomBarVisible
-            ? BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF1A2E39),
-          unselectedItemColor: Colors.grey[400],
-          selectedFontSize: 12,
-          unselectedFontSize: 10, // Reduced unselected font size
-          elevation: 8,
-          iconSize: 24, // Reduced icon size
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.home, color: Color(0xFF0288D1)),
-              activeIcon: Icon(CupertinoIcons.home, color: Color(0xFF1A2E39)),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.search, color: Color(0xFF7B1FA2)),
-              activeIcon: Icon(CupertinoIcons.search, color: Color(0xFF1A2E39)),
-              label: 'Search',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.add_circled, color: Color(0xFFD81B60)),
-              activeIcon: Icon(CupertinoIcons.add_circled, color: Color(0xFF1A2E39)),
-              label: 'Add',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF00897B)),
-              activeIcon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF1A2E39)),
-              label: 'Profile',
-            ),
-          ],
-        )
-            : null, // Avoid rendering BottomNavigationBar when height is 0
+        child: ClipRRect(
+          child: _isBottomBarVisible
+              ? BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            selectedItemColor: const Color(0xFF1A2E39),
+            unselectedItemColor: Colors.grey[400],
+            selectedFontSize: 11, // Reduced from 12
+            unselectedFontSize: 9, // Reduced from 10
+            elevation: 8,
+            iconSize: 20,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.home, color: Color(0xFF0288D1)),
+                activeIcon: Icon(CupertinoIcons.home, color: Color(0xFF1A2E39)),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.search, color: Color(0xFF7B1FA2)),
+                activeIcon: Icon(CupertinoIcons.search, color: Color(0xFF1A2E39)),
+                label: 'Search',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.add_circled, color: Color(0xFFD81B60)),
+                activeIcon: Icon(CupertinoIcons.add_circled, color: Color(0xFF1A2E39)),
+                label: 'Add',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF00897B)),
+                activeIcon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF1A2E39)),
+                label: 'Profile',
+              ),
+            ],
+          )
+              : null,
+        ),
       ),
     );
   }
+}
+
+// Placeholder classes (replace with actual implementations)
+class FriendsListScreen extends StatelessWidget {
+  const FriendsListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container();
+}
+
+class AddExpenseScreen extends StatelessWidget {
+  final Map<String, dynamic> payerAmounts;
+  const AddExpenseScreen({super.key, required this.payerAmounts});
+
+  @override
+  Widget build(BuildContext context) => Container();
+}
+
+class ProfileOverviewScreen extends StatelessWidget {
+  const ProfileOverviewScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container();
 }

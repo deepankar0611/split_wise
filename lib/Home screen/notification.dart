@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class Notificationn extends StatefulWidget {
@@ -17,8 +16,6 @@ class _NotificationnState extends State<Notificationn> {
   final String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _showBanner = false;
-  String? _bannerTitle;
-  String? _bannerBody;
   Map<String, String> userNames = {};
 
   @override
@@ -129,8 +126,6 @@ class _NotificationnState extends State<Notificationn> {
     if (mounted) {
       setState(() {
         _showBanner = true;
-        _bannerTitle = title;
-        _bannerBody = body;
       });
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) setState(() => _showBanner = false);
@@ -234,7 +229,7 @@ class _NotificationnState extends State<Notificationn> {
           .collection('reminders')
           .doc(reminderId)
           .update({
-        'dismissedBy': FieldValue.arrayUnion([currentUserUid]),
+        'participants': FieldValue.arrayRemove([currentUserUid]), // Remove UID from participants
       });
       _showSnackBar("Reminder dismissed");
       setState(() {});
@@ -274,7 +269,7 @@ class _NotificationnState extends State<Notificationn> {
             .collection('reminders')
             .doc(id)
             .update({
-          'dismissedBy': FieldValue.arrayUnion([currentUserUid]),
+          'participants': FieldValue.arrayRemove([currentUserUid]), // Remove UID from participants
         });
       }
       setState(() {});
@@ -299,7 +294,7 @@ class _NotificationnState extends State<Notificationn> {
             .collection('reminders')
             .doc(id)
             .update({
-          'dismissedBy': FieldValue.arrayRemove([currentUserUid]),
+          'participants': FieldValue.arrayUnion([currentUserUid]), // Re-add UID to participants
         });
       }
       setState(() {});
@@ -328,8 +323,8 @@ class _NotificationnState extends State<Notificationn> {
               .delete();
         } else if (notification['type'] == 'split_reminder') {
           String splitId = notification['splitId'];
-          List<dynamic> dismissedBy = notification['data']['dismissedBy'] ?? [];
-          if (!dismissedBy.contains(currentUserUid)) {
+          List<dynamic> participants = notification['data']['participants'] ?? [];
+          if (participants.contains(currentUserUid)) {
             deletedNotifications.add({
               'type': notification['type'],
               'id': notification['id'],
@@ -342,7 +337,7 @@ class _NotificationnState extends State<Notificationn> {
                 .collection('reminders')
                 .doc(notification['id'])
                 .update({
-              'dismissedBy': FieldValue.arrayUnion([currentUserUid]),
+              'participants': FieldValue.arrayRemove([currentUserUid]),
             });
           }
         }
@@ -369,7 +364,7 @@ class _NotificationnState extends State<Notificationn> {
         return AlertDialog(
           title: Text("Delete All Notifications", style: GoogleFonts.poppins()),
           content: Text(
-            "Are you sure you want to delete all notifications? This action will remove all friend requests and dismiss all reminders.",
+            "Are you sure you want to delete all notifications? This action will remove all friend requests and remove you from all reminders.",
             style: GoogleFonts.poppins(),
           ),
           actions: [
@@ -570,9 +565,6 @@ class _NotificationnState extends State<Notificationn> {
                           String senderUid = notification['data']['sentBy'];
                           String splitId = notification['splitId'];
                           String reminderId = notification['id'];
-                          List<dynamic> dismissedBy = notification['data']['dismissedBy'] ?? [];
-
-                          if (dismissedBy.contains(currentUserUid)) return const SizedBox.shrink();
 
                           return FutureBuilder<String>(
                             future: _fetchUserName(senderUid),

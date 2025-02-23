@@ -5,13 +5,13 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:split_wise/Home%20screen/notification.dart';
 import 'package:split_wise/Home%20screen/spendanalyser.dart';
-import '../Profile/all expense history detals.dart';
-import 'split details.dart';
+import 'package:split_wise/Profile/all%20expense%20history%20detals.dart';
+import 'package:split_wise/Home%20screen/split%20details.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.scrollController, });
+  const HomeScreen({super.key, required this.scrollController});
 
-  final ScrollController scrollController; // Receive scrollController
+  final ScrollController scrollController;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -25,7 +25,6 @@ class _HomeScreenState extends State<HomeScreen> {
     "amountToReceive": "0",
   };
 
-  // Categories from AddExpenseScreen
   final List<String> categories = [
     "Grocery",
     "Medicine",
@@ -38,7 +37,6 @@ class _HomeScreenState extends State<HomeScreen> {
     "Others",
   ];
 
-  // Map categories to LucideIcons and colors
   final Map<String, Map<String, dynamic>> categoryIcons = {
     "Grocery": {"icon": LucideIcons.shoppingCart, "color": Colors.teal},
     "Medicine": {"icon": LucideIcons.pill, "color": Colors.red},
@@ -51,13 +49,12 @@ class _HomeScreenState extends State<HomeScreen> {
     "Others": {"icon": LucideIcons.circleDollarSign, "color": Colors.grey},
   };
 
-  // Map for service logos and colors (based on the screenshot)
   final Map<String, Map<String, dynamic>> serviceIcons = {
-    "Swiggy": {"icon": LucideIcons.fastForward, "color": Colors.orange}, // Example icon
-    "Zepto": {"icon": LucideIcons.zap, "color": Colors.purple}, // Example icon
-    "Instamart": {"icon": LucideIcons.shoppingBag, "color": Colors.deepPurple}, // Example icon
-    "Blinkit": {"icon": LucideIcons.clock, "color": Colors.yellow}, // Example icon
-    "Zomato": {"icon": LucideIcons.utensils, "color": Colors.red}, // Example icon
+    "Swiggy": {"icon": LucideIcons.fastForward, "color": Colors.orange},
+    "Zepto": {"icon": LucideIcons.zap, "color": Colors.purple},
+    "Instamart": {"icon": LucideIcons.shoppingBag, "color": Colors.deepPurple},
+    "Blinkit": {"icon": LucideIcons.clock, "color": Colors.yellow},
+    "Zomato": {"icon": LucideIcons.utensils, "color": Colors.red},
   };
 
   @override
@@ -87,7 +84,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Stream of total paid amount and last involvement timestamp by category
   Stream<Map<String, Map<String, dynamic>>> _streamTotalPaidByCategory() {
     return FirebaseFirestore.instance
         .collection('splits')
@@ -97,14 +93,12 @@ class _HomeScreenState extends State<HomeScreen> {
         .map((QuerySnapshot snapshot) {
       Map<String, Map<String, dynamic>> categoryData = {};
 
-      print("🔍 All Splits for user $userId:");
       for (var splitDoc in snapshot.docs) {
         Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
         String category = splitData['category'] ?? 'Others';
         Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
         double userPaidAmount = paidBy[userId]?.toDouble() ?? 0.0;
         Timestamp? createdAt = splitData['createdAt'] as Timestamp?;
-        print("  Split ${splitDoc.id}: Category = $category, PaidBy[$userId] = $userPaidAmount, CreatedAt = ${createdAt?.toDate()}");
 
         if (userPaidAmount > 0) {
           if (!categoryData.containsKey(category)) {
@@ -122,13 +116,10 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       }
-
-      print("✅ Real-Time Category Data: $categoryData");
       return categoryData;
     });
   }
 
-  // Method for real-time settle status using a stream
   Stream<bool> _isSplitSettledStream(String splitId) {
     return FirebaseFirestore.instance
         .collection('splits')
@@ -137,20 +128,14 @@ class _HomeScreenState extends State<HomeScreen> {
         .doc(userId)
         .snapshots()
         .map((snapshot) {
-      // Handle both existing and non-existent documents
-      bool isSettled = snapshot.exists ? (snapshot.get('settled') as bool? ?? false) : false;
-      print("Stream settle status for split $splitId, user $userId: exists=${snapshot.exists}, isSettled=$isSettled");
-      return isSettled;
+      return snapshot.exists ? (snapshot.get('settled') as bool? ?? false) : false;
     }).handleError((error, stackTrace) {
-      print("Error in stream for split $splitId, user $userId: $error");
-      return false; // Default to false on error, ensuring unsettled state
+      return false;
     });
   }
 
-  // Helper method to check if all transactions are settled (updated for efficiency)
   Future<bool> _checkTransactionSettledStatus(String splitId) async {
     try {
-      // Check if the settle document exists to avoid unnecessary transaction queries
       DocumentSnapshot settleDoc = await FirebaseFirestore.instance
           .collection('splits')
           .doc(splitId)
@@ -158,19 +143,11 @@ class _HomeScreenState extends State<HomeScreen> {
           .doc(userId)
           .get();
 
-      if (!settleDoc.exists) {
-        print("No settle document found for split $splitId, user $userId, defaulting to unsettled");
-        return false; // No settle data means unsettled
-      }
+      if (!settleDoc.exists) return false;
 
-      // If split-level settled exists, use it
       bool? splitSettled = settleDoc.get('settled') as bool?;
-      if (splitSettled != null) {
-        print("Split-level settle status for $splitId, user $userId: $splitSettled");
-        return splitSettled;
-      }
+      if (splitSettled != null) return splitSettled;
 
-      // Otherwise, check transaction-level settle status
       QuerySnapshot transactionSettleSnapshot = await FirebaseFirestore.instance
           .collection('splits')
           .doc(splitId)
@@ -179,29 +156,19 @@ class _HomeScreenState extends State<HomeScreen> {
           .collection('transactions')
           .get();
 
-      if (transactionSettleSnapshot.docs.isEmpty) {
-        print("No transaction settle data found for split $splitId, user $userId");
-        return false;
-      }
+      if (transactionSettleSnapshot.docs.isEmpty) return false;
 
-      // Check if ALL transactions are settled (settled: true)
-      bool allSettled = transactionSettleSnapshot.docs.every((doc) =>
-      doc.get('settled') as bool? ?? false);
-
-      print("Transaction-level settle status for split $splitId, user $userId: allSettled=$allSettled");
-      return allSettled;
+      return transactionSettleSnapshot.docs.every((doc) => doc.get('settled') as bool? ?? false);
     } catch (e) {
-      print("Error checking transaction settle status for split $splitId, user $userId: $e");
-      return false; // Default to false if there’s an error, ensuring unsettled state
+      return false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       body: CustomScrollView(
-        controller: widget.scrollController, // Use widget.scrollController here
+        controller: widget.scrollController,
         slivers: <Widget>[
           SliverAppBar(
             pinned: true,
@@ -215,7 +182,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 return FlexibleSpaceBar(
                   titlePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
-                  title: null,
                   background: Padding(
                     padding: const EdgeInsets.only(top: 90.0),
                     child: Padding(
@@ -289,17 +255,20 @@ class _HomeScreenState extends State<HomeScreen> {
     double amountToReceive = double.tryParse(userData["amountToReceive"]) ?? 0;
     return GestureDetector(
       onTap: () {
-        print("Tapped Receive Card, navigating to splits where user is receiver in transactions");
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ExpenseHistoryDetailedScreen(isReceiver: true, showFilter: '', splitId: '',  ),
+            builder: (context) => ExpenseHistoryDetailedScreen(
+              isReceiver: true,
+              showFilter: '',
+              splitId: '',
+            ),
           ),
         );
       },
       child: Container(
         width: 170,
-        height: 120,
+        height: 110,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -337,11 +306,15 @@ class _HomeScreenState extends State<HomeScreen> {
     double amountToPay = double.tryParse(userData["amountToPay"]) ?? 0;
     return GestureDetector(
       onTap: () {
-        print("Tapped Pay Card, navigating to splits where user is payer in transactions");
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ExpenseHistoryDetailedScreen(isPayer: false, showFilter: '', splitId: '', friendUid: '',),
+            builder: (context) => ExpenseHistoryDetailedScreen(
+              isPayer: false,
+              showFilter: '',
+              splitId: '',
+              friendUid: '',
+            ),
           ),
         );
       },
@@ -392,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHistoryCardBox(),
           const SizedBox(height: 20),
-          _buildExclusiveFeatureCard(), // New stack card for "Auto-fetch & Split Bills"
+          _buildExclusiveFeatureCard(),
           const SizedBox(height: 20),
           _buildTransactionList(),
         ],
@@ -463,7 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         date: (splitData['createdAt'] as Timestamp?)?.toDate().toString() ?? DateTime.now().toString(),
                         amount: displayAmount,
                         color: Colors.blueAccent,
-                        splitId: splitDoc.id, // Pass the split ID for real-time settle status
+                        splitId: splitDoc.id,
                         settled: netAmount.abs() < 0.01,
                       ),
                     );
@@ -476,8 +449,6 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-
-
 
   Widget _buildExclusiveFeatureCard() {
     final List<String> card = [
@@ -526,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             MaterialPageRoute(
                               builder: (context) => SpendAnalyzerScreen(
                                 categoryData: <String, Map<String, dynamic>>{},
-                                amountToPay: 0.0,  // No data, so 0
+                                amountToPay: 0.0,
                                 amountToReceive: 0.0,
                               ),
                             ),
@@ -557,7 +528,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }
 
-                // Calculate totals from splits
                 double totalAmountToPay = 0.0;
                 double totalAmountToReceive = 0.0;
                 Map<String, Map<String, dynamic>> categoryData = {};
@@ -572,12 +542,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   double netAmount = userShare - userPaidAmount;
 
                   if (netAmount > 0) {
-                    totalAmountToPay += netAmount; // User owes this amount
+                    totalAmountToPay += netAmount;
                   } else if (netAmount < 0) {
-                    totalAmountToReceive += netAmount.abs(); // User is owed this amount
+                    totalAmountToReceive += netAmount.abs();
                   }
 
-                  // Aggregate category data (unchanged from your original logic)
                   String category = splitData['category'] ?? 'Others';
                   Timestamp? createdAt = splitData['createdAt'] as Timestamp?;
                   if (userPaidAmount > 0) {
@@ -587,8 +556,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         'lastInvolved': createdAt?.toDate(),
                       };
                     }
-                    categoryData[category]!['totalPaid'] =
-                        (categoryData[category]!['totalPaid'] as double) + userPaidAmount;
+                    categoryData[category]!['totalPaid'] = (categoryData[category]!['totalPaid'] as double) + userPaidAmount;
                     if (createdAt != null &&
                         (categoryData[category]!['lastInvolved'] == null ||
                             createdAt.toDate().isAfter(categoryData[category]!['lastInvolved'] as DateTime))) {
@@ -646,10 +614,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-// Ensure _buildHistoryCardBox remains unchanged for reference
-// (Assuming it’s already in your HomeScreen code as provided earlier)
-
-
   Widget _buildHistoryItem({
     required String title,
     required String date,
@@ -658,9 +622,6 @@ class _HomeScreenState extends State<HomeScreen> {
     required String splitId,
     bool settled = false,
   }) {
-    final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
-
-    // Convert date to "time ago" format
     DateTime createdAtDate = DateTime.parse(date);
     Duration difference = DateTime.now().difference(createdAtDate);
     String timeAgo;
@@ -677,9 +638,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return StreamBuilder<bool>(
       stream: _isSplitSettledStream(splitId),
       builder: (context, settleSnapshot) {
-        print("Settle snapshot for split $splitId: connectionState=${settleSnapshot.connectionState}, "
-            "hasData=${settleSnapshot.hasData}, hasError=${settleSnapshot.hasError}, "
-            "data=${settleSnapshot.data}");
         if (settleSnapshot.connectionState == ConnectionState.waiting) {
           return Shimmer.fromColors(
             baseColor: Colors.grey[300]!,
@@ -693,12 +651,10 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
         if (settleSnapshot.hasError) {
-          print("Settle status error for split $splitId: ${settleSnapshot.error}");
           return _buildUnsettledHistoryItem(title, date, amount, color, settled);
         }
 
         bool isSettled = settleSnapshot.data ?? false;
-        print("Real-time settle status for split $splitId, user $userId: isSettled=$isSettled");
 
         return Container(
           width: 150,
@@ -718,7 +674,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                timeAgo, // Always show the timestamp
+                timeAgo,
                 style: TextStyle(color: Colors.grey[600], fontSize: 11, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
@@ -747,7 +703,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Helper method to build the unsettled history item (used during errors or for consistency)
   Widget _buildUnsettledHistoryItem(String title, String date, String amount, Color color, bool settled) {
     DateTime createdAtDate = DateTime.parse(date);
     Duration difference = DateTime.now().difference(createdAtDate);
@@ -827,7 +782,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final categoryData = snapshot.hasData ? snapshot.data! : {};
 
-        // Convert categories to a sorted list, including all categories
         List<MapEntry<String, Map<String, dynamic>>> sortedCategories = categories
             .map<MapEntry<String, Map<String, dynamic>>>((category) {
           return MapEntry(
@@ -840,9 +794,9 @@ class _HomeScreenState extends State<HomeScreen> {
             DateTime? timeA = a.value['lastInvolved'] as DateTime?;
             DateTime? timeB = b.value['lastInvolved'] as DateTime?;
             if (timeA == null && timeB == null) return 0;
-            if (timeA == null) return 1; // Nulls at the end
+            if (timeA == null) return 1;
             if (timeB == null) return -1;
-            return timeB.compareTo(timeA); // Most recent first
+            return timeB.compareTo(timeA);
           });
 
         return Padding(
@@ -870,6 +824,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle,
                     "₹${totalPaid.toStringAsFixed(2)}",
                     categoryIcons[category]!['color'],
+                    category, // Pass the category to the item
                   );
                 }).toList(),
               ),
@@ -893,32 +848,46 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildTransactionItem(IconData icon, String title, String subtitle, String amount, Color color) {
-    return Card(
-      elevation: 2,
-      color: Colors.white,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
-        child: ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.4),
-              borderRadius: BorderRadius.circular(10),
+  Widget _buildTransactionItem(IconData icon, String title, String subtitle, String amount, Color color, String category) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExpenseHistoryDetailedScreen(
+              category: category, // Pass the selected category
+              showFilter: '',
+              splitId: '',
             ),
-            child: Icon(icon, color: color, size: 26),
           ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-          trailing: Text(
-            amount,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.green,
+        );
+      },
+      child: Card(
+        elevation: 2,
+        color: Colors.white,
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 26),
+            ),
+            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+            trailing: Text(
+              amount,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.green,
+              ),
             ),
           ),
         ),
