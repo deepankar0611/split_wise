@@ -38,6 +38,10 @@ dependencies:
   flutter_local_notifications:
   workmanager:
   flutter_foreground_task:
+  path_provider:
+  pdf:
+  file_picker:
+
 
 
 dev_dependencies:

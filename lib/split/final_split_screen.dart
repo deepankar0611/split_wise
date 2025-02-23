@@ -43,9 +43,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     if (user == null) return;
 
     // Unified list of participants with UIDs
-    List<Map<String, dynamic>> people = [
-      {"name": "You", "uid": user.uid}
-    ]..addAll(widget.selectedPeople);
+    List<Map<String, dynamic>> people = [{"name": "You", "uid": user.uid}]..addAll(widget.selectedPeople);
 
     // Convert payerAmounts to UID-based map
     Map<String, double> finalPayerAmounts = {};
@@ -245,6 +243,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       ),
       body: Stack(
         children: [
+          // Scrollable content
           SingleChildScrollView(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
@@ -274,45 +273,45 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                     ],
                   ),
                   SizedBox(height: screenHeight * 0.03),
-                  Text("Split Summary",
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.teal.shade300, fontWeight: FontWeight.bold, fontSize: screenWidth > 600 ? 32 : 28)),
+                  Text(
+                    "Split Summary",
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.teal.shade300,
+                        fontWeight: FontWeight.bold,
+                        fontSize: screenWidth > 600 ? 32 : 28),
+                  ),
                   SizedBox(height: screenHeight * 0.02),
                   _buildListView(screenWidth, allPeople, finalPayerAmounts, amountPerPerson),
                   SizedBox(height: screenHeight * 0.03),
-                  Text("Transactions to Settle",
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.teal.shade300, fontWeight: FontWeight.bold, fontSize: screenWidth > 600 ? 28 : 24)),
+                  Text(
+                    "Transactions to Settle",
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.teal.shade300,
+                        fontWeight: FontWeight.bold,
+                        fontSize: screenWidth > 600 ? 28 : 24),
+                  ),
                   SizedBox(height: screenHeight * 0.015),
                   _buildListView(screenWidth, transactions, {}, 0),
-                  SizedBox(height: screenHeight * 0.025),
-                  const Divider(thickness: 1.3, color: Colors.black26),
-                  SizedBox(height: screenHeight * 0.02),
-                  _buildFinalizeButton(),
-                  SizedBox(height: screenHeight * 0.2),
+                  SizedBox(height: screenHeight * 0.1), // Extra padding to avoid overlap with fixed button
                 ],
               ),
             ),
           ),
-          Visibility(
-            visible: _paymentFinalized,
-            child: Stack(
-              children: [
-                SingleChildScrollView(
-                  child: Column(
-                    children: [_buildFinalizeButton()],
-                  ),
-                ),
-                if (_paymentFinalized)
-                  BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-                    child: Center(
-                      child: Lottie.asset('assets/animation/45.json', width: 200, height: 200),
-                    ),
-                  ),
-              ],
-            ),
+          // Fixed SliderButton at the bottom
+          Positioned(
+            left: screenWidth * 0.05, // 5% margin from left
+            right: screenWidth * 0.05, // 5% margin from right
+            bottom: screenHeight * 0.03, // 3% margin from bottom
+            child: _buildFinalizeButton(),
           ),
+          // Overlay for payment finalized animation
+          if (_paymentFinalized)
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+              child: Center(
+                child: Lottie.asset('assets/animation/45.json', width: 200, height: 200),
+              ),
+            ),
         ],
       ),
     );
@@ -326,35 +325,49 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.15), spreadRadius: 2, blurRadius: 7, offset: const Offset(0, 5)),
+          BoxShadow(
+              color: Colors.grey.withOpacity(0.15),
+              spreadRadius: 2,
+              blurRadius: 7,
+              offset: const Offset(0, 5)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: color, fontWeight: FontWeight.w500, fontSize: width > 600 ? 20 : 18)),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w500,
+                fontSize: width > 600 ? 20 : 18),
+          ),
           Padding(
             padding: EdgeInsets.only(top: width * 0.015),
             child: Stack(
               children: [
                 Container(
                   height: width * 0.075,
-                  decoration: BoxDecoration(color: bgColor.withOpacity(0.3), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(
+                      color: bgColor.withOpacity(0.3), borderRadius: BorderRadius.circular(8)),
                 ),
                 ClipRect(
                   child: Container(
                     height: width * 0.075,
                     width: width * 0.4 * (amount / (label == "RECEIVE" ? 30000 : 10000)),
-                    decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(
+                        color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: width * 0.015, horizontal: width * 0.025),
-                  child: Text("₹${amount.toStringAsFixed(0)}",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.green.shade900, fontWeight: FontWeight.w700, fontSize: width > 600 ? 26 : 22)),
+                  child: Text(
+                    "₹${amount.toStringAsFixed(0)}",
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.green.shade900,
+                        fontWeight: FontWeight.w700,
+                        fontSize: width > 600 ? 26 : 22),
+                  ),
                 ),
               ],
             ),
@@ -372,7 +385,11 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.15), spreadRadius: 2, blurRadius: 7, offset: const Offset(0, 5)),
+          BoxShadow(
+              color: Colors.grey.withOpacity(0.15),
+              spreadRadius: 2,
+              blurRadius: 7,
+              offset: const Offset(0, 5)),
         ],
       ),
       child: ListView.builder(
@@ -386,12 +403,14 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
 
   Widget _buildListTile(double width, Map<String, dynamic> item,
       Map<String, double> amounts, double amountPerPerson) {
-    if (item.containsKey('name')) { // Split Summary
+    if (item.containsKey('name')) {
+      // Split Summary
       String name = item["name"];
       String uid = item["uid"];
       double amountPaid = amounts[uid] ?? 0.0;
       double amountToPay = amountPerPerson - amountPaid;
-      String amountText = amountToPay > 0 ? "-₹${amountToPay.toStringAsFixed(0)}" : "+₹${(-amountToPay).toStringAsFixed(0)}";
+      String amountText =
+      amountToPay > 0 ? "-₹${amountToPay.toStringAsFixed(0)}" : "+₹${(-amountToPay).toStringAsFixed(0)}";
       TextStyle amountStyle = TextStyle(
         color: amountToPay > 0 ? Colors.redAccent.shade700 : Colors.green.shade700,
         fontWeight: FontWeight.w700,
@@ -404,55 +423,87 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
           contentPadding: EdgeInsets.zero,
           leading: Container(
             padding: EdgeInsets.all(width * 0.025),
-            decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(12)),
-            child: Icon(name == "You" ? LucideIcons.user : LucideIcons.users, color: Colors.teal.shade700, size: width * 0.075),
+            decoration: BoxDecoration(
+                color: Colors.teal.shade50, borderRadius: BorderRadius.circular(12)),
+            child: Icon(
+                name == "You" ? LucideIcons.user : LucideIcons.users,
+                color: Colors.teal.shade700,
+                size: width * 0.075),
           ),
-          title: Text(name == "You" ? "You" : name,
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: width > 600 ? 22 : 18, color: Colors.black87)),
-          subtitle: Text("Paid: ₹${amountPaid.toStringAsFixed(2)}",
-              style: TextStyle(fontSize: width > 600 ? 18 : 15, color: Colors.grey.shade600)),
+          title: Text(
+            name == "You" ? "You" : name,
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: width > 600 ? 22 : 18,
+                color: Colors.black87),
+          ),
+          subtitle: Text(
+            "Paid: ₹${amountPaid.toStringAsFixed(2)}",
+            style: TextStyle(fontSize: width > 600 ? 18 : 15, color: Colors.grey.shade600),
+          ),
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(amountText, style: amountStyle),
-              Text(amountToPay > 0 ? "To Pay" : "To Receive",
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: width > 600 ? 16 : 13)),
+              Text(
+                amountToPay > 0 ? "To Pay" : "To Receive",
+                style: TextStyle(color: Colors.grey.shade500, fontSize: width > 600 ? 16 : 13),
+              ),
             ],
           ),
         ),
       );
-    } else { // Transactions to Settle
+    } else {
+      // Transactions to Settle
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: width * 0.0375, vertical: width * 0.025),
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Container(
             padding: EdgeInsets.all(width * 0.02),
-            decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(12)),
-            child: Icon(LucideIcons.arrowRightCircle, color: Colors.teal.shade700, size: width * 0.065),
+            decoration: BoxDecoration(
+                color: Colors.teal.shade50, borderRadius: BorderRadius.circular(12)),
+            child: Icon(
+                LucideIcons.arrowRightCircle,
+                color: Colors.teal.shade700,
+                size: width * 0.065),
           ),
-          title: Text("${item['from']} to ${item['to']}",
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: width > 600 ? 20 : 17, color: Colors.black87)),
-          trailing: Text("₹${item['amount'].toStringAsFixed(2)}",
-              style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: width > 600 ? 20 : 17,
-                  color: Colors.green.shade700)),
+          title: Text(
+            "${item['from']} to ${item['to']}",
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: width > 600 ? 20 : 17,
+                color: Colors.black87),
+          ),
+          trailing: Text(
+            "₹${item['amount'].toStringAsFixed(2)}",
+            style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: width > 600 ? 20 : 17,
+                color: Colors.green.shade700),
+          ),
         ),
       );
     }
   }
 
   Widget _buildFinalizeButton() {
-    return Center(
-      child: SliderButton(
-        action: () async {
-          _handleFinalizePayment();
-          return true;
-        },
-        label: const Text("Slide to Finalize Payment"),
-      ),
+    return SliderButton(
+      action: () async {
+        _handleFinalizePayment();
+        return true;
+      },
+      label: const Text("Slide to Finalize Payment"),
+      backgroundColor: Colors.grey.shade200, // Track background color
+      buttonColor: Colors.teal.shade300, // Button color
+      icon: const Center(
+        child: Text(
+          ">",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+      ), // Adds ">>" inside the button
+      width: MediaQuery.of(context).size.width * 0.9, // Ensure it spans most of the width
     );
   }
 }

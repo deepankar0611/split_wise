@@ -104,16 +104,14 @@ class _NotificationnState extends State<Notificationn> {
   }
 
   Future<void> _showNotification(String title, String body, String payload) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-    AndroidNotificationDetails(
+    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
       'notification_channel',
       'Notifications',
       channelDescription: 'General notifications',
       importance: Importance.max,
       priority: Priority.high,
     );
-    const NotificationDetails platformChannelSpecifics =
-    NotificationDetails(android: androidPlatformChannelSpecifics);
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
 
     await flutterLocalNotificationsPlugin.show(
       DateTime.now().millisecondsSinceEpoch % 100000,
@@ -229,7 +227,7 @@ class _NotificationnState extends State<Notificationn> {
           .collection('reminders')
           .doc(reminderId)
           .update({
-        'participants': FieldValue.arrayRemove([currentUserUid]), // Remove UID from participants
+        'participants': FieldValue.arrayRemove([currentUserUid]),
       });
       _showSnackBar("Reminder dismissed");
       setState(() {});
@@ -269,7 +267,7 @@ class _NotificationnState extends State<Notificationn> {
             .collection('reminders')
             .doc(id)
             .update({
-          'participants': FieldValue.arrayRemove([currentUserUid]), // Remove UID from participants
+          'participants': FieldValue.arrayRemove([currentUserUid]),
         });
       }
       setState(() {});
@@ -294,7 +292,7 @@ class _NotificationnState extends State<Notificationn> {
             .collection('reminders')
             .doc(id)
             .update({
-          'participants': FieldValue.arrayUnion([currentUserUid]), // Re-add UID to participants
+          'participants': FieldValue.arrayUnion([currentUserUid]),
         });
       }
       setState(() {});

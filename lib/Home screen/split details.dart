@@ -5,6 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class SplitDetailScreen extends StatefulWidget {
   final String splitId;
@@ -77,10 +80,10 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       double netAmount = splitAmount - paidAmount;
 
       if (netAmount > 0) {
-        totalPay = netAmount;  // User owes this amount
+        totalPay = netAmount; // User owes this amount
         totalReceive = 0.0;
       } else if (netAmount < 0) {
-        totalReceive = netAmount.abs();  // User is owed this amount
+        totalReceive = netAmount.abs(); // User is owed this amount
         totalPay = 0.0;
       }
     }
@@ -125,6 +128,95 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _generatePdf() async {
+    final pdf = pw.Document();
+
+    // Fetch transactions
+    QuerySnapshot transactionSnapshot = await FirebaseFirestore.instance
+        .collection('splits')
+        .doc(widget.splitId)
+        .collection('transactions')
+        .orderBy('timestamp', descending: true)
+        .get();
+
+    List<Map<String, dynamic>> transactions = transactionSnapshot.docs.map((doc) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+
+    // Prepare participant data
+    Map<String, dynamic> paidBy = splitData!['paidBy'] as Map<String, dynamic>? ?? {};
+    List<String> participants = List<String>.from(splitData!['participants']);
+    double totalAmount = (splitData!['totalAmount'] as num).toDouble();
+    double sharePerPerson = totalAmount / participants.length;
+
+    // Summary data
+    Timestamp? createdAt = splitData!['createdAt'] as Timestamp?;
+    String formattedDate =
+    createdAt != null ? DateFormat('dd MMM, hh:mm a').format(createdAt.toDate()) : "Unknown Date";
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (pw.Context context) => [
+          pw.Text(
+            splitData!['title'] ?? 'Split Details',
+            style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 20),
+          pw.Text('Summary', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 10),
+          pw.Text('Total Amount: ₹${totalAmount.toStringAsFixed(2)}'),
+          pw.Text('Category: ${splitData!['category'] ?? "Others"}'),
+          pw.Text('Created By: ${userNames[splitData!['createdBy']] ?? "Unknown"}'),
+          pw.Text('Date: $formattedDate'),
+          pw.Text('Participants: ${participants.length}'),
+          pw.Text('Amount Per Person: ₹${sharePerPerson.toStringAsFixed(2)}'),
+          pw.SizedBox(height: 20),
+          pw.Text('Participants', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 10),
+          pw.Table.fromTextArray(
+            headers: ['Name', 'Paid', 'Net Amount'],
+            data: participants.map((uid) {
+              double paidAmount = (paidBy[uid] as num?)?.toDouble() ?? 0.0;
+              double netAmount = sharePerPerson - paidAmount;
+              return [
+                userNames[uid] ?? "Unknown",
+                '₹${paidAmount.toStringAsFixed(2)}',
+                netAmount > 0 ? '-₹${netAmount.toStringAsFixed(2)}' : '+₹${(-netAmount).toStringAsFixed(2)}',
+              ];
+            }).toList(),
+          ),
+          pw.SizedBox(height: 20),
+          pw.Text('Transactions', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 10),
+          if (transactions.isNotEmpty)
+            pw.Table.fromTextArray(
+              headers: ['From', 'To', 'Amount'],
+              data: transactions.map((transaction) {
+                return [
+                  userNames[transaction['from']] ?? "Unknown",
+                  userNames[transaction['to']] ?? "Unknown",
+                  '₹${(transaction['amount'] as num).toDouble().toStringAsFixed(2)}',
+                ];
+              }).toList(),
+            )
+          else
+            pw.Text('No transactions to settle.'),
+        ],
+      ),
+    );
+
+    // Save the PDF
+    final directory = await getExternalStorageDirectory();
+    final file = File("${directory!.path}/split_${widget.splitId}_${DateTime.now().millisecondsSinceEpoch}.pdf");
+    await file.writeAsBytes(await pdf.save());
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("PDF saved to ${file.path}", style: GoogleFonts.poppins())),
+    );
   }
 
   @override
@@ -181,12 +273,26 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _fetchSplitData,
-        backgroundColor: const Color(0xFF234567),
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        child: const Icon(LucideIcons.refreshCw, color: Colors.white),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: _generatePdf,
+            backgroundColor: const Color(0xFF234567),
+            elevation: 6,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            child: const Icon(Icons.picture_as_pdf, color: Colors.white),
+            tooltip: 'Generate PDF',
+          ),
+          SizedBox(height: 10),
+          FloatingActionButton(
+            onPressed: _fetchSplitData,
+            backgroundColor: const Color(0xFF234567),
+            elevation: 6,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            child: const Icon(LucideIcons.refreshCw, color: Colors.white),
+          ),
+        ],
       ),
     );
   }
@@ -788,7 +894,6 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
 
   Future<void> _settleSplit(bool isSplitSettled) async {
     try {
-      // Step 1: Mark the split as settled for the user
       await FirebaseFirestore.instance
           .collection('splits')
           .doc(widget.splitId)
@@ -799,7 +904,6 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // Step 2: Update user's amountToPay or amountToReceive in the users collection
       DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(userId);
       DocumentSnapshot userDoc = await userRef.get();
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>? ?? {};
@@ -807,24 +911,20 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       double currentAmountToPay = (userData['amountToPay'] as num?)?.toDouble() ?? 0.0;
       double currentAmountToReceive = (userData['amountToReceive'] as num?)?.toDouble() ?? 0.0;
 
-      // Update based on whether the user owes or is owed
       if (totalPay > 0) {
-        // User owes money, decrease amountToPay
         double newAmountToPay = (currentAmountToPay - totalPay).clamp(0, double.infinity);
         await userRef.update({
           'amountToPay': newAmountToPay,
         });
       } else if (totalReceive > 0) {
-        // User is owed money, decrease amountToReceive
         double newAmountToReceive = (currentAmountToReceive - totalReceive).clamp(0, double.infinity);
         await userRef.update({
           'amountToReceive': newAmountToReceive,
         });
       }
 
-      // Refresh UI
       setState(() {
-        _fetchSplitData(); // Refetch to update balances
+        _fetchSplitData();
       });
 
       ScaffoldMessenger.of(context).showSnackBar(

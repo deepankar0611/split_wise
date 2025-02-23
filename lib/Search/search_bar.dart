@@ -83,21 +83,21 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           ),
         ),
         backgroundColor: const Color(0xFF234567),
-        elevation: 4, // Adds shadow for depth
-        centerTitle: true, // Centers the title
+        elevation: 4,
+        centerTitle: true,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-        ), // Rounded bottom corners
-        toolbarHeight: 50, // Increase height for more visual impact
+        ),
+        toolbarHeight: 50,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Material(
-              elevation: 4, // Keep elevation for shadow, adjust as needed
-              shadowColor: Colors.grey.withOpacity(0.5), // Add shadow color and opacity
-              borderRadius: BorderRadius.circular(15), // Adjust borderRadius for rounded rectangle corners
+              elevation: 4,
+              shadowColor: Colors.grey.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(15),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
@@ -145,11 +145,16 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                                 borderRadius: BorderRadius.circular(15)),
                             child: ListTile(
                               leading: CircleAvatar(
+                                backgroundImage: userData['profileImageUrl'] != null
+                                    ? NetworkImage(userData['profileImageUrl'])
+                                    : null,
                                 backgroundColor: Colors.blueGrey.shade100,
-                                child: Text(
+                                child: userData['profileImageUrl'] == null
+                                    ? Text(
                                   userData['name']?[0] ?? "?",
                                   style: const TextStyle(color: Colors.blueGrey),
-                                ),
+                                )
+                                    : null,
                               ),
                               title: Text(
                                 userData['name'] ?? "Unknown",
@@ -171,7 +176,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12)),
                                 ),
-                                child: const Text("Add Friend"),
+                                child: const Text(
+                                  "Add Friend",
+                                  style: TextStyle(color: Colors.white),
+                                ),
                               ),
                             ),
                           );

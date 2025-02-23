@@ -283,7 +283,9 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                     radius: 22,
                     backgroundImage: payer == "You" && currentUserProfilePic != null && currentUserProfilePic!.isNotEmpty
                         ? NetworkImage(currentUserProfilePic!)
-                        : friend["profilePic"].isNotEmpty ? NetworkImage(friend["profilePic"]) : null,
+                        : friend["profilePic"].isNotEmpty
+                        ? NetworkImage(friend["profilePic"])
+                        : null,
                     backgroundColor: Colors.grey.shade300,
                     child: (payer == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
                         friend["profilePic"].isEmpty
@@ -304,19 +306,20 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 10),
                   SizedBox(
-                    width: 130,
+                    width: 90, // Adjusted width
                     child: TextField(
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.right,
-                      style: TextStyle(fontSize: 16, color: Colors.black87), // Contrast color for input text
+                      style: TextStyle(fontSize: 16, color: Colors.black87),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
                         prefixText: "₹ ",
-                        prefixStyle: TextStyle(color: Colors.teal.shade900, fontWeight: FontWeight.bold), // Contrast color for prefix
+                        prefixStyle: TextStyle(color: Colors.teal.shade900, fontWeight: FontWeight.bold),
                         hintText: "0.00",
-                        hintStyle: TextStyle(color: Colors.grey[500]), // Slightly darker hint color
+                        hintStyle: TextStyle(color: Colors.grey[500]),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -363,14 +366,14 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Total Paid: ₹ ${payerAmounts.values.fold(0.0, (sum, amount) => sum + amount).toStringAsFixed(2)} of ₹ ${widget.totalAmount.toStringAsFixed(2)}",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87), // Contrast color for Total Paid
+                  "Paid: ₹ ${payerAmounts.values.fold(0.0, (sum, amount) => sum + amount).toStringAsFixed(2)} of ₹ ${widget.totalAmount.toStringAsFixed(2)}",
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
                 ),
                 Text(
                   remainingAmount <= 0 ? "₹ 0.00 left" : "₹ ${remainingAmount.toStringAsFixed(2)} left",
                   style: TextStyle(
-                    color: remainingAmount <= 0 ? Colors.green.shade900 : Colors.red.shade900, // Darker contrast color for "left" text
-                    fontSize: 15,
+                    color: remainingAmount <= 0 ? Colors.green.shade900 : Colors.red.shade900,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
