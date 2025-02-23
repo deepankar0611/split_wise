@@ -477,6 +477,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+
+
   Widget _buildExclusiveFeatureCard() {
     final List<String> card = [
       "assets/logo/spend.jpg",
@@ -499,40 +501,142 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: MediaQuery.of(context).size.height * 0.2, // Reduced to 20% of screen height
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: card.length,
-              itemBuilder: (context, index) {
-                return GestureDetector( // Wrap Container with GestureDetector
-                  onTap: index == 0 ? () {
-                    // Condition to check for the first image (index 0)
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SpendAnalyzerScreen(),
+            height: MediaQuery.of(context).size.height * 0.2,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('splits')
+                  .where('participants', arrayContains: userId)
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: card.length,
+                    itemBuilder: (context, index) {
+                      return GestureDetector(
+                        onTap: index == 0
+                            ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SpendAnalyzerScreen(
+                                categoryData: <String, Map<String, dynamic>>{},
+                                amountToPay: 0.0,  // No data, so 0
+                                amountToReceive: 0.0,
+                              ),
+                            ),
+                          );
+                        }
+                            : null,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          width: MediaQuery.of(context).size.width * 0.9,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            image: DecorationImage(
+                              image: AssetImage(card[index]),
+                              fit: BoxFit.cover,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.2),
+                                spreadRadius: 1,
+                                blurRadius: 7,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }
+
+                // Calculate totals from splits
+                double totalAmountToPay = 0.0;
+                double totalAmountToReceive = 0.0;
+                Map<String, Map<String, dynamic>> categoryData = {};
+
+                for (var splitDoc in snapshot.data!.docs) {
+                  Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
+                  Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
+                  double totalAmount = splitData['totalAmount']?.toDouble() ?? 0.0;
+                  int participantCount = (splitData['participants'] as List<dynamic>?)?.length ?? 1;
+                  double userPaidAmount = paidBy[userId]?.toDouble() ?? 0.0;
+                  double userShare = totalAmount / participantCount;
+                  double netAmount = userShare - userPaidAmount;
+
+                  if (netAmount > 0) {
+                    totalAmountToPay += netAmount; // User owes this amount
+                  } else if (netAmount < 0) {
+                    totalAmountToReceive += netAmount.abs(); // User is owed this amount
+                  }
+
+                  // Aggregate category data (unchanged from your original logic)
+                  String category = splitData['category'] ?? 'Others';
+                  Timestamp? createdAt = splitData['createdAt'] as Timestamp?;
+                  if (userPaidAmount > 0) {
+                    if (!categoryData.containsKey(category)) {
+                      categoryData[category] = {
+                        'totalPaid': 0.0,
+                        'lastInvolved': createdAt?.toDate(),
+                      };
+                    }
+                    categoryData[category]!['totalPaid'] =
+                        (categoryData[category]!['totalPaid'] as double) + userPaidAmount;
+                    if (createdAt != null &&
+                        (categoryData[category]!['lastInvolved'] == null ||
+                            createdAt.toDate().isAfter(categoryData[category]!['lastInvolved'] as DateTime))) {
+                      categoryData[category]!['lastInvolved'] = createdAt.toDate();
+                    }
+                  }
+                }
+
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: card.length,
+                  itemBuilder: (context, index) {
+                    return GestureDetector(
+                      onTap: index == 0
+                          ? () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SpendAnalyzerScreen(
+                              categoryData: categoryData,
+                              amountToPay: totalAmountToPay,
+                              amountToReceive: totalAmountToReceive,
+                            ),
+                          ),
+                        );
+                      }
+                          : null,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        width: MediaQuery.of(context).size.width * 0.9,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          image: DecorationImage(
+                            image: AssetImage(card[index]),
+                            fit: BoxFit.cover,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              spreadRadius: 1,
+                              blurRadius: 7,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
                       ),
                     );
-                  } : null, // No action for other images
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    width: MediaQuery.of(context).size.width * 0.9, // Width set to 90% of screen width for each card
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      image: DecorationImage(
-                        image: AssetImage(card[index]), // Use the dynamic path from the list
-                        fit: BoxFit.cover,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2), // Fixed typo: withOpacity instead of withValues
-                          spreadRadius: 1,
-                          blurRadius: 7,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                  ),
+                  },
                 );
               },
             ),
@@ -541,6 +645,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+// Ensure _buildHistoryCardBox remains unchanged for reference
+// (Assuming it’s already in your HomeScreen code as provided earlier)
 
 
   Widget _buildHistoryItem({

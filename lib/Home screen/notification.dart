@@ -5,8 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:split_wise/Home%20screen/split%20details.dart';
-import 'package:split_wise/Profile/all%20expense%20history%20detals.dart' as ExpenseHistory;
 
 class Notificationn extends StatefulWidget {
   const Notificationn({super.key});
@@ -21,13 +19,23 @@ class _NotificationnState extends State<Notificationn> {
   bool _showBanner = false;
   String? _bannerTitle;
   String? _bannerBody;
-  String? _bannerSplitId;
+  Map<String, String> userNames = {};
 
   @override
   void initState() {
     super.initState();
     _initializeLocalNotifications();
     _setupNotificationListeners();
+    _preloadUserNames();
+  }
+
+  Future<void> _preloadUserNames() async {
+    var userDocs = await FirebaseFirestore.instance.collection('users').get();
+    setState(() {
+      for (var doc in userDocs.docs) {
+        userNames[doc.id] = doc.data()['name'] ?? 'Unknown';
+      }
+    });
   }
 
   void _initializeLocalNotifications() async {
@@ -35,14 +43,7 @@ class _NotificationnState extends State<Notificationn> {
     AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings =
     InitializationSettings(android: initializationSettingsAndroid);
-    await flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (response.payload != null) {
-          goToExpenseHistoryDetail(response.payload!);
-        }
-      },
-    );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   void _setupNotificationListeners() {
@@ -55,11 +56,14 @@ class _NotificationnState extends State<Notificationn> {
       for (var change in snapshot.docChanges) {
         if (change.type == DocumentChangeType.added) {
           var data = change.doc.data()!;
-          _showNotification(
-            "Friend Request",
-            "${userNames[data['fromUid']] ?? 'Someone'} sent a friend request",
-            change.doc.id,
-          );
+          String fromUid = data['fromUid'];
+          _fetchUserName(fromUid).then((name) {
+            _showNotification(
+              "Friend Request",
+              "$name sent a friend request",
+              change.doc.id,
+            );
+          });
         }
       }
     });
@@ -74,17 +78,32 @@ class _NotificationnState extends State<Notificationn> {
         if (change.type == DocumentChangeType.added) {
           var data = change.doc.data()!;
           String splitId = data['splitId'] ?? change.doc.reference.parent.parent!.id;
+          String sentBy = data['sentBy'];
           FirebaseFirestore.instance.collection('splits').doc(splitId).get().then((splitDoc) {
             String description = splitDoc.data()?['description'] ?? 'No description';
-            _showNotification(
-              "${userNames[data['sentBy']] ?? 'Someone'} sent a reminder",
-              "Split details of '$description'",
-              splitId,
-            );
+            _fetchUserName(sentBy).then((name) {
+              _showNotification(
+                "$name sent a reminder",
+                "Split details of '$description'",
+                splitId,
+              );
+            });
           });
         }
       }
     });
+  }
+
+  Future<String> _fetchUserName(String uid) async {
+    if (userNames.containsKey(uid)) {
+      return userNames[uid]!;
+    }
+    var userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    String name = userDoc.data()?['name'] ?? 'Unknown';
+    setState(() {
+      userNames[uid] = name;
+    });
+    return name;
   }
 
   Future<void> _showNotification(String title, String body, String payload) async {
@@ -112,7 +131,6 @@ class _NotificationnState extends State<Notificationn> {
         _showBanner = true;
         _bannerTitle = title;
         _bannerBody = body;
-        _bannerSplitId = payload;
       });
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) setState(() => _showBanner = false);
@@ -225,29 +243,153 @@ class _NotificationnState extends State<Notificationn> {
     }
   }
 
-  void goToExpenseHistoryDetail(String splitId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ExpenseHistory.ExpenseHistoryDetailedScreen(
-          splitId: splitId,
-          friendUid: null,
-          category: null,
-          isPayer: null,
-          isReceiver: null,
-          showFilter: splitId, // Adjust based on your ExpenseHistoryDetailedScreen requirements
-        ),
-      ),
-    ).then((_) => setState(() {}));
-  }
-
-  void _showSnackBar(String message) {
+  void _showSnackBar(String message, {VoidCallback? onUndo}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message, style: GoogleFonts.poppins())),
+      SnackBar(
+        content: Text(message, style: GoogleFonts.poppins()),
+        action: onUndo != null
+            ? SnackBarAction(
+          label: 'Undo',
+          textColor: Colors.yellow,
+          onPressed: onUndo,
+        )
+            : null,
+      ),
     );
   }
 
-  Map<String, String> userNames = {};
+  Future<void> _deleteNotification(String type, String id, String? splitId) async {
+    try {
+      if (type == 'friend_request') {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserUid)
+            .collection('friend_requests')
+            .doc(id)
+            .delete();
+      } else if (type == 'split_reminder' && splitId != null) {
+        await FirebaseFirestore.instance
+            .collection('splits')
+            .doc(splitId)
+            .collection('reminders')
+            .doc(id)
+            .update({
+          'dismissedBy': FieldValue.arrayUnion([currentUserUid]),
+        });
+      }
+      setState(() {});
+    } catch (e) {
+      _showSnackBar("Error deleting notification: $e");
+    }
+  }
+
+  Future<void> _undoDelete(String type, String id, String? splitId, Map<String, dynamic> data) async {
+    try {
+      if (type == 'friend_request') {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserUid)
+            .collection('friend_requests')
+            .doc(id)
+            .set(data);
+      } else if (type == 'split_reminder' && splitId != null) {
+        await FirebaseFirestore.instance
+            .collection('splits')
+            .doc(splitId)
+            .collection('reminders')
+            .doc(id)
+            .update({
+          'dismissedBy': FieldValue.arrayRemove([currentUserUid]),
+        });
+      }
+      setState(() {});
+    } catch (e) {
+      _showSnackBar("Error undoing deletion: $e");
+    }
+  }
+
+  Future<void> _deleteAllNotifications(List<Map<String, dynamic>> allNotifications) async {
+    try {
+      List<Map<String, dynamic>> deletedNotifications = [];
+
+      for (var notification in allNotifications) {
+        if (notification['type'] == 'friend_request') {
+          deletedNotifications.add({
+            'type': notification['type'],
+            'id': notification['id'],
+            'splitId': null,
+            'data': notification['data'],
+          });
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUserUid)
+              .collection('friend_requests')
+              .doc(notification['id'])
+              .delete();
+        } else if (notification['type'] == 'split_reminder') {
+          String splitId = notification['splitId'];
+          List<dynamic> dismissedBy = notification['data']['dismissedBy'] ?? [];
+          if (!dismissedBy.contains(currentUserUid)) {
+            deletedNotifications.add({
+              'type': notification['type'],
+              'id': notification['id'],
+              'splitId': splitId,
+              'data': notification['data'],
+            });
+            await FirebaseFirestore.instance
+                .collection('splits')
+                .doc(splitId)
+                .collection('reminders')
+                .doc(notification['id'])
+                .update({
+              'dismissedBy': FieldValue.arrayUnion([currentUserUid]),
+            });
+          }
+        }
+      }
+
+      _showSnackBar(
+        "All notifications deleted",
+        onUndo: () async {
+          for (var deleted in deletedNotifications) {
+            await _undoDelete(deleted['type'], deleted['id'], deleted['splitId'], deleted['data']);
+          }
+        },
+      );
+      setState(() {});
+    } catch (e) {
+      _showSnackBar("Error deleting all notifications: $e");
+    }
+  }
+
+  Future<void> _confirmDeleteAllNotifications(List<Map<String, dynamic>> allNotifications) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Delete All Notifications", style: GoogleFonts.poppins()),
+          content: Text(
+            "Are you sure you want to delete all notifications? This action will remove all friend requests and dismiss all reminders.",
+            style: GoogleFonts.poppins(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text("Delete", style: GoogleFonts.poppins(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      await _deleteAllNotifications(allNotifications);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -255,6 +397,50 @@ class _NotificationnState extends State<Notificationn> {
       appBar: AppBar(
         title: const Text("Notifications"),
         backgroundColor: const Color(0xFF234567),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_forever),
+            tooltip: "Delete All",
+            onPressed: () async {
+              final friendSnapshot = await getFriendRequests().first;
+              final reminderSnapshot = await getSplitReminders().first;
+
+              List<Map<String, dynamic>> allNotifications = [];
+
+              if (friendSnapshot.docs.isNotEmpty) {
+                allNotifications.addAll(friendSnapshot.docs.map((doc) {
+                  var data = doc.data();
+                  return {
+                    'type': 'friend_request',
+                    'data': data,
+                    'timestamp': (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+                    'id': doc.id,
+                  };
+                }));
+              }
+
+              if (reminderSnapshot.docs.isNotEmpty) {
+                allNotifications.addAll(reminderSnapshot.docs.map((doc) {
+                  var data = doc.data();
+                  String splitId = data['splitId'] ?? doc.reference.parent.parent!.id;
+                  return {
+                    'type': 'split_reminder',
+                    'data': data,
+                    'timestamp': (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+                    'id': doc.id,
+                    'splitId': splitId,
+                  };
+                }));
+              }
+
+              if (allNotifications.isNotEmpty) {
+                _confirmDeleteAllNotifications(allNotifications);
+              } else {
+                _showSnackBar("No notifications to delete");
+              }
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -284,7 +470,6 @@ class _NotificationnState extends State<Notificationn> {
                     if (friendSnapshot.hasData && friendSnapshot.data!.docs.isNotEmpty) {
                       allNotifications.addAll(friendSnapshot.data!.docs.map((doc) {
                         var data = doc.data();
-                        userNames[data['fromUid']] = "Unknown";
                         return {
                           'type': 'friend_request',
                           'data': data,
@@ -298,7 +483,6 @@ class _NotificationnState extends State<Notificationn> {
                       allNotifications.addAll(reminderSnapshot.data!.docs.map((doc) {
                         var data = doc.data();
                         String splitId = data['splitId'] ?? doc.reference.parent.parent!.id;
-                        userNames[data['sentBy']] = "Unknown";
                         return {
                           'type': 'split_reminder',
                           'data': data,
@@ -321,44 +505,62 @@ class _NotificationnState extends State<Notificationn> {
                         var notification = allNotifications[index];
                         if (notification['type'] == 'friend_request') {
                           String senderUid = notification['data']['fromUid'];
-                          return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                            future: FirebaseFirestore.instance.collection('users').doc(senderUid).get(),
-                            builder: (context, userSnapshot) {
-                              if (userSnapshot.hasError) {
-                                return Text("User Error: ${userSnapshot.error}", style: GoogleFonts.poppins());
-                              }
-                              if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                          return FutureBuilder<String>(
+                            future: _fetchUserName(senderUid),
+                            builder: (context, nameSnapshot) {
+                              if (!nameSnapshot.hasData) {
                                 return const SizedBox.shrink();
                               }
-                              var userData = userSnapshot.data!.data()!;
-                              userNames[senderUid] = userData['name'] ?? "Unknown";
-                              String senderName = userNames[senderUid]!;
-                              String formattedDate = DateFormat('dd MMM, hh:mm a')
-                                  .format(notification['timestamp']);
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: const Color(0xFF234567),
-                                    child: Text(senderName[0].toUpperCase(), style: const TextStyle(color: Colors.white)),
-                                  ),
-                                  title: Text("$senderName sent a friend request",
-                                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-                                  subtitle: Text("Sent: $formattedDate",
-                                      style: GoogleFonts.poppins(color: Colors.grey[600])),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.check, color: Colors.green),
-                                        onPressed: () => acceptFriendRequest(senderUid),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.close, color: Colors.red),
-                                        onPressed: () => rejectFriendRequest(senderUid),
-                                      ),
-                                    ],
+                              String senderName = nameSnapshot.data!;
+                              String formattedDate = DateFormat('dd MMM, hh:mm a').format(notification['timestamp']);
+                              return Dismissible(
+                                key: Key(notification['id']),
+                                direction: DismissDirection.endToStart,
+                                onDismissed: (direction) {
+                                  var deletedData = notification['data'];
+                                  _deleteNotification(notification['type'], notification['id'], null);
+                                  _showSnackBar(
+                                    "Friend request deleted",
+                                    onUndo: () => _undoDelete(
+                                      notification['type'],
+                                      notification['id'],
+                                      null,
+                                      deletedData,
+                                    ),
+                                  );
+                                },
+                                background: Container(
+                                  color: Colors.red,
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 20),
+                                  child: const Icon(Icons.delete, color: Colors.white),
+                                ),
+                                child: Card(
+                                  margin: const EdgeInsets.symmetric(vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: const Color(0xFF234567),
+                                      child: Text(senderName[0].toUpperCase(),
+                                          style: const TextStyle(color: Colors.white)),
+                                    ),
+                                    title: Text("$senderName sent a friend request",
+                                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                                    subtitle: Text("Sent: $formattedDate",
+                                        style: GoogleFonts.poppins(color: Colors.grey[600])),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.check, color: Colors.green),
+                                          onPressed: () => acceptFriendRequest(senderUid),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.close, color: Colors.red),
+                                          onPressed: () => rejectFriendRequest(senderUid),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -372,26 +574,21 @@ class _NotificationnState extends State<Notificationn> {
 
                           if (dismissedBy.contains(currentUserUid)) return const SizedBox.shrink();
 
-                          return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                            future: FirebaseFirestore.instance.collection('users').doc(senderUid).get(),
-                            builder: (context, userSnapshot) {
-                              if (userSnapshot.hasError) {
-                                return Text("User Error: ${userSnapshot.error}", style: GoogleFonts.poppins());
-                              }
-                              if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                          return FutureBuilder<String>(
+                            future: _fetchUserName(senderUid),
+                            builder: (context, nameSnapshot) {
+                              if (!nameSnapshot.hasData) {
                                 return const SizedBox.shrink();
                               }
-                              var userData = userSnapshot.data!.data()!;
-                              userNames[senderUid] = userData['name'] ?? "Unknown";
-                              String senderName = userNames[senderUid]!;
-                              String formattedDate = DateFormat('dd MMM, hh:mm a')
-                                  .format(notification['timestamp']);
+                              String senderName = nameSnapshot.data!;
+                              String formattedDate = DateFormat('dd MMM, hh:mm a').format(notification['timestamp']);
 
                               return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                                 future: FirebaseFirestore.instance.collection('splits').doc(splitId).get(),
                                 builder: (context, splitSnapshot) {
                                   if (splitSnapshot.hasError) {
-                                    return Text("Split Error: ${splitSnapshot.error}", style: GoogleFonts.poppins());
+                                    return Text("Split Error: ${splitSnapshot.error}",
+                                        style: GoogleFonts.poppins());
                                   }
                                   String description = 'Unknown';
                                   if (splitSnapshot.hasData && splitSnapshot.data!.exists) {
@@ -399,37 +596,48 @@ class _NotificationnState extends State<Notificationn> {
                                     description = splitData['description'] ?? 'No description';
                                   }
 
-                                  return Card(
-                                    elevation: 4,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                    margin: const EdgeInsets.symmetric(vertical: 8),
-                                    child: ListTile(
-                                      leading: CircleAvatar(
-                                        backgroundColor: const Color(0xFF234567),
-                                        child: Text(senderName[0].toUpperCase(), style: const TextStyle(color: Colors.white)),
-                                      ),
-                                      title: Text("$senderName sent a reminder",
-                                          style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-                                      subtitle: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text("Split details of '$description'",
-                                              style: const TextStyle(fontStyle: FontStyle.italic)),
-                                          Text("Sent: $formattedDate",
-                                              style: GoogleFonts.poppins(color: Colors.grey[600])),
-                                        ],
-                                      ),
-                                      trailing: GestureDetector(
-                                        onTap: () => goToExpenseHistoryDetail(splitId),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "View Details",
-                                            style: GoogleFonts.poppins(
-                                              color: Colors.blue,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
+                                  return Dismissible(
+                                    key: Key(reminderId),
+                                    direction: DismissDirection.endToStart,
+                                    onDismissed: (direction) {
+                                      var deletedData = notification['data'];
+                                      _deleteNotification(notification['type'], reminderId, splitId);
+                                      _showSnackBar(
+                                        "Reminder dismissed",
+                                        onUndo: () => _undoDelete(
+                                          notification['type'],
+                                          reminderId,
+                                          splitId,
+                                          deletedData,
+                                        ),
+                                      );
+                                    },
+                                    background: Container(
+                                      color: Colors.red,
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.only(right: 20),
+                                      child: const Icon(Icons.delete, color: Colors.white),
+                                    ),
+                                    child: Card(
+                                      elevation: 4,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                      margin: const EdgeInsets.symmetric(vertical: 8),
+                                      child: ListTile(
+                                        leading: CircleAvatar(
+                                          backgroundColor: const Color(0xFF234567),
+                                          child: Text(senderName[0].toUpperCase(),
+                                              style: const TextStyle(color: Colors.white)),
+                                        ),
+                                        title: Text("$senderName sent a reminder",
+                                            style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text("Split details of '$description'",
+                                                style: const TextStyle(fontStyle: FontStyle.italic)),
+                                            Text("Sent: $formattedDate",
+                                                style: GoogleFonts.poppins(color: Colors.grey[600])),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -447,56 +655,6 @@ class _NotificationnState extends State<Notificationn> {
               },
             ),
           ),
-          if (_showBanner)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SlideInDown(
-                duration: const Duration(milliseconds: 300),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Colors.blueAccent,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _bannerTitle ?? "Notification",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        _bannerBody ?? "",
-                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
-                      ),
-                      SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() => _showBanner = false);
-                            if (_bannerSplitId != null) {
-                              goToExpenseHistoryDetail(_bannerSplitId!);
-                            }
-                          },
-                          child: Text(
-                            "View",
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );

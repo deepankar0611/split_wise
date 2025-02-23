@@ -274,7 +274,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ExpenseHistoryDetailedScreen(showFilter: '', splitId: '',)),
+                    MaterialPageRoute(builder: (context) =>  ExpenseHistoryDetailedScreen(showFilter: '', splitId: '',)),
                   );
                 },
                 iconColor: const Color(0xFF7B1FA2),

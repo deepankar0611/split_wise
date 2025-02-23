@@ -77,11 +77,11 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       double netAmount = splitAmount - paidAmount;
 
       if (netAmount > 0) {
-        totalReceive = netAmount;
-        totalPay = 0.0;
-      } else if (netAmount < 0) {
-        totalPay = netAmount.abs();
+        totalPay = netAmount;  // User owes this amount
         totalReceive = 0.0;
+      } else if (netAmount < 0) {
+        totalReceive = netAmount.abs();  // User is owed this amount
+        totalPay = 0.0;
       }
     }
   }
@@ -265,7 +265,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
               children: [
                 Column(
                   children: [
-                    Text("Receive", style: TextStyle(fontSize: 14, color: Colors.green.shade700)),
+                    Text("Pay", style: TextStyle(fontSize: 14, color: Colors.red.shade700)),
                     Text("₹${totalPay.toStringAsFixed(2)}",
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
@@ -273,7 +273,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                 Container(height: 20, child: VerticalDivider(color: Colors.grey.shade300)),
                 Column(
                   children: [
-                    Text("Pay", style: TextStyle(fontSize: 14, color: Colors.red.shade700)),
+                    Text("Receive", style: TextStyle(fontSize: 14, color: Colors.green.shade700)),
                     Text("₹${totalReceive.toStringAsFixed(2)}",
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
@@ -301,7 +301,8 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       shadowColor: Colors.grey.shade200.withOpacity(0.3),
       color: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(25), bottomRight: Radius.circular(25)),
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(25), bottomRight: Radius.circular(25)),
       ),
       child: Padding(
         padding: EdgeInsets.all(screenWidth * 0.04),
@@ -787,6 +788,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
 
   Future<void> _settleSplit(bool isSplitSettled) async {
     try {
+      // Step 1: Mark the split as settled for the user
       await FirebaseFirestore.instance
           .collection('splits')
           .doc(widget.splitId)
@@ -796,7 +798,35 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         'settled': true,
         'timestamp': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      setState(() {});
+
+      // Step 2: Update user's amountToPay or amountToReceive in the users collection
+      DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(userId);
+      DocumentSnapshot userDoc = await userRef.get();
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>? ?? {};
+
+      double currentAmountToPay = (userData['amountToPay'] as num?)?.toDouble() ?? 0.0;
+      double currentAmountToReceive = (userData['amountToReceive'] as num?)?.toDouble() ?? 0.0;
+
+      // Update based on whether the user owes or is owed
+      if (totalPay > 0) {
+        // User owes money, decrease amountToPay
+        double newAmountToPay = (currentAmountToPay - totalPay).clamp(0, double.infinity);
+        await userRef.update({
+          'amountToPay': newAmountToPay,
+        });
+      } else if (totalReceive > 0) {
+        // User is owed money, decrease amountToReceive
+        double newAmountToReceive = (currentAmountToReceive - totalReceive).clamp(0, double.infinity);
+        await userRef.update({
+          'amountToReceive': newAmountToReceive,
+        });
+      }
+
+      // Refresh UI
+      setState(() {
+        _fetchSplitData(); // Refetch to update balances
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Split settled successfully", style: GoogleFonts.poppins())),
       );

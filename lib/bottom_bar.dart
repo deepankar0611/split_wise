@@ -29,7 +29,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _fetchUserData();
     _controller = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -82,7 +81,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
         _isBottomBarVisible = false;
       });
     }
-    Future.delayed(const Duration(milliseconds: 200), () {
+    Future.delayed(const Duration(milliseconds: 350), () {
       _handlingScroll = false;
     });
   }
@@ -95,7 +94,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
         _isBottomBarVisible = true;
       });
     }
-    Future.delayed(const Duration(milliseconds: 200), () {
+    Future.delayed(const Duration(milliseconds: 350), () {
       _handlingScroll = false;
     });
   }
@@ -124,27 +123,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
     "amountToPay": "",
     "amountToReceive": "",
   };
-
-  Future<void> _fetchUserData() async {
-    if (userId == 'defaultUserId') return;
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      if (doc.exists && mounted) {
-        final data = doc.data() ?? {};
-        setState(() {
-          userData = {
-            "name": data["name"] ?? "User",
-            "email": data["email"] ?? "",
-            "profileImageUrl": data.containsKey("profileImageUrl") ? data["profileImageUrl"] : "",
-            "amountToPay": data["amountToPay"]?.toString() ?? "0",
-            "amountToReceive": data["amountToReceive"]?.toString() ?? "0",
-          };
-        });
-      }
-    } catch (e) {
-      print("Error fetching user data: $e");
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -198,9 +176,9 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
               label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.person_2, color: Color(0xFF7B1FA2)),
-              activeIcon: Icon(CupertinoIcons.person_2, color: Color(0xFF1A2E39)),
-              label: 'Friends',
+              icon: Icon(CupertinoIcons.search, color: Color(0xFF7B1FA2)),
+              activeIcon: Icon(CupertinoIcons.search, color: Color(0xFF1A2E39)),
+              label: 'Search',
             ),
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.add_circled, color: Color(0xFFD81B60)),

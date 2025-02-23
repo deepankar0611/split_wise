@@ -4,7 +4,16 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 
 class SpendAnalyzerScreen extends StatefulWidget {
-  const SpendAnalyzerScreen({super.key});
+  final Map<String, Map<String, dynamic>> categoryData;
+  final double amountToPay;
+  final double amountToReceive;
+
+  const SpendAnalyzerScreen({
+    super.key,
+    required this.categoryData,
+    required this.amountToPay,
+    required this.amountToReceive,
+  });
 
   @override
   State<SpendAnalyzerScreen> createState() => _SpendAnalyzerScreenState();
@@ -15,98 +24,33 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
   String _chartType = 'Spent';
   String _selectedChartType = 'Pie';
   DateTime _selectedDate = DateTime.now();
-  String _selectedStatisticsCategory = 'Transport';
-  int _touchedIndex = -1; // To track touched pie section
+  String _selectedStatisticsCategory = 'Grocery';
+  int _touchedIndex = -1; // Track touched pie section
 
-  final List<String> receivedCategories = ['Cashback', 'Friends'];
-  final List<String> spentCategories = [
-    "Shopping",
-    "Transport",
+  // Categories and Icons from HomeScreen
+  final List<String> categories = [
+    "Grocery",
+    "Medicine",
     "Food",
-    "Clothing",
+    "Rent",
+    "Travel",
+    "Shopping",
     "Entertainment",
+    "Utilities",
+    "Others",
   ];
 
-  // *** --- Dynamic Data Handling --- ***
-  // Assume you have a list of transactions with dates and categories
-  List<Transaction> transactions = [
-    Transaction(
-        date: DateTime(2025, 1, 5), category: "Shopping", amount: 1000.00),
-    Transaction(
-        date: DateTime(2025, 1, 10), category: "Food", amount: 500.00),
-    Transaction(
-        date: DateTime(2025, 1, 15), category: "Transport", amount: 200.00),
-    Transaction(
-        date: DateTime(2025, 1, 20), category: "Cashback", amount: 3000.00),
-    Transaction(
-        date: DateTime(2025, 2, 1), category: "Shopping", amount: 1200.00),
-    Transaction(
-        date: DateTime(2025, 2, 8), category: "Entertainment", amount: 300.00),
-    Transaction(
-        date: DateTime(2025, 2, 15), category: "Friends", amount: 10000.00),
-    // ... more transactions for different months and categories
-  ];
-
-  Map<String, double> monthlyReceivedSpending = {}; // Will be dynamically calculated
-  Map<String, double> monthlySpentSpending = {};   // Will be dynamically calculated
-  Map<String, double> dailySpentSpending = {};     // Will be dynamically calculated
-  Map<String, double> dailyReceivedSpending = {};   // Will be dynamically calculated
-
-  @override
-  void initState() {
-    super.initState();
-    _updateSpendingData(); // Initial data load
-  }
-
-  void _updateSpendingData() {
-    monthlySpentSpending = _calculateMonthlySpending(spentCategories);
-    monthlyReceivedSpending = _calculateMonthlySpending(receivedCategories);
-    dailySpentSpending = _calculateDailySpending(spentCategories);
-    dailyReceivedSpending = _calculateDailySpending(receivedCategories);
-  }
-
-  Map<String, double> _calculateMonthlySpending(List<String> categories) {
-    Map<String, double> spending = {};
-    DateTime firstDayOfMonth = DateTime(_selectedDate.year, _selectedDate.month, 1);
-    DateTime lastDayOfMonth = DateTime(_selectedDate.year, _selectedDate.month + 1, 0);
-
-    for (String category in categories) {
-      double totalAmount = 0;
-      for (var transaction in transactions) {
-        if (categories.contains(transaction.category) &&
-            transaction.category == category &&
-            transaction.date.isAfter(firstDayOfMonth.subtract(const Duration(days: 1))) &&
-            transaction.date.isBefore(lastDayOfMonth.add(const Duration(days: 1)))) {
-          totalAmount += transaction.amount;
-        }
-      }
-      spending[category] = totalAmount;
-    }
-    return spending;
-  }
-
-  Map<String, double> _calculateDailySpending(List<String> categories) {
-    Map<String, double> spending = {};
-    DateTime selectedDay = _selectedDate;
-
-
-    for (String category in categories) {
-      double totalAmount = 0;
-      for (var transaction in transactions) {
-        if (categories.contains(transaction.category) &&
-            transaction.category == category &&
-            transaction.date.year == selectedDay.year &&
-            transaction.date.month == selectedDay.month &&
-            transaction.date.day == selectedDay.day) {
-          totalAmount += transaction.amount;
-        }
-      }
-      spending[category] = totalAmount;
-    }
-    return spending;
-  }
-  // *** --- End Dynamic Data Handling --- ***
-
+  final Map<String, Map<String, dynamic>> categoryIcons = {
+    "Grocery": {"icon": LucideIcons.shoppingCart, "color": Colors.teal},
+    "Medicine": {"icon": LucideIcons.pill, "color": Colors.red},
+    "Food": {"icon": LucideIcons.utensils, "color": Colors.orange},
+    "Rent": {"icon": LucideIcons.home, "color": Colors.brown},
+    "Travel": {"icon": LucideIcons.car, "color": Colors.blueAccent},
+    "Shopping": {"icon": LucideIcons.gift, "color": Colors.pinkAccent},
+    "Entertainment": {"icon": LucideIcons.film, "color": Colors.purple},
+    "Utilities": {"icon": LucideIcons.lightbulb, "color": Colors.blueGrey},
+    "Others": {"icon": LucideIcons.circleDollarSign, "color": Colors.grey},
+  };
 
   final List<Color> chartColors = [
     const Color(0xFFFFC107),
@@ -119,13 +63,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Map<String, double> currentSpending =
-    _timePeriod == 'Month' ? monthlySpentSpending : dailySpentSpending;
-    List<String> currentCategories =
-    _chartType == 'Received' ? receivedCategories : spentCategories;
-
-    double totalSpent = _calculateTotalSpending(monthlySpentSpending); // Using monthly for total
-    double totalReceived = _calculateTotalSpending(monthlyReceivedSpending); // Using monthly for total
+    Map<String, double> currentSpending = _getSpendingForTimePeriod(widget.categoryData);
 
     return Scaffold(
       appBar: AppBar(
@@ -150,7 +88,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTotalSpendReceiveCard(totalSpent, totalReceived, context),
+            _buildTotalSpendReceiveCard(widget.amountToPay, widget.amountToReceive, context),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Row(
@@ -169,8 +107,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(value,
-                            style:
-                            TextStyle(color: Colors.grey.shade700, fontSize: 14)),
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
                       );
                     }).toList(),
                     onChanged: (String? newValue) {
@@ -181,6 +118,26 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                   ),
                   Row(
                     children: [
+                      DropdownButton<String>(
+                        value: _timePeriod,
+                        underline: const SizedBox(),
+                        dropdownColor: Colors.grey.shade50,
+                        icon: Icon(LucideIcons.chevronDown, color: Colors.grey.shade700, size: 16),
+                        items: <String>['Day', 'Month']
+                            .map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value,
+                                style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _timePeriod = newValue!;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
                       Text(
                         DateFormat('yyyy-MM-dd').format(_selectedDate),
                         style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
@@ -193,12 +150,11 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                             context: context,
                             initialDate: _selectedDate,
                             firstDate: DateTime(2000),
-                            lastDate: DateTime(2026),
+                            lastDate: DateTime(2025),
                           );
                           if (pickedDate != null && pickedDate != _selectedDate) {
                             setState(() {
                               _selectedDate = pickedDate;
-                              _updateSpendingData(); // Update data on date change
                             });
                           }
                         },
@@ -210,21 +166,47 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                 ],
               ),
             ),
-            _buildChartSection(currentSpending, currentCategories),
+            _buildChartSection(currentSpending, categories),
             const SizedBox(height: 20),
-            _buildCategoryStackCard(currentSpending, currentCategories),
+            _buildCategoryStackCard(currentSpending, categories),
             const SizedBox(height: 20),
-            _buildStatisticsCard(),
+            _buildStatisticsCard(widget.categoryData),
           ],
         ),
       ),
     );
   }
 
+  Map<String, double> _getSpendingForTimePeriod(Map<String, Map<String, dynamic>> categoryData) {
+    Map<String, double> spending = {};
+    for (String category in categories) {
+      double totalPaid = categoryData[category]?['totalPaid']?.toDouble() ?? 0.0;
+      DateTime? lastInvolved = categoryData[category]?['lastInvolved'] as DateTime?;
+      if (_timePeriod == 'Day' && lastInvolved != null) {
+        if (lastInvolved.day == _selectedDate.day &&
+            lastInvolved.month == _selectedDate.month &&
+            lastInvolved.year == _selectedDate.year) {
+          spending[category] = totalPaid;
+        } else {
+          spending[category] = 0.0;
+        }
+      } else {
+        if (lastInvolved != null &&
+            lastInvolved.month == _selectedDate.month &&
+            lastInvolved.year == _selectedDate.year) {
+          spending[category] = totalPaid;
+        } else {
+          spending[category] = 0.0;
+        }
+      }
+    }
+    return spending;
+  }
+
   Widget _buildTotalSpendReceiveCard(double totalSpent, double totalReceived, BuildContext context) {
     return Card(
       elevation: 2,
-      color: Color(0xFF234567),
+      color: const Color(0xFF234567),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -234,7 +216,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
             Column(
               children: [
                 const Text(
-                  'Total Spent',
+                  'Total to Pay',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -246,7 +228,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                   children: [
                     Icon(LucideIcons.arrowDown, color: Colors.redAccent.shade200, size: 20),
                     Text(
-                      '${totalSpent.toStringAsFixed(2)}',
+                      '₹${totalSpent.toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -267,7 +249,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
             Column(
               children: [
                 const Text(
-                  'Total Received',
+                  'Total to Receive',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -279,7 +261,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                   children: [
                     Icon(LucideIcons.arrowUp, color: Colors.greenAccent.shade200, size: 20),
                     Text(
-                      '${totalReceived.toStringAsFixed(2)}',
+                      '₹${totalReceived.toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -296,9 +278,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-
-  Widget _buildChartSection(
-      Map<String, double> spending, List<String> categories) {
+  Widget _buildChartSection(Map<String, double> spending, List<String> categories) {
     return Card(
       elevation: 1,
       color: Colors.white,
@@ -325,9 +305,8 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     }
   }
 
-
-  Widget _buildPieChartCard(
-      String title, Map<String, double> spending, List<String> categories) {
+  Widget _buildPieChartCard(String title, Map<String, double> spending, List<String> categories) {
+    double totalSpending = spending.values.fold(0, (sum, amount) => sum + amount);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -354,19 +333,18 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
               height: 200,
               child: PieChart(
                 PieChartData(
-                  pieTouchData: PieTouchData(   // Enable touch interaction
-                      touchCallback: (FlTouchEvent event, PieTouchResponse? pieTouchResponse) {
-                        setState(() {
-                          if (!event.isInterestedForInteractions ||
-                              pieTouchResponse == null ||
-                              pieTouchResponse.touchedSection == null) {
-                            _touchedIndex = -1;
-                            return;
-                          }
-                          _touchedIndex = pieTouchResponse
-                              .touchedSection!.touchedSectionIndex;
-                        });
-                      }
+                  pieTouchData: PieTouchData(
+                    touchCallback: (FlTouchEvent event, PieTouchResponse? pieTouchResponse) {
+                      setState(() {
+                        if (!event.isInterestedForInteractions ||
+                            pieTouchResponse == null ||
+                            pieTouchResponse.touchedSection == null) {
+                          _touchedIndex = -1;
+                          return;
+                        }
+                        _touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                      });
+                    },
                   ),
                   sections: _generatePieChartSections(spending, categories),
                   sectionsSpace: 0,
@@ -375,11 +353,11 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                 ),
               ),
             ),
-            _touchedIndex != -1 ? // Show category name if a section is touched
-            Column(
+            _touchedIndex != -1
+                ? Column(
               children: [
                 Text(
-                  categories[_touchedIndex], // Category name from touched index
+                  categories[_touchedIndex],
                   style: const TextStyle(
                     color: Colors.black87,
                     fontSize: 18,
@@ -387,15 +365,16 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                   ),
                 ),
                 Text(
-                  '€ ${spending[categories[_touchedIndex]]?.toStringAsFixed(2) ?? '0.00'}', // Amount for the category
+                  '₹${spending[categories[_touchedIndex]]?.toStringAsFixed(2) ?? '0.00'}',
                   style: const TextStyle(
                     color: Colors.grey,
                     fontSize: 14,
                   ),
                 ),
               ],
-            ) : Text( // Default text when no section is touched
-              '€ 7,500.00', // Static value - consider making dynamic based on total of currentSpending
+            )
+                : Text(
+              '₹${totalSpending.toStringAsFixed(2)}',
               style: const TextStyle(
                 color: Colors.black87,
                 fontSize: 22,
@@ -414,8 +393,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-  Widget _buildBarChartCard(
-      String title, Map<String, double> spending, List<String> categories) {
+  Widget _buildBarChartCard(String title, Map<String, double> spending, List<String> categories) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -441,15 +419,10 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
             BarChartData(
               barGroups: _generateBarChartGroups(spending, categories),
               titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                  sideTitles: _bottomBarChartTitles(categories),
-                ),
-                leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(sideTitles: _bottomBarChartTitles(categories)),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
               gridData: const FlGridData(show: false),
               borderData: FlBorderData(show: false),
@@ -466,8 +439,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-  List<BarChartGroupData> _generateBarChartGroups(
-      Map<String, double> spending, List<String> categories) {
+  List<BarChartGroupData> _generateBarChartGroups(Map<String, double> spending, List<String> categories) {
     return categories.asMap().entries.map((entry) {
       int index = entry.key;
       String category = entry.value;
@@ -501,8 +473,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-  Widget _buildLineChartCard(
-      String title, Map<String, double> spending, List<String> categories) {
+  Widget _buildLineChartCard(String title, Map<String, double> spending, List<String> categories) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -526,20 +497,13 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
           height: 200,
           child: LineChart(
             LineChartData(
-              lineBarsData: [
-                _generateLineChartBarData(spending, categories)
-              ],
+              lineBarsData: [_generateLineChartBarData(spending, categories)],
               gridData: const FlGridData(show: false),
               titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                  sideTitles: _bottomLineChartTitles(categories),
-                ),
-                leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
-                rightTitles:const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(sideTitles: _bottomLineChartTitles(categories)),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
               borderData: FlBorderData(show: false),
             ),
@@ -555,13 +519,11 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-  LineChartBarData _generateLineChartBarData(
-      Map<String, double> spending, List<String> categories) {
+  LineChartBarData _generateLineChartBarData(Map<String, double> spending, List<String> categories) {
     final List<FlSpot> spots = [];
     categories.asMap().forEach((index, category) {
       spots.add(FlSpot(index.toDouble(), spending[category] ?? 0));
     });
-
     return LineChartBarData(
       spots: spots,
       isCurved: true,
@@ -589,8 +551,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-  Widget _buildHistogramChartCard(
-      String title, Map<String, double> spending, List<String> categories) {
+  Widget _buildHistogramChartCard(String title, Map<String, double> spending, List<String> categories) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -616,17 +577,12 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
             BarChartData(
               barGroups: _generateHistogramChartGroups(spending, categories),
               titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                  sideTitles: _bottomBarChartTitles(categories),
-                ),
-                leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
-                topTitles:const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(sideTitles: _bottomBarChartTitles(categories)),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
-              gridData:const FlGridData(show: false),
+              gridData: const FlGridData(show: false),
               borderData: FlBorderData(show: false),
             ),
           ),
@@ -641,8 +597,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-  List<BarChartGroupData> _generateHistogramChartGroups(
-      Map<String, double> spending, List<String> categories) {
+  List<BarChartGroupData> _generateHistogramChartGroups(Map<String, double> spending, List<String> categories) {
     return categories.asMap().entries.map((entry) {
       int index = entry.key;
       String category = entry.value;
@@ -660,22 +615,22 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     }).toList();
   }
 
-  List<PieChartSectionData> _generatePieChartSections(
-      Map<String, double> spending, List<String> categories) {
-    double totalSpending = spending.values.reduce((a, b) => a + b);
+  List<PieChartSectionData> _generatePieChartSections(Map<String, double> spending, List<String> categories) {
+    double totalSpending = spending.values.fold(0, (sum, amount) => sum + amount);
+    if (totalSpending == 0) return [];
     return categories.asMap().entries.map((entry) {
       int index = entry.key;
       String category = entry.value;
-      final isTouched = index == _touchedIndex; // Check if section is touched
-      final radius = isTouched ? 50.0 : 40.0; // Increase radius when touched
+      final isTouched = index == _touchedIndex;
+      final radius = isTouched ? 50.0 : 40.0;
       double amount = spending[category] ?? 0;
       double percentage = (amount / totalSpending * 100);
       return PieChartSectionData(
         value: amount,
         color: chartColors[index % chartColors.length],
-        radius: radius, // Dynamic radius for animation effect
-        showTitle: isTouched ? true : false, // Show title only when touched
-        title: '${percentage.toStringAsFixed(1)}%', // Percentage as title
+        radius: radius,
+        showTitle: isTouched,
+        title: '${percentage.toStringAsFixed(1)}%',
         titleStyle: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
@@ -686,9 +641,9 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     }).toList();
   }
 
-  List<Widget> _buildPieChartLabels(
-      Map<String, double> spending, List<String> categories) {
-    double totalSpending = spending.values.reduce((a, b) => a + b);
+  List<Widget> _buildPieChartLabels(Map<String, double> spending, List<String> categories) {
+    double totalSpending = spending.values.fold(0, (sum, amount) => sum + amount);
+    if (totalSpending == 0) return [const Text("No spending data")];
     return categories.asMap().entries.map((entry) {
       int index = entry.key;
       String category = entry.value;
@@ -716,8 +671,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     }).toList();
   }
 
-  Widget _buildCategoryStackCard(
-      Map<String, double> spending, List<String> categories) {
+  Widget _buildCategoryStackCard(Map<String, double> spending, List<String> categories) {
     return Card(
       elevation: 1,
       color: Colors.white,
@@ -753,18 +707,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-
-  List<Widget> _buildCategoryStackItems(
-      Map<String, double> spending, List<String> categories) {
-    final Map<String, IconData> categoryIcons = {
-      "Cashback": LucideIcons.dollarSign,
-      "Friends": LucideIcons.users,
-      "Food": LucideIcons.utensils,
-      "Clothing": LucideIcons.shirt,
-      "Transport": LucideIcons.car,
-      "Entertainment": LucideIcons.tv,
-      "Shopping": LucideIcons.shoppingCart,
-    };
+  List<Widget> _buildCategoryStackItems(Map<String, double> spending, List<String> categories) {
     return categories.asMap().entries.map((entry) {
       int index = entry.key;
       String category = entry.value;
@@ -785,19 +728,18 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                   ),
                   margin: const EdgeInsets.only(right: 12),
                 ),
-                Icon(categoryIcons[category]!, color: Colors.grey.shade700, size: 20),
+                Icon(categoryIcons[category]!['icon'] as IconData,
+                    color: Colors.grey.shade700, size: 20),
                 const SizedBox(width: 12),
                 Text(
                   category,
-                  style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400),
+                  style: const TextStyle(
+                      color: Colors.black87, fontSize: 15, fontWeight: FontWeight.w400),
                 ),
               ],
             ),
             Text(
-              '€${amount.toStringAsFixed(2)}',
+              '₹${amount.toStringAsFixed(2)}',
               style: const TextStyle(
                 fontWeight: FontWeight.w500,
                 fontSize: 15,
@@ -810,21 +752,19 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     }).toList();
   }
 
-  Widget _buildStatisticsCard() {
-    List<String> allCategoriesForStatistics = [...spentCategories, ...receivedCategories];
-
+  Widget _buildStatisticsCard(Map<String, Map<String, dynamic>> categoryData) {
     return Card(
       elevation: 1,
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: _buildStatisticsContent(allCategoriesForStatistics),
+        child: _buildStatisticsContent(categories, categoryData),
       ),
     );
   }
 
-  Widget _buildStatisticsContent(List<String> allCategoriesForStatistics) {
+  Widget _buildStatisticsContent(List<String> allCategoriesForStatistics, Map<String, Map<String, dynamic>> categoryData) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -847,8 +787,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
             ),
             DropdownButton<String>(
               value: _selectedStatisticsCategory,
-              items: allCategoriesForStatistics
-                  .map<DropdownMenuItem<String>>((String value) {
+              items: allCategoriesForStatistics.map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Row(
@@ -867,8 +806,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                 });
               },
               underline: Container(),
-              icon: Icon(LucideIcons.chevronDown,
-                  color: Colors.grey.shade700, size: 16),
+              icon: Icon(LucideIcons.chevronDown, color: Colors.grey.shade700, size: 16),
               elevation: 1,
               dropdownColor: Colors.grey.shade50,
             ),
@@ -881,20 +819,15 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
             LineChartData(
               gridData: const FlGridData(show: false),
               titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                  sideTitles: _bottomTitles(),
-                ),
-                leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(sideTitles: _bottomTitles()),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
               borderData: FlBorderData(show: false),
               lineBarsData: [
                 LineChartBarData(
-                  spots: _generateLineChartDataForCategory(_selectedStatisticsCategory),
+                  spots: _generateLineChartDataForCategory(categoryData),
                   isCurved: true,
                   color: lineChartColor,
                   barWidth: 2,
@@ -909,173 +842,39 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-
-  List<FlSpot> _generateLineChartDataForCategory(String category) {
-    Map<String, Map<String, double>> timePeriodSpending;
-
-    if (_timePeriod == 'Month') {
-      timePeriodSpending = {
-        'Spent': monthlySpentSpending,
-        'Received': monthlyReceivedSpending,
-      };
-    } else {
-      timePeriodSpending = {
-        'Spent': dailySpentSpending,
-        'Received': dailyReceivedSpending,
-      };
-    }
-
-    Map<String, double> currentSpending = timePeriodSpending[_chartType] ?? monthlySpentSpending;
-
+  List<FlSpot> _generateLineChartDataForCategory(Map<String, Map<String, dynamic>> categoryData) {
     List<FlSpot> spots = [];
-    double categorySpending = currentSpending[category] ?? 0;
+    double totalPaid = categoryData[_selectedStatisticsCategory]?['totalPaid']?.toDouble() ?? 0.0;
+    DateTime? lastInvolved = categoryData[_selectedStatisticsCategory]?['lastInvolved'] as DateTime?;
 
-    spots = [
-      const FlSpot(0, 5 + 0.1 * 5 * 10),
-      const FlSpot(1, 10 + 0.1 * 10 * 10),
-       FlSpot(2, categorySpending / 4 + 0.1 * 15 * 10),
-       FlSpot(3, categorySpending / 3  + 0.1 * 20 * 10),
-       FlSpot(4, categorySpending / 2 + 0.1 * 25 * 10),
-       FlSpot(5, categorySpending + 0.1 * 30 * 10),
-    ];
-
-
+    if (lastInvolved != null && totalPaid > 0) {
+      int daysInMonth = DateTime(_selectedDate.year, _selectedDate.month + 1, 0).day;
+      double dailyAverage = totalPaid / daysInMonth;
+      for (int i = 0; i < 6; i++) {
+        double x = i * (daysInMonth / 5);
+        double y = lastInvolved.day > x ? dailyAverage * (x + 1) : totalPaid;
+        spots.add(FlSpot(x, y));
+      }
+    } else {
+      spots = List.generate(6, (index) => FlSpot(index.toDouble(), 0));
+    }
     return spots;
   }
 
-
-  List<FlSpot> _generateLineChartData() {
-    return [
-      const FlSpot(0, 15),
-      const FlSpot(1, 22),
-      const FlSpot(2, 28),
-      const FlSpot(3, 20),
-      const FlSpot(4, 25),
-      const FlSpot(5, 30),
-    ];
-  }
-
   SideTitles _bottomTitles() {
+    int daysInMonth = DateTime(_selectedDate.year, _selectedDate.month + 1, 0).day;
     return SideTitles(
       showTitles: true,
-      interval: 1,
+      interval: daysInMonth / 5,
       getTitlesWidget: (value, meta) {
-        String text = '';
-        switch (value.toInt()) {
-          case 0:
-            text = 'Jan 5';
-            break;
-          case 1:
-            text = 'Jan 10';
-            break;
-          case 2:
-            text = 'Jan 15';
-            break;
-          case 3:
-            text = 'Jan 20';
-            break;
-          case 4:
-            text = 'Jan 25';
-            break;
-          case 5:
-            text = 'Jan 30';
-            break;
+        int day = value.toInt() + 1;
+        if (day <= daysInMonth) {
+          return Text('Day $day',
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 10));
         }
-        return Text(text,
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 10));
+        return const Text('');
       },
       reservedSize: 22,
     );
   }
-
-  Widget _buildCategorySpendingList(
-      Map<String, double> spending, List<String> categories) {
-    final Map<String, IconData> categoryIcons = {
-      "Cashback": LucideIcons.dollarSign,
-      "Friends": LucideIcons.users,
-      "Food": LucideIcons.utensils,
-      "Clothing": LucideIcons.shirt,
-      "Transport": LucideIcons.car,
-      "Entertainment": LucideIcons.tv,
-      "Shopping": LucideIcons.shoppingCart,
-    };
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(LucideIcons.list, color: Colors.grey.shade700, size: 20),
-            const SizedBox(width: 8),
-            const Text(
-              'Spending by Category',
-              style: TextStyle(
-                color: Colors.black87,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: categories.length,
-          itemBuilder: (context, index) {
-            String category = categories[index];
-            double amount = spending[category] ?? 0;
-            return _buildCategoryListItem(
-                category, amount, categoryIcons[category] ?? LucideIcons.circle);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategoryListItem(
-      String category, double spending, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: Colors.grey.shade700, size: 20),
-              const SizedBox(width: 12),
-              Text(
-                category,
-                style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400),
-              ),
-            ],
-          ),
-          Text(
-            '€${spending.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 15,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  double _calculateTotalSpending(Map<String, double> spendingMap) {
-    return spendingMap.values.fold(0, (sum, amount) => sum + amount);
-  }
-}
-
-// *** --- Transaction Data Model --- ***
-class Transaction {
-  DateTime date;
-  String category;
-  double amount;
-
-  Transaction({required this.date, required this.category, required this.amount});
 }
