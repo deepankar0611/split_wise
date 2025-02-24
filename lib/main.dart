@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:split_wise/bottom_bar.dart';
 import 'package:split_wise/login%20signup/login_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+//
 
 // FCM Background Handler
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
