@@ -111,39 +111,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             letterSpacing: 0.5,
           ),
         ),
-        backgroundColor: const Color(0xFF1A3C6D), // Non-nullable Color
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1A3C6D), Color(0xFF2E6B9F)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
+        backgroundColor: const Color(0xFF1A3C6D), // Solid background color
         elevation: 0,
         centerTitle: true,
         actions: [
           TextButton(
             onPressed: () {
-              if (totalAmount > 0 && expenseDescription.isNotEmpty) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FinalSplitScreen(
-                      selectedPeople: selectedPeople,
-                      payerAmounts: payerAmounts,
-                      totalAmount: totalAmount,
-                      expenseDescription: expenseDescription,
-                      selectedCategory: selectedCategory,
-                    ),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid amount and description')),
-                );
-              }
+              // Placeholder for save action - replace with your logic
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const Placeholder(), // Replace Placeholder with your actual screen/widget
+                ),
+              );
             },
             child: const Text(
               "Save",
@@ -155,6 +135,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ),
           ),
         ],
+        shape: const RoundedRectangleBorder( // Apply shape to AppBar
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        ),
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),

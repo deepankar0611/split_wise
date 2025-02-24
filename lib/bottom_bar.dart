@@ -154,45 +154,47 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
         },
       ),
       bottomNavigationBar: AnimatedContainer(
-        duration: const Duration(milliseconds: 1000),
-        height: _isBottomBarVisible ? 80.0 : 0.0, // Increased height to accommodate content
+        clipBehavior: Clip.none,
+        duration: const Duration(milliseconds: 300),
+        height: _isBottomBarVisible ? 60.0 : 0.0,
+
         curve: Curves.easeInOut,
         child: _isBottomBarVisible
             ? BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed,
+          type: BottomNavigationBarType.fixed, // Ensure type is fixed for label efficiency
           backgroundColor: Colors.white,
           selectedItemColor: const Color(0xFF1A2E39),
           unselectedItemColor: Colors.grey[400],
-          selectedFontSize: 12,
-          unselectedFontSize: 10, // Reduced unselected font size
+          selectedFontSize: 11, // Keep reduced selectedFontSize
+          unselectedFontSize: 9, // Keep reduced unselectedFontSize
           elevation: 8,
-          iconSize: 24, // Reduced icon size
+          iconSize: 20, // Keep or slightly reduce iconSize if needed, e.g., 18
           items: const [
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.home, color: Color(0xFF0288D1)),
               activeIcon: Icon(CupertinoIcons.home, color: Color(0xFF1A2E39)),
-              label: 'Home',
+              label: '', // Short label
             ),
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.search, color: Color(0xFF7B1FA2)),
               activeIcon: Icon(CupertinoIcons.search, color: Color(0xFF1A2E39)),
-              label: 'Search',
+              label: '', // Short label
             ),
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.add_circled, color: Color(0xFFD81B60)),
               activeIcon: Icon(CupertinoIcons.add_circled, color: Color(0xFF1A2E39)),
-              label: 'Add',
+              label: '', // Short label
             ),
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF00897B)),
               activeIcon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF1A2E39)),
-              label: 'Profile',
+              label: '', // Short label
             ),
           ],
         )
-            : null, // Avoid rendering BottomNavigationBar when height is 0
+            : null,
       ),
     );
   }
