@@ -134,35 +134,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<bool> _checkTransactionSettledStatus(String splitId) async {
-    try {
-      DocumentSnapshot settleDoc = await FirebaseFirestore.instance
-          .collection('splits')
-          .doc(splitId)
-          .collection('settle')
-          .doc(userId)
-          .get();
-
-      if (!settleDoc.exists) return false;
-
-      bool? splitSettled = settleDoc.get('settled') as bool?;
-      if (splitSettled != null) return splitSettled;
-
-      QuerySnapshot transactionSettleSnapshot = await FirebaseFirestore.instance
-          .collection('splits')
-          .doc(splitId)
-          .collection('settle')
-          .doc(userId)
-          .collection('transactions')
-          .get();
-
-      if (transactionSettleSnapshot.docs.isEmpty) return false;
-
-      return transactionSettleSnapshot.docs.every((doc) => doc.get('settled') as bool? ?? false);
-    } catch (e) {
-      return false;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const Notificationn()),
+                    MaterialPageRoute(builder: (context) => const NotificationScreen()),
                   );
                 },
               ),

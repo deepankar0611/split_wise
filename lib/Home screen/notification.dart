@@ -1,38 +1,58 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:convert';
+import 'dart:developer';
+import 'package:http/http.dart' as http;
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:flutter/services.dart';
+import 'FCM Service.dart'; // Ensure this matches your file name (e.g., 'fcm_service.dart')
 
-class Notificationn extends StatefulWidget {
-  const Notificationn({super.key});
+class NotificationScreen extends StatefulWidget {
+  const NotificationScreen({super.key});
 
   @override
-  State<Notificationn> createState() => _NotificationnState();
+  State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationnState extends State<Notificationn> {
+class _NotificationScreenState extends State<NotificationScreen> {
   final String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  late FirebaseMessaging _messaging;
   bool _showBanner = false;
   Map<String, String> userNames = {};
+  Map<String, String> userTokens = {};
 
   @override
   void initState() {
     super.initState();
+    _messaging = FirebaseMessaging.instance;
     _initializeLocalNotifications();
+    _setupFCM();
     _setupNotificationListeners();
-    _preloadUserNames();
+    _preloadUserNamesAndTokens();
   }
 
-  Future<void> _preloadUserNames() async {
+  Future<void> _preloadUserNamesAndTokens() async {
     var userDocs = await FirebaseFirestore.instance.collection('users').get();
     setState(() {
       for (var doc in userDocs.docs) {
         userNames[doc.id] = doc.data()['name'] ?? 'Unknown';
+        userTokens[doc.id] = doc.data()['fcmToken'] ?? '';
       }
     });
+    String? token = await _messaging.getToken();
+    log('Current User FCM Token: $token');
+    if (token != null && userTokens[currentUserUid] != token) {
+      await FirebaseFirestore.instance.collection('users').doc(currentUserUid).update({
+        'fcmToken': token,
+      });
+      userTokens[currentUserUid] = token;
+    }
   }
 
   void _initializeLocalNotifications() async {
@@ -43,7 +63,34 @@ class _NotificationnState extends State<Notificationn> {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
+  void _setupFCM() async {
+    await _messaging.requestPermission();
+    String? token = await _messaging.getToken();
+    log('FCM Token: $token');
+
+    // Handle foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      log('Received FCM Message: ${message.notification?.title} - ${message.notification?.body}');
+      if (message.notification != null) {
+        _showNotification(
+          message.notification!.title ?? 'No Title',
+          message.notification!.body ?? 'No Body',
+          message.data['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        );
+      }
+    });
+
+    // Handle background messages (optional, for completeness)
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  }
+
+  static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+    log('Background FCM Message: ${message.notification?.title} - ${message.notification?.body}');
+    // No need to show local notification here as FCM handles it
+  }
+
   void _setupNotificationListeners() {
+    // Friend Requests
     FirebaseFirestore.instance
         .collection('users')
         .doc(currentUserUid)
@@ -55,16 +102,22 @@ class _NotificationnState extends State<Notificationn> {
           var data = change.doc.data()!;
           String fromUid = data['fromUid'];
           _fetchUserName(fromUid).then((name) {
-            _showNotification(
-              "Friend Request",
-              "$name sent a friend request",
-              change.doc.id,
-            );
+            String deviceToken = userTokens[currentUserUid] ?? '';
+            if (deviceToken.isNotEmpty) {
+              log('Sending FCM for Friend Request from $name');
+              FCMService.sendPushNotification(
+                deviceToken,
+                "Friend Request",
+                "$name wants to connect with you on Settle Up",
+              );
+            }
+            // Only show local notification if app is in foreground (handled by FCM.onMessage)
           });
         }
       }
     });
 
+    // Reminders
     FirebaseFirestore.instance
         .collectionGroup('reminders')
         .where('participants', arrayContains: currentUserUid)
@@ -78,12 +131,21 @@ class _NotificationnState extends State<Notificationn> {
           String sentBy = data['sentBy'];
           FirebaseFirestore.instance.collection('splits').doc(splitId).get().then((splitDoc) {
             String description = splitDoc.data()?['description'] ?? 'No description';
+            double amount = (splitDoc.data()?['totalAmount'] as num?)?.toDouble() ?? 0.0;
+            int participantCount = (splitDoc.data()?['participants'] as List?)?.length ?? 1;
+            double share = amount / participantCount;
             _fetchUserName(sentBy).then((name) {
-              _showNotification(
-                "$name sent a reminder",
-                "Split details of '$description'",
-                splitId,
-              );
+              String deviceToken = userTokens[currentUserUid] ?? '';
+              if (deviceToken.isNotEmpty) {
+                log('Sending FCM for Reminder from $name');
+                FCMService.sendPushNotification(
+                  deviceToken,
+                  "Payment Reminder",
+                  "$name requests ₹${share.toStringAsFixed(2)} for '$description'",
+                );
+              }
+              // Remove local notification trigger here to avoid duplicates
+              // FCM will handle display via onMessage or background handler
             });
           });
         }
@@ -97,17 +159,20 @@ class _NotificationnState extends State<Notificationn> {
     }
     var userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     String name = userDoc.data()?['name'] ?? 'Unknown';
+    String token = userDoc.data()?['fcmToken'] ?? '';
     setState(() {
       userNames[uid] = name;
+      userTokens[uid] = token;
     });
     return name;
   }
 
   Future<void> _showNotification(String title, String body, String payload) async {
+    log('Showing Local Notification: $title - $body');
     const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'notification_channel',
-      'Notifications',
-      channelDescription: 'General notifications',
+      'settleup_channel',
+      'Settle Up Notifications',
+      channelDescription: 'Notifications for Settle Up app',
       importance: Importance.max,
       priority: Priority.high,
     );
@@ -198,6 +263,17 @@ class _NotificationnState extends State<Notificationn> {
 
       await currentUserRef.collection('friend_requests').doc(friendUid).delete();
       _showSnackBar("Friend request accepted!");
+
+      String friendToken = userTokens[friendUid] ?? '';
+      if (friendToken.isNotEmpty) {
+        log('Sending FCM for Friend Request Acceptance to $friendName');
+        FCMService.sendPushNotification(
+          friendToken,
+          "Friend Request Accepted",
+          "$currentUserName has accepted your friend request!",
+        );
+      }
+
       setState(() {});
     } catch (e) {
       _showSnackBar("Error accepting friend request: $e");
@@ -362,7 +438,7 @@ class _NotificationnState extends State<Notificationn> {
         return AlertDialog(
           title: Text("Delete All Notifications", style: GoogleFonts.poppins()),
           content: Text(
-            "Are you sure you want to delete all notifications? This action will remove all friend requests and remove you from all reminders.",
+            "Are you sure you want to delete all notifications? This action will remove all friend requests and dismiss all payment reminders.",
             style: GoogleFonts.poppins(),
           ),
           actions: [
@@ -534,13 +610,19 @@ class _NotificationnState extends State<Notificationn> {
                                   child: ListTile(
                                     leading: CircleAvatar(
                                       backgroundColor: const Color(0xFF234567),
-                                      child: Text(senderName[0].toUpperCase(),
-                                          style: const TextStyle(color: Colors.white)),
+                                      child: Text(
+                                        senderName[0].toUpperCase(),
+                                        style: const TextStyle(color: Colors.white),
+                                      ),
                                     ),
-                                    title: Text("$senderName sent a friend request",
-                                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-                                    subtitle: Text("Sent: $formattedDate",
-                                        style: GoogleFonts.poppins(color: Colors.grey[600])),
+                                    title: Text(
+                                      "$senderName sent a friend request",
+                                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                                    ),
+                                    subtitle: Text(
+                                      "Sent: $formattedDate",
+                                      style: GoogleFonts.poppins(color: Colors.grey[600]),
+                                    ),
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -577,13 +659,19 @@ class _NotificationnState extends State<Notificationn> {
                                 future: FirebaseFirestore.instance.collection('splits').doc(splitId).get(),
                                 builder: (context, splitSnapshot) {
                                   if (splitSnapshot.hasError) {
-                                    return Text("Split Error: ${splitSnapshot.error}",
-                                        style: GoogleFonts.poppins());
+                                    return Text(
+                                      "Split Error: ${splitSnapshot.error}",
+                                      style: GoogleFonts.poppins(),
+                                    );
                                   }
                                   String description = 'Unknown';
+                                  double amount = 0.0;
                                   if (splitSnapshot.hasData && splitSnapshot.data!.exists) {
                                     var splitData = splitSnapshot.data!.data()!;
                                     description = splitData['description'] ?? 'No description';
+                                    amount = (splitData['totalAmount'] as num?)?.toDouble() ?? 0.0;
+                                    int participantCount = (splitData['participants'] as List?)?.length ?? 1;
+                                    amount = amount / participantCount; // Share per person
                                   }
 
                                   return Dismissible(
@@ -615,18 +703,26 @@ class _NotificationnState extends State<Notificationn> {
                                       child: ListTile(
                                         leading: CircleAvatar(
                                           backgroundColor: const Color(0xFF234567),
-                                          child: Text(senderName[0].toUpperCase(),
-                                              style: const TextStyle(color: Colors.white)),
+                                          child: Text(
+                                            senderName[0].toUpperCase(),
+                                            style: const TextStyle(color: Colors.white),
+                                          ),
                                         ),
-                                        title: Text("$senderName sent a reminder",
-                                            style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                                        title: Text(
+                                          "$senderName sent a reminder",
+                                          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                                        ),
                                         subtitle: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text("Split details of '$description'",
-                                                style: const TextStyle(fontStyle: FontStyle.italic)),
-                                            Text("Sent: $formattedDate",
-                                                style: GoogleFonts.poppins(color: Colors.grey[600])),
+                                            Text(
+                                              "Requests ₹${amount.toStringAsFixed(2)} for '$description'",
+                                              style: const TextStyle(fontStyle: FontStyle.italic),
+                                            ),
+                                            Text(
+                                              "Sent: $formattedDate",
+                                              style: GoogleFonts.poppins(color: Colors.grey[600]),
+                                            ),
                                           ],
                                         ),
                                       ),

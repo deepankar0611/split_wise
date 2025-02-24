@@ -8,6 +8,15 @@ import 'package:animate_do/animate_do.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'dart:developer';
+import 'package:http/http.dart' as http;
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:flutter/services.dart';
+
+import 'FCM Service.dart';
+
+
 
 class SplitDetailScreen extends StatefulWidget {
   final String splitId;
@@ -22,6 +31,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
   Map<String, dynamic>? splitData;
   bool _isLoading = true;
   Map<String, String> userNames = {};
+  Map<String, String> userTokens = {}; // Added for FCM tokens
   double totalReceive = 0.0;
   double totalPay = 0.0;
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
@@ -30,6 +40,16 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
   void initState() {
     super.initState();
     _fetchSplitData();
+    _preloadUserTokens(); // Preload FCM tokens
+  }
+
+  Future<void> _preloadUserTokens() async {
+    var userDocs = await FirebaseFirestore.instance.collection('users').get();
+    setState(() {
+      for (var doc in userDocs.docs) {
+        userTokens[doc.id] = doc.data()['fcmToken'] ?? '';
+      }
+    });
   }
 
   Future<void> _fetchSplitData() async {
@@ -100,6 +120,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
 
   Future<void> _sendReminder() async {
     try {
+      // Add reminder to Firestore
       await FirebaseFirestore.instance
           .collection('splits')
           .doc(widget.splitId)
@@ -111,6 +132,28 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         'splitTitle': splitData!['title'] ?? 'Split Payment',
         'splitId': widget.splitId,
       });
+
+      // Fetch current user's name
+      String senderName = userNames[userId] ?? "Unknown";
+      String description = splitData!['description'] ?? 'No description';
+      double totalAmount = (splitData!['totalAmount'] as num).toDouble();
+      int participantCount = (splitData!['participants'] as List).length;
+      double share = totalAmount / participantCount;
+
+      // Send push notification to all participants except sender
+      List<String> participants = List<String>.from(splitData!['participants']);
+      for (String participantUid in participants) {
+        if (participantUid != userId) {
+          String deviceToken = userTokens[participantUid] ?? '';
+          if (deviceToken.isNotEmpty) {
+            await FCMService.sendPushNotification(
+              deviceToken,
+              "Payment Reminder",
+              "$senderName requests ₹${share.toStringAsFixed(2)} for '$description'",
+            );
+          }
+        }
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

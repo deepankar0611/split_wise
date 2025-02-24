@@ -154,7 +154,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
         },
       ),
       bottomNavigationBar: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 1000),
         height: _isBottomBarVisible ? 80.0 : 0.0, // Increased height to accommodate content
         curve: Curves.easeInOut,
         child: _isBottomBarVisible
