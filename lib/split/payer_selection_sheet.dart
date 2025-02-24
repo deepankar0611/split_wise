@@ -27,7 +27,7 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
   late Map<String, double> payerAmounts;
   double remainingAmount = 0.0;
   Map<String, String?> errorMessages = {};
-  String? currentUserProfilePic; // State variable for current user's profile picture
+  String? currentUserProfilePic;
 
   final String userId = FirebaseAuth.instance.currentUser!.uid;
 
@@ -37,30 +37,29 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
     selectedPayers = List.from(widget.selectedPayers);
     payerAmounts = Map.from(widget.payerAmounts);
     _updateRemainingAmount();
-    _fetchCurrentUserProfilePic(); // Fetch current user's profile picture
+    _fetchCurrentUserProfilePic();
   }
 
   Future<void> _fetchCurrentUserProfilePic() async {
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      if (doc.exists) {
+      if (doc.exists && mounted) {
         final data = doc.data() ?? {};
-        String? profileUrl = data['profileImageUrl'] as String?; // Explicitly cast to String?
-        print("Current user profile picture URL: $profileUrl"); // Debug print to verify URL
         setState(() {
-          currentUserProfilePic = profileUrl?.isNotEmpty == true ? profileUrl : ""; // Set only if non-empty
+          currentUserProfilePic = (data['profileImageUrl'] as String?)?.isNotEmpty == true ? data['profileImageUrl'] : "";
         });
-      } else {
-        print("User document does not exist for UID: $userId");
+      } else if (mounted) {
         setState(() {
-          currentUserProfilePic = ""; // Default to empty string if user doc doesn’t exist
+          currentUserProfilePic = "";
         });
       }
     } catch (e) {
       print("Error fetching current user's profile picture: $e");
-      setState(() {
-        currentUserProfilePic = ""; // Default to empty string on error
-      });
+      if (mounted) {
+        setState(() {
+          currentUserProfilePic = "";
+        });
+      }
     }
   }
 
@@ -73,39 +72,44 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 50, // Increased toolbarHeight for a more prominent AppBar
-        backgroundColor: const Color(0xFF1A2E39), // Teal AppBar color
-        shape: const RoundedRectangleBorder( // Rounded bottom corners for AppBar
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(25),
-            bottomRight: Radius.circular(25),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(screenHeight * 0.07), // 7% of screen height
+        child: AppBar(
+          backgroundColor: const Color(0xFF1A2E39),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(screenWidth * 0.06),
+              bottomRight: Radius.circular(screenWidth * 0.06),
+            ),
           ),
-        ),
-        elevation: 3, // Subtle elevation for AppBar
-        shadowColor: Colors.black.withOpacity(0.4), // Shadow color
-        title: Text(
-          "Choose Payers",
-          style: const TextStyle(
-            fontSize: 24, // Slightly smaller font in AppBar
-            fontWeight: FontWeight.bold,
-            color: Colors.white, // White text for AppBar
-            letterSpacing: 1.1,
+          elevation: 3,
+          shadowColor: Colors.black.withOpacity(0.4),
+          title: Text(
+            "Choose Payers",
+            style: TextStyle(
+              fontSize: screenWidth * 0.06,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 1.1,
+            ),
           ),
+          centerTitle: true,
         ),
-        centerTitle: true, // Center the title
       ),
       body: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
         ),
-        child: Padding( // Added Padding back to the body content
-          padding: const EdgeInsets.all(16.0),
+        child: Padding(
+          padding: EdgeInsets.all(screenWidth * 0.04), // 4% of screen width
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 10), // Spacing below AppBar
+              SizedBox(height: screenHeight * 0.015),
               Expanded(
                 child: ListView.builder(
                   itemCount: widget.friends.length,
@@ -113,19 +117,18 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                     final friend = widget.friends[index];
                     final bool isSelected = selectedPayers.contains(friend["name"]);
                     return Card(
-                      elevation: 2,
+                      elevation: screenWidth * 0.005,
                       color: Colors.grey[50],
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      margin: EdgeInsets.symmetric(vertical: screenHeight * 0.007),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.03)),
                       child: Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: EdgeInsets.all(screenWidth * 0.02),
                         child: Row(
                           children: [
-                            // Avatar with Status Indicator
                             Stack(
                               children: [
                                 CircleAvatar(
-                                  radius: 25,
+                                  radius: screenWidth * 0.06,
                                   backgroundImage: friend["name"] == "You" && currentUserProfilePic != null && currentUserProfilePic!.isNotEmpty
                                       ? NetworkImage(currentUserProfilePic!)
                                       : friend["profilePic"]?.isNotEmpty == true
@@ -136,9 +139,9 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                                       (friend["profilePic"]?.isEmpty ?? true)
                                       ? Text(
                                     friend["name"][0].toUpperCase(),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 20,
+                                      fontSize: screenWidth * 0.05,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   )
@@ -149,41 +152,40 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                                     bottom: 0,
                                     right: 0,
                                     child: Container(
-                                      padding: const EdgeInsets.all(2),
+                                      padding: EdgeInsets.all(screenWidth * 0.005),
                                       decoration: const BoxDecoration(
                                         color: Colors.white,
                                         shape: BoxShape.circle,
                                       ),
                                       child: Icon(
                                         Icons.check_circle,
-                                        size: 16,
+                                        size: screenWidth * 0.04,
                                         color: Colors.teal.shade700,
                                       ),
                                     ),
                                   ),
                               ],
                             ),
-                            const SizedBox(width: 12),
-                            // Name and Optional Subtitle
+                            SizedBox(width: screenWidth * 0.03),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     friend["name"],
-                                    style: const TextStyle(
-                                      fontSize: 16,
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.04,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.black87,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
+                                  SizedBox(height: screenHeight * 0.002),
                                   Text(
                                     payerAmounts[friend["name"]] != null && payerAmounts[friend["name"]]! > 0
                                         ? "Paid: ₹ ${payerAmounts[friend["name"]]!.toStringAsFixed(2)}"
                                         : "Not paid yet",
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: screenWidth * 0.03,
                                       color: payerAmounts[friend["name"]] != null && payerAmounts[friend["name"]]! > 0
                                           ? Colors.green.shade700
                                           : Colors.grey.shade600,
@@ -192,7 +194,6 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                                 ],
                               ),
                             ),
-                            // Selection Toggle
                             Switch(
                               value: isSelected,
                               activeColor: Colors.teal.shade700,
@@ -216,25 +217,31 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                   },
                 ),
               ),
-              if (selectedPayers.isNotEmpty) buildAmountEntry(),
-              const SizedBox(height: 20),
+              if (selectedPayers.isNotEmpty) buildAmountEntry(screenWidth, screenHeight),
+              SizedBox(height: screenHeight * 0.025),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.1,
+                    vertical: screenHeight * 0.02,
+                  ),
                   backgroundColor: Colors.teal.shade700,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.075)),
+                  elevation: screenWidth * 0.007,
                 ),
                 onPressed: () {
                   widget.onSelectionDone(selectedPayers, payerAmounts);
                   Navigator.pop(context);
                 },
-                child: const Text(
+                child: Text(
                   "Done",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.04,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: screenHeight * 0.015),
             ],
           ),
         ),
@@ -242,13 +249,19 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
     );
   }
 
-  Widget buildAmountEntry() {
+  Widget buildAmountEntry(double screenWidth, double screenHeight) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(screenWidth * 0.05),
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5))],
+        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: screenWidth * 0.025,
+            offset: Offset(0, screenWidth * 0.012),
+          ),
+        ],
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
@@ -256,12 +269,12 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
         children: [
           Row(
             children: [
-              Icon(Icons.calculate_rounded, color: Colors.teal.shade800, size: 28),
-              const SizedBox(width: 8),
+              Icon(Icons.calculate_rounded, color: Colors.teal.shade800, size: screenWidth * 0.07),
+              SizedBox(width: screenWidth * 0.02),
               Text(
                 "Enter Paid Amounts",
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: screenWidth * 0.05,
                   fontWeight: FontWeight.bold,
                   color: Colors.teal.shade800,
                   letterSpacing: 0.8,
@@ -269,18 +282,18 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: screenHeight * 0.025),
           ...selectedPayers.map((payer) {
             final friend = widget.friends.firstWhere(
                   (f) => f["name"] == payer,
               orElse: () => {"profilePic": "", "name": payer},
             );
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10.0),
+              padding: EdgeInsets.symmetric(vertical: screenHeight * 0.012),
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 22,
+                    radius: screenWidth * 0.055,
                     backgroundImage: payer == "You" && currentUserProfilePic != null && currentUserProfilePic!.isNotEmpty
                         ? NetworkImage(currentUserProfilePic!)
                         : friend["profilePic"].isNotEmpty
@@ -289,50 +302,79 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                     backgroundColor: Colors.grey.shade300,
                     child: (payer == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
                         friend["profilePic"].isEmpty
-                        ? Text(payer[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                        ? Text(
+                      payer[0],
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: screenWidth * 0.04,
+                      ),
+                    )
                         : null,
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: screenWidth * 0.025),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(payer, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                        Text(
+                          payer,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: screenWidth * 0.038,
+                          ),
+                        ),
                         if (errorMessages[payer] != null)
                           Text(
                             errorMessages[payer]!,
-                            style: const TextStyle(color: Colors.red, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: screenWidth * 0.03,
+                            ),
                           ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: screenWidth * 0.025),
                   SizedBox(
-                    width: 90, // Adjusted width
+                    width: screenWidth * 0.25, // 25% of screen width
                     child: TextField(
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.right,
-                      style: TextStyle(fontSize: 16, color: Colors.black87),
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.04,
+                        color: Colors.black87,
+                      ),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
                         prefixText: "₹ ",
-                        prefixStyle: TextStyle(color: Colors.teal.shade900, fontWeight: FontWeight.bold),
+                        prefixStyle: TextStyle(
+                          color: Colors.teal.shade900,
+                          fontWeight: FontWeight.bold,
+                          fontSize: screenWidth * 0.04,
+                        ),
                         hintText: "0.00",
-                        hintStyle: TextStyle(color: Colors.grey[500]),
+                        hintStyle: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: screenWidth * 0.04,
+                        ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(screenWidth * 0.03),
                           borderSide: BorderSide(color: Colors.grey.shade300),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(screenWidth * 0.03),
                           borderSide: BorderSide(color: Colors.grey.shade300),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(screenWidth * 0.03),
                           borderSide: BorderSide(color: Colors.teal.shade700, width: 1.5),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: screenHeight * 0.017,
+                          horizontal: screenWidth * 0.035,
+                        ),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -354,12 +396,15 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
               ),
             );
           }).toList(),
-          const SizedBox(height: 20),
+          SizedBox(height: screenHeight * 0.025),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth * 0.05,
+              vertical: screenHeight * 0.017,
+            ),
             decoration: BoxDecoration(
               color: remainingAmount <= 0 ? Colors.green.shade100 : Colors.red.shade100,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(screenWidth * 0.03),
               border: Border.all(color: remainingAmount <= 0 ? Colors.green.shade300 : Colors.red.shade300),
             ),
             child: Row(
@@ -367,13 +412,17 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
               children: [
                 Text(
                   "Paid: ₹ ${payerAmounts.values.fold(0.0, (sum, amount) => sum + amount).toStringAsFixed(2)} of ₹ ${widget.totalAmount.toStringAsFixed(2)}",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: screenWidth * 0.04,
+                    color: Colors.black87,
+                  ),
                 ),
                 Text(
                   remainingAmount <= 0 ? "₹ 0.00 left" : "₹ ${remainingAmount.toStringAsFixed(2)} left",
                   style: TextStyle(
                     color: remainingAmount <= 0 ? Colors.green.shade900 : Colors.red.shade900,
-                    fontSize: 16,
+                    fontSize: screenWidth * 0.04,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

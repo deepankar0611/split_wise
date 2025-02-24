@@ -71,8 +71,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth = MediaQuery.of(context).size.width;
-    var screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -82,25 +82,25 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontWeight: FontWeight.w500,
-            fontSize: 22,
+            fontSize: screenWidth * 0.055, // Scaled from 22
           ),
         ),
         backgroundColor: const Color(0xFF234567),
         elevation: 4,
         centerTitle: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
         ),
-        toolbarHeight: 50,
+        toolbarHeight: screenHeight * 0.07, // Scaled from 50
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(screenWidth * 0.04), // Scaled from 16
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Card(
               elevation: 6,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.04)),
               shadowColor: Colors.teal.withOpacity(0.3),
               child: Container(
                 decoration: BoxDecoration(
@@ -109,7 +109,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(screenWidth * 0.04),
                 ),
                 padding: EdgeInsets.all(screenWidth * 0.04),
                 child: Column(
@@ -118,20 +118,20 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                     Text(
                       "Confirm Account Deletion",
                       style: GoogleFonts.poppins(
-                        fontSize: 20,
+                        fontSize: screenWidth * 0.05, // Scaled from 20
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: screenHeight * 0.015), // Scaled from 10
                     Text(
                       "This action cannot be undone. Please enter your password to confirm.",
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
+                        fontSize: screenWidth * 0.035, // Scaled from 14
                         color: Colors.grey.shade700,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: screenHeight * 0.03), // Scaled from 20
                     Form(
                       key: _formKey,
                       child: TextFormField(
@@ -141,10 +141,10 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                           labelText: "Password",
                           labelStyle: GoogleFonts.poppins(color: Colors.grey.shade700),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(screenWidth * 0.03), // Scaled from 12
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(screenWidth * 0.03),
                             borderSide: const BorderSide(color: Colors.teal, width: 2),
                           ),
                         ),
@@ -156,21 +156,24 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: screenHeight * 0.03), // Scaled from 20
                     ElevatedButton(
                       onPressed: _isLoading ? null : _deleteAccount,
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.1, // Scaled from 40
+                            vertical: screenHeight * 0.02), // Scaled from 15
                         backgroundColor: Colors.red.shade600,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(screenWidth * 0.03)), // Scaled from 12
                         elevation: 3,
                       ),
                       child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
+                          ? CircularProgressIndicator(color: Colors.white, strokeWidth: screenWidth * 0.01)
                           : Text(
                         "Delete Account",
                         style: GoogleFonts.poppins(
-                          fontSize: 16,
+                          fontSize: screenWidth * 0.04, // Scaled from 16
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),

@@ -41,19 +41,17 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     if (userId == 'defaultUserId') return;
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      if (doc.exists) {
+      if (doc.exists && mounted) {
         final data = doc.data() ?? {};
-        if (mounted) {
-          setState(() {
-            userData = {
-              "name": data["name"] ?? "User",
-              "email": data["email"] ?? "",
-              "profileImageUrl": data.containsKey("profileImageUrl") ? data["profileImageUrl"] : "",
-              "amountToPay": data["amountToPay"],
-              "amountToReceive": data["amountToReceive"],
-            };
-          });
-        }
+        setState(() {
+          userData = {
+            "name": data["name"] ?? "User",
+            "email": data["email"] ?? "",
+            "profileImageUrl": data.containsKey("profileImageUrl") ? data["profileImageUrl"] : "",
+            "amountToPay": data["amountToPay"] ?? "0",
+            "amountToReceive": data["amountToReceive"] ?? "0",
+          };
+        });
       }
     } catch (e) {
       print("Error fetching user data: $e");
@@ -62,48 +60,54 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth = MediaQuery.of(context).size.width;
-    var screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        title: Text(
-          "Profile Overview",
-          style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 22),
-        ),
-        backgroundColor: const Color(0xFF234567),
-        elevation: 4,
-        centerTitle: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-        ),
-        toolbarHeight: 50,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => EditProfileScreen()));
-            },
-            tooltip: 'Edit Profile',
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(screenHeight * 0.08), // 8% of screen height
+        child: AppBar(
+          title: Text(
+            "Profile Overview",
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+              fontSize: screenWidth * 0.055, // Responsive font size
+            ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildProfileHeader(screenWidth, screenHeight),
-            const SizedBox(height: 20),
-            _buildFinanceSummary(screenWidth, screenHeight),
-            const SizedBox(height: 20),
-            _buildProfileOptions(context),
-            const SizedBox(height: 20), // Removed _buildLogoutButton here
+          backgroundColor: const Color(0xFF234567),
+          elevation: 4,
+          centerTitle: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.edit, color: Colors.white, size: screenWidth * 0.06),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => EditProfileScreen()));
+              },
+              tooltip: 'Edit Profile',
+            ),
           ],
         ),
       ),
-      floatingActionButton: _buildLogoutButton(context), // Added FAB at the bottom
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // Position at bottom right
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(screenWidth * 0.04), // 4% of screen width
+        child: Column(
+          children: [
+            _buildProfileHeader(screenWidth, screenHeight),
+            SizedBox(height: screenHeight * 0.03), // 3% of screen height
+            _buildFinanceSummary(screenWidth, screenHeight),
+            SizedBox(height: screenHeight * 0.03),
+            _buildProfileOptions(context),
+            SizedBox(height: screenHeight * 0.03),
+          ],
+        ),
+      ),
+      floatingActionButton: _buildLogoutButton(context),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -112,7 +116,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
       stream: FirebaseFirestore.instance.collection('users').doc(userId).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.teal));
+          return Center(child: CircularProgressIndicator(color: Colors.teal));
         }
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}', style: GoogleFonts.poppins()));
@@ -123,42 +127,42 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
 
         final userData = snapshot.data!.data() as Map<String, dynamic>;
         return Card(
-          elevation: 8,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: screenWidth * 0.02, // Responsive elevation
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.05)),
           shadowColor: Colors.black.withOpacity(0.2),
           child: Stack(
             children: [
               Container(
-                height: screenHeight * 0.18,
+                height: screenHeight * 0.18, // 18% of screen height
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Colors.teal.shade700, Colors.teal.shade400],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(screenWidth * 0.05),
                 ),
               ),
               Positioned(
-                left: 16,
-                bottom: 16,
+                left: screenWidth * 0.04,
+                bottom: screenHeight * 0.02,
                 child: Row(
                   children: [
                     CircleAvatar(
-                      radius: 40,
+                      radius: screenWidth * 0.1, // 10% of screen width
                       backgroundImage: userData.containsKey('profileImageUrl') && userData['profileImageUrl'].isNotEmpty
                           ? NetworkImage(userData['profileImageUrl'] as String)
                           : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
                       backgroundColor: Colors.white,
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: screenWidth * 0.03),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           userData['name'] ?? 'User',
                           style: GoogleFonts.poppins(
-                            fontSize: 22,
+                            fontSize: screenWidth * 0.055,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             shadows: [Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(2, 2))],
@@ -166,11 +170,17 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                         ),
                         Text(
                           userData['email'] ?? '',
-                          style: GoogleFonts.poppins(fontSize: 14, color: Colors.white70),
+                          style: GoogleFonts.poppins(
+                            fontSize: screenWidth * 0.035,
+                            color: Colors.white70,
+                          ),
                         ),
                         Text(
                           userData['phone'] ?? '',
-                          style: GoogleFonts.poppins(fontSize: 14, color: Colors.white70),
+                          style: GoogleFonts.poppins(
+                            fontSize: screenWidth * 0.035,
+                            color: Colors.white70,
+                          ),
                         ),
                       ],
                     ),
@@ -189,7 +199,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
       stream: FirebaseFirestore.instance.collection('users').doc(userId).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.teal));
+          return Center(child: CircularProgressIndicator(color: Colors.teal));
         }
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}', style: GoogleFonts.poppins()));
@@ -202,14 +212,13 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         double amountToPay = double.tryParse(userData["amountToPay"]?.toString() ?? "0") ?? 0;
         double amountToReceive = double.tryParse(userData["amountToReceive"]?.toString() ?? "0") ?? 0;
         double totalBalance = amountToReceive - amountToPay;
-        Color balanceColor = totalBalance >= 0 ? Colors.green.shade600 : Colors.red.shade600;
 
         return AnimatedOpacity(
-          duration: const Duration(milliseconds: 500), // Fade-in animation
+          duration: const Duration(milliseconds: 500),
           opacity: snapshot.hasData && snapshot.data!.exists ? 1.0 : 0.0,
           child: Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: screenWidth * 0.02,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.05)),
             shadowColor: Colors.teal.withOpacity(0.4),
             child: Container(
               decoration: BoxDecoration(
@@ -218,25 +227,25 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(screenWidth * 0.05),
               ),
               padding: EdgeInsets.all(screenWidth * 0.04),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildSummaryTile("Total Balance", "₹${totalBalance.toStringAsFixed(2)}", Colors.white),
-                  const VerticalDivider(
+                  _buildSummaryTile("Total Balance", "₹${totalBalance.toStringAsFixed(2)}", Colors.white, screenWidth),
+                  VerticalDivider(
                     color: Colors.white,
                     thickness: 1,
-                    width: 16, // Space between tiles
+                    width: screenWidth * 0.04,
                   ),
-                  _buildSummaryTile("Pay", "₹${amountToPay.toStringAsFixed(2)}", Colors.white),
-                  const VerticalDivider(
+                  _buildSummaryTile("Pay", "₹${amountToPay.toStringAsFixed(2)}", Colors.white, screenWidth),
+                  VerticalDivider(
                     color: Colors.white,
                     thickness: 1,
-                    width: 16,
+                    width: screenWidth * 0.04,
                   ),
-                  _buildSummaryTile("Receive", "₹${amountToReceive.toStringAsFixed(2)}", Colors.white),
+                  _buildSummaryTile("Receive", "₹${amountToReceive.toStringAsFixed(2)}", Colors.white, screenWidth),
                 ],
               ),
             ),
@@ -246,47 +255,44 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     );
   }
 
-  // Updated _buildSummaryTile to use smaller text
-  Widget _buildSummaryTile(String label, String value, [Color? color]) {
+  Widget _buildSummaryTile(String label, String value, Color? color, double screenWidth) {
     return Column(
-      mainAxisSize: MainAxisSize.min, // Compact vertical size
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value,
           style: GoogleFonts.poppins(
-            fontSize: 16, // Smaller text for values
+            fontSize: screenWidth * 0.04, // Responsive font size
             fontWeight: FontWeight.bold,
             color: color ?? Colors.white,
           ),
         ),
         Text(
           label,
-          style: GoogleFonts.poppins(fontSize: 12, color: Colors.white), // Smaller text for labels
+          style: GoogleFonts.poppins(
+            fontSize: screenWidth * 0.03,
+            color: Colors.white,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildProfileOptions(BuildContext context) {
-    var screenWidth = MediaQuery.of(context).size.width;
-    var screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return SizedBox(
-      height: 300, // Increased height to accommodate 5 items (from 240)
+      height: screenHeight * 0.4, // 40% of screen height to accommodate 5 items
       child: ListView.builder(
-        itemCount: 5, // Updated to include 5 items
+        itemCount: 5,
         itemBuilder: (context, index) {
           switch (index) {
             case 0:
               return _buildOptionTile(
                 icon: Icons.people,
                 title: "Manage Friends",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const FriendsList()),
-                  );
-                },
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FriendsList())),
                 iconColor: const Color(0xFF0288D1),
                 backgroundColor: Colors.white,
                 screenWidth: screenWidth,
@@ -296,12 +302,10 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
               return _buildOptionTile(
                 icon: Icons.history,
                 title: "Expense History",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ExpenseHistoryDetailedScreen(showFilter: '', splitId: '')),
-                  );
-                },
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ExpenseHistoryDetailedScreen(showFilter: '', splitId: '')),
+                ),
                 iconColor: const Color(0xFF7B1FA2),
                 backgroundColor: Colors.white,
                 screenWidth: screenWidth,
@@ -311,12 +315,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
               return _buildOptionTile(
                 icon: Icons.settings,
                 title: "Settings",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                  );
-                },
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen())),
                 iconColor: const Color(0xFF00897B),
                 backgroundColor: Colors.white,
                 screenWidth: screenWidth,
@@ -324,26 +323,20 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
               );
             case 3:
               return _buildOptionTile(
-                icon: Icons.info, // Icon for About Us
+                icon: Icons.info,
                 title: "About Us",
-                onTap: () {
-                  // Add navigation or action for About Us (e.g., show a dialog, navigate to a new screen)
-                  _showAboutUsDialog(context); // Example implementation below
-                },
-                iconColor: const Color(0xFF6A1B9A), // Purple for variety
+                onTap: () => _showAboutUsDialog(context),
+                iconColor: const Color(0xFF6A1B9A),
                 backgroundColor: Colors.white,
                 screenWidth: screenWidth,
                 screenHeight: screenHeight,
               );
             case 4:
               return _buildOptionTile(
-                icon: Icons.star, // Icon for Rate Us
+                icon: Icons.star,
                 title: "Rate Us",
-                onTap: () {
-                  // Add action for Rate Us (e.g., open app store or show a rating dialog)
-                  _showRateUsDialog(context); // Example implementation below
-                },
-                iconColor: const Color(0xFFF57C00), // Orange for variety
+                onTap: () => _showRateUsDialog(context),
+                iconColor: const Color(0xFFF57C00),
                 backgroundColor: Colors.white,
                 screenWidth: screenWidth,
                 screenHeight: screenHeight,
@@ -356,47 +349,47 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     );
   }
 
-  // Helper method to show About Us dialog
   void _showAboutUsDialog(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("About Us", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        title: Text("About Us", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.05)),
         content: Text(
           "Welcome to SplitWise! We help you manage your expenses and split bills with friends effortlessly. Contact us at support@splitwise.com for more information.",
-          style: GoogleFonts.poppins(),
+          style: GoogleFonts.poppins(fontSize: screenWidth * 0.04),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Close", style: GoogleFonts.poppins(color: Colors.teal)),
+            child: Text("Close", style: GoogleFonts.poppins(color: Colors.teal, fontSize: screenWidth * 0.04)),
           ),
         ],
       ),
     );
   }
 
-  // Helper method to show Rate Us dialog
   void _showRateUsDialog(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Rate Us", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        title: Text("Rate Us", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.05)),
         content: Text(
           "If you enjoy using SplitWise, please rate us on the App Store or Google Play to help us improve!",
-          style: GoogleFonts.poppins(),
+          style: GoogleFonts.poppins(fontSize: screenWidth * 0.04),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Later", style: GoogleFonts.poppins(color: Colors.teal)),
+            child: Text("Later", style: GoogleFonts.poppins(color: Colors.teal, fontSize: screenWidth * 0.04)),
           ),
           TextButton(
             onPressed: () {
-              // Add logic to open the app store or play store here (e.g., using url_launcher package)
               Navigator.pop(context);
+              // Add logic to open app store/play store (e.g., with url_launcher)
             },
-            child: Text("Rate Now", style: GoogleFonts.poppins(color: Colors.teal)),
+            child: Text("Rate Now", style: GoogleFonts.poppins(color: Colors.teal, fontSize: screenWidth * 0.04)),
           ),
         ],
       ),
@@ -404,6 +397,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   }
 
   Widget _buildLogoutButton(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     return StatefulBuilder(
       builder: (context, setState) {
         double scale = 1.0;
@@ -418,11 +412,11 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
             duration: const Duration(milliseconds: 200),
             transform: Matrix4.identity()..scale(scale),
             child: FloatingActionButton(
-              onPressed: null, // Disable default onPressed to use GestureDetector
+              onPressed: null, // Handled by GestureDetector
               backgroundColor: const Color(0xFF234567),
-              elevation: 6,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              child: const Icon(LucideIcons.logOut, size: 24, color: Colors.white),
+              elevation: screenWidth * 0.015,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.075)),
+              child: Icon(LucideIcons.logOut, size: screenWidth * 0.06, color: Colors.white),
             ),
           ),
         );
@@ -433,15 +427,10 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
   Future<void> _logout(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
     } catch (e) {
       print("Logout failed: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error logging out: $e")),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error logging out: $e")));
     }
   }
 
@@ -455,8 +444,8 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     Function()? onTap,
   }) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: screenWidth * 0.01,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.03)),
       shadowColor: Colors.teal.withOpacity(0.2),
       child: Container(
         decoration: BoxDecoration(
@@ -465,7 +454,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(screenWidth * 0.03),
         ),
         child: ListTile(
           contentPadding: EdgeInsets.symmetric(
@@ -473,17 +462,17 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
             vertical: screenHeight * 0.005,
           ),
           leading: Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(screenWidth * 0.02),
             decoration: BoxDecoration(
               color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(screenWidth * 0.02),
             ),
-            child: Icon(icon, color: iconColor, size: 24),
+            child: Icon(icon, color: iconColor, size: screenWidth * 0.06),
           ),
           title: Text(
             title,
             style: GoogleFonts.poppins(
-              fontSize: 16,
+              fontSize: screenWidth * 0.04,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
             ),

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class FriendsListScreen extends StatefulWidget {
   const FriendsListScreen({super.key});
@@ -15,40 +16,31 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
   Stream<List<Map<String, dynamic>>> getUsersByName(String name) {
     if (name.isEmpty) return const Stream.empty();
-
     String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
 
     return FirebaseFirestore.instance.collection('users').snapshots().map(
-          (snapshot) {
-        return snapshot.docs
-            .map((doc) => doc.data())
-            .where((user) =>
-        user['uid'] != currentUserUid &&
-            user['name']
-                .toString()
-                .toLowerCase()
-                .contains(name.toLowerCase()))
-            .toList();
-      },
+          (snapshot) => snapshot.docs
+          .map((doc) => doc.data())
+          .where((user) =>
+      user['uid'] != currentUserUid &&
+          user['name'].toString().toLowerCase().contains(name.toLowerCase()))
+          .toList(),
     );
   }
 
   Future<bool> isAlreadyFriend(String friendUid) async {
     String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
-
     final friendDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(currentUserUid)
         .collection('friends')
         .doc(friendUid)
         .get();
-
     return friendDoc.exists;
   }
 
   Future<void> sendFriendRequest(String friendUid) async {
     String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
-
     await FirebaseFirestore.instance
         .collection('users')
         .doc(friendUid)
@@ -61,67 +53,88 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text("Friend request sent!"),
+        content: Text("Friend request sent!", style: GoogleFonts.poppins()),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Colors.teal.shade700,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          "Find Friends",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'YourPreferredFont', // Replace with your desired font
+      backgroundColor: Colors.grey.shade100,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(screenHeight * 0.08),
+        child: AppBar(
+          title: Text(
+            "Find Friends",
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: screenWidth * 0.055,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          backgroundColor: const Color(0xFF234567),
+          elevation: 4,
+          centerTitle: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+          ),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.white, size: screenWidth * 0.06),
+            onPressed: () => Navigator.pop(context),
           ),
         ),
-        backgroundColor: const Color(0xFF234567),
-        elevation: 4,
-        centerTitle: true,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-        ),
-        toolbarHeight: 50,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(screenWidth * 0.04),
         child: Column(
           children: [
             Material(
-              elevation: 4,
+              elevation: screenWidth * 0.015,
               shadowColor: Colors.grey.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(screenWidth * 0.04),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
                   fillColor: Colors.white,
                   filled: true,
                   hintText: "Search by name...",
-                  prefixIcon: const Icon(Icons.search, color: Colors.blueGrey),
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey.shade500,
+                    fontSize: screenWidth * 0.04,
+                  ),
+                  prefixIcon: Icon(Icons.search, color: Colors.teal.shade700, size: screenWidth * 0.06),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
                 ),
+                style: GoogleFonts.poppins(fontSize: screenWidth * 0.04),
                 onChanged: (value) => setState(() => searchQuery = value.trim()),
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: screenHeight * 0.03),
             searchQuery.isNotEmpty
                 ? StreamBuilder<List<Map<String, dynamic>>>(
               stream: getUsersByName(searchQuery),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(child: CircularProgressIndicator(color: Colors.teal.shade700));
                 }
-
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No users found"));
+                  return Center(
+                    child: Text(
+                      "No users found",
+                      style: GoogleFonts.poppins(
+                        fontSize: screenWidth * 0.045,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  );
                 }
 
                 return Expanded(
@@ -132,53 +145,98 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                       return FutureBuilder<bool>(
                         future: isAlreadyFriend(userData['uid']),
                         builder: (context, isFriendSnapshot) {
-                          if (isFriendSnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const SizedBox.shrink();
+                          if (isFriendSnapshot.connectionState == ConnectionState.waiting) {
+                            return SizedBox.shrink();
                           }
 
                           bool isFriend = isFriendSnapshot.data ?? false;
 
                           return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            elevation: screenWidth * 0.015,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15)),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundImage: userData['profileImageUrl'] != null
-                                    ? NetworkImage(userData['profileImageUrl'])
-                                    : null,
-                                backgroundColor: Colors.blueGrey.shade100,
-                                child: userData['profileImageUrl'] == null
-                                    ? Text(
-                                  userData['name']?[0] ?? "?",
-                                  style: const TextStyle(color: Colors.blueGrey),
-                                )
-                                    : null,
-                              ),
-                              title: Text(
-                                userData['name'] ?? "Unknown",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 16),
-                              ),
-                              subtitle: Text(userData['email'] ?? "No email"),
-                              trailing: isFriend
-                                  ? const Chip(
-                                label: Text("Friend"),
-                                backgroundColor: Colors.green,
-                                labelStyle: TextStyle(color: Colors.white),
-                              )
-                                  : ElevatedButton(
-                                onPressed: () =>
-                                    sendFriendRequest(userData['uid']),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF234567),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                            ),
+                            shadowColor: Colors.teal.withOpacity(0.3),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Colors.white, Colors.teal.shade50],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                child: const Text(
-                                  "Add Friend",
-                                  style: TextStyle(color: Colors.white),
+                                borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                              ),
+                              child: ListTile(
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                  vertical: screenHeight * 0.01,
+                                ),
+                                leading: CircleAvatar(
+                                  radius: screenWidth * 0.06,
+                                  backgroundImage: userData['profileImageUrl'] != null &&
+                                      userData['profileImageUrl'].isNotEmpty
+                                      ? NetworkImage(userData['profileImageUrl'])
+                                      : null,
+                                  backgroundColor: Colors.teal.shade100,
+                                  child: userData['profileImageUrl'] == null ||
+                                      userData['profileImageUrl'].isEmpty
+                                      ? Text(
+                                    userData['name']?[0].toUpperCase() ?? "?",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: screenWidth * 0.05,
+                                      color: Colors.teal.shade900,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                      : null,
+                                ),
+                                title: Text(
+                                  userData['name'] ?? "Unknown",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: screenWidth * 0.045,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  userData['email'] ?? "No email",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: screenWidth * 0.035,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                trailing: isFriend
+                                    ? Chip(
+                                  label: Text(
+                                    "Friend",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: screenWidth * 0.035,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  backgroundColor: Colors.green.shade700,
+                                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
+                                )
+                                    : ElevatedButton(
+                                  onPressed: () => sendFriendRequest(userData['uid']),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF234567),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: screenWidth * 0.04,
+                                      vertical: screenHeight * 0.015,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "Add Friend",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: screenWidth * 0.035,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -190,15 +248,24 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                 );
               },
             )
-                : const Center(
+                : Center(
               child: Text(
                 "Search for a user by name",
-                style: TextStyle(color: Colors.blueGrey, fontSize: 16),
+                style: GoogleFonts.poppins(
+                  fontSize: screenWidth * 0.045,
+                  color: Colors.teal.shade700,
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }

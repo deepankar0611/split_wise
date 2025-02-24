@@ -5,8 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import 'all expense history detals.dart';
-
+import 'all expense history detals.dart'; // Ensure this import matches your file name
 
 class FriendsList extends StatefulWidget {
   const FriendsList({super.key});
@@ -17,7 +16,7 @@ class FriendsList extends StatefulWidget {
 
 class _FriendsListState extends State<FriendsList> {
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
-  Map<String, Map<String, String>> friendDetails = {}; // Cache friend name and profile image URL
+  Map<String, Map<String, String>> friendDetails = {};
 
   @override
   void initState() {
@@ -40,7 +39,7 @@ class _FriendsListState extends State<FriendsList> {
         var data = userDoc.data() as Map<String, dynamic>?;
         friendDetails[uid] = {
           "name": data?['name'] ?? "Unknown ($uid)",
-          "profileImageUrl": data!.containsKey('profileImageUrl') ? data!['profileImageUrl'] : "",
+          "profileImageUrl": data?.containsKey('profileImageUrl') ?? false ? data!['profileImageUrl'] : "",
         };
       }
       if (mounted) setState(() {});
@@ -51,29 +50,33 @@ class _FriendsListState extends State<FriendsList> {
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth = MediaQuery.of(context).size.width;
-    var screenHeight = MediaQuery.of(context).size.height;
+    // Get screen dimensions
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        title: Text(
-          "My Friends",
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-            fontSize: 22,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(screenHeight * 0.08), // 8% of screen height
+        child: AppBar(
+          title: Text(
+            "My Friends",
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+              fontSize: screenWidth * 0.055, // Responsive font size
+            ),
           ),
-        ),
-        backgroundColor: const Color(0xFF234567),
-        elevation: 4,
-        centerTitle: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          backgroundColor: const Color(0xFF234567),
+          elevation: 4,
+          centerTitle: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+          ),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.white, size: screenWidth * 0.06),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -84,16 +87,27 @@ class _FriendsListState extends State<FriendsList> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.teal));
+            return Center(child: CircularProgressIndicator(color: Colors.teal));
           }
           if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}", style: GoogleFonts.poppins(color: Colors.grey)));
+            return Center(
+              child: Text(
+                "Error: ${snapshot.error}",
+                style: GoogleFonts.poppins(
+                  color: Colors.grey,
+                  fontSize: screenWidth * 0.045,
+                ),
+              ),
+            );
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
               child: Text(
                 "No friends added yet.",
-                style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey.shade600),
+                style: GoogleFonts.poppins(
+                  fontSize: screenWidth * 0.045,
+                  color: Colors.grey.shade600,
+                ),
               ),
             );
           }
@@ -101,7 +115,10 @@ class _FriendsListState extends State<FriendsList> {
           var friends = snapshot.data!.docs;
 
           return Padding(
-            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.02),
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth * 0.04, // 4% of screen width
+              vertical: screenHeight * 0.02, // 2% of screen height
+            ),
             child: ListView.builder(
               itemCount: friends.length,
               itemBuilder: (context, index) {
@@ -111,23 +128,31 @@ class _FriendsListState extends State<FriendsList> {
 
                 return GestureDetector(
                   onTap: () {
-                    print("Tapping on friend: $friendName (UID: $friendUid)"); // Debug print
+                    print("Tapping on friend: $friendName (UID: $friendUid)");
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ExpenseHistoryDetailedScreen(friendUid: friendUid, showFilter: '', splitId: '', isReceiver: false, isPayer: false,),
+                        builder: (context) => ExpenseHistoryDetailedScreen(
+                          friendUid: friendUid,
+                          showFilter: '',
+                          splitId: '',
+                          isReceiver: false,
+                          isPayer: false,
+                        ),
                       ),
                     ).then((value) {
-                      print("Returned from ExpenseHistoryDetailedScreen"); // Debug return
+                      print("Returned from ExpenseHistoryDetailedScreen");
                     }).catchError((error) {
-                      print("Navigation error: $error"); // Debug errors
+                      print("Navigation error: $error");
                     });
                   },
                   child: FadeInUp(
                     delay: Duration(milliseconds: 100 * index),
                     child: Card(
-                      elevation: 6,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      elevation: screenWidth * 0.015, // Responsive elevation
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                      ),
                       shadowColor: Colors.teal.withOpacity(0.3),
                       child: Container(
                         decoration: BoxDecoration(
@@ -136,15 +161,18 @@ class _FriendsListState extends State<FriendsList> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(screenWidth * 0.04),
                         ),
                         child: ListTile(
-                          contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.01),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.04,
+                            vertical: screenHeight * 0.01,
+                          ),
                           leading: CircleAvatar(
-                            radius: screenWidth * 0.06,
+                            radius: screenWidth * 0.06, // 6% of screen width
                             backgroundColor: Colors.teal.shade100,
                             foregroundImage: profileImageUrl.isNotEmpty
-                                ? CachedNetworkImageProvider(profileImageUrl) // Use CachedNetworkImageProvider for foreground
+                                ? CachedNetworkImageProvider(profileImageUrl)
                                 : null,
                             child: profileImageUrl.isEmpty
                                 ? Text(
@@ -160,7 +188,7 @@ class _FriendsListState extends State<FriendsList> {
                           title: Text(
                             friendName,
                             style: GoogleFonts.poppins(
-                              fontSize: 18,
+                              fontSize: screenWidth * 0.045, // Responsive font size
                               fontWeight: FontWeight.w600,
                               color: Colors.black87,
                             ),
@@ -168,7 +196,7 @@ class _FriendsListState extends State<FriendsList> {
                           trailing: Icon(
                             Icons.person,
                             color: Colors.teal.shade700,
-                            size: screenWidth * 0.07,
+                            size: screenWidth * 0.07, // Responsive icon size
                           ),
                         ),
                       ),

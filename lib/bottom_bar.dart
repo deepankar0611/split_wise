@@ -58,15 +58,11 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   void _onScrollDirectionChange() {
     if (_handlingScroll) return;
 
-    print("Scroll direction changed!");
     if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
-      print("Scrolling DOWN");
       if (_isBottomBarVisible) {
         _hideBottomBar();
       }
-    }
-    if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
-      print("Scrolling UP");
+    } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
       if (!_isBottomBarVisible) {
         _showBottomBar();
       }
@@ -76,7 +72,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   void _hideBottomBar() {
     _handlingScroll = true;
     if (_isBottomBarVisible) {
-      print("Hiding Bottom Bar FUNCTION CALLED");
       setState(() {
         _isBottomBarVisible = false;
       });
@@ -89,7 +84,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   void _showBottomBar() {
     _handlingScroll = true;
     if (!_isBottomBarVisible) {
-      print("Showing Bottom Bar FUNCTION CALLED");
       setState(() {
         _isBottomBarVisible = true;
       });
@@ -126,75 +120,96 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: AnimatedBuilder(
-        animation: _animation,
-        builder: (context, child) {
-          return IndexedStack(
-            index: _selectedIndex,
-            children: _screens.map((widget) {
-              final isCurrent = _screens.indexOf(widget) == _selectedIndex;
-              return AnimatedBuilder(
-                animation: _animation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: isCurrent ? 1.0 : (1.0 - _animation.value * 0.1),
-                    child: Opacity(
-                      opacity: isCurrent ? 1.0 : (1.0 - _animation.value),
-                      child: Transform.translate(
-                        offset: Offset(0, _animation.value * (isCurrent ? -10 : 10)),
-                        child: widget,
-                      ),
-                    ),
-                  );
-                },
-              );
-            }).toList(),
-          );
-        },
-      ),
-      bottomNavigationBar: AnimatedContainer(
-        clipBehavior: Clip.none,
-        duration: const Duration(milliseconds: 300),
-        height: _isBottomBarVisible ? 60.0 : 0.0,
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final bottomBarHeight = screenHeight * 0.1; // Increased to 10% to avoid overflow
 
-        curve: Curves.easeInOut,
-        child: _isBottomBarVisible
-            ? BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed, // Ensure type is fixed for label efficiency
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF1A2E39),
-          unselectedItemColor: Colors.grey[400],
-          selectedFontSize: 11, // Keep reduced selectedFontSize
-          unselectedFontSize: 9, // Keep reduced unselectedFontSize
-          elevation: 8,
-          iconSize: 20, // Keep or slightly reduce iconSize if needed, e.g., 18
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.home, color: Color(0xFF0288D1)),
-              activeIcon: Icon(CupertinoIcons.home, color: Color(0xFF1A2E39)),
-              label: '', // Short label
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: Stack(
+        children: [
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              return IndexedStack(
+                index: _selectedIndex,
+                children: _screens.map((widget) {
+                  final isCurrent = _screens.indexOf(widget) == _selectedIndex;
+                  return AnimatedBuilder(
+                    animation: _animation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: isCurrent ? 1.0 : (1.0 - _animation.value * 0.1),
+                        child: Opacity(
+                          opacity: isCurrent ? 1.0 : (1.0 - _animation.value),
+                          child: Transform.translate(
+                            offset: Offset(0, _animation.value * (isCurrent ? -10 : 10)),
+                            child: widget,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          // Bottom Navigation Bar positioned at the bottom
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            bottom: _isBottomBarVisible ? 0 : -bottomBarHeight,
+            left: 0,
+            right: 0,
+            height: bottomBarHeight,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: screenWidth * 0.025,
+                    offset: Offset(0, -screenWidth * 0.005),
+                  ),
+                ],
+              ),
+              child: BottomNavigationBar(
+                currentIndex: _selectedIndex,
+                onTap: _onItemTapped,
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: Colors.transparent,
+                elevation: 0, // Elevation handled by container
+                selectedItemColor: const Color(0xFF1A2E39),
+                unselectedItemColor: Colors.grey[400],
+                selectedFontSize: screenWidth * 0.03,
+                unselectedFontSize: screenWidth * 0.025,
+                iconSize: screenWidth * 0.06,
+                items: [
+                  BottomNavigationBarItem(
+                    icon: Icon(CupertinoIcons.home, color: const Color(0xFF0288D1)),
+                    activeIcon: Icon(CupertinoIcons.home, color: const Color(0xFF1A2E39)),
+                    label: '',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(CupertinoIcons.search, color: const Color(0xFF7B1FA2)),
+                    activeIcon: Icon(CupertinoIcons.search, color: const Color(0xFF1A2E39)),
+                    label: '',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(CupertinoIcons.add_circled, color: const Color(0xFFD81B60)),
+                    activeIcon: Icon(CupertinoIcons.add_circled, color: const Color(0xFF1A2E39)),
+                    label: '',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(CupertinoIcons.profile_circled, color: const Color(0xFF00897B)),
+                    activeIcon: Icon(CupertinoIcons.profile_circled, color: const Color(0xFF1A2E39)),
+                    label: '',
+                  ),
+                ],
+              ),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.search, color: Color(0xFF7B1FA2)),
-              activeIcon: Icon(CupertinoIcons.search, color: Color(0xFF1A2E39)),
-              label: '', // Short label
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.add_circled, color: Color(0xFFD81B60)),
-              activeIcon: Icon(CupertinoIcons.add_circled, color: Color(0xFF1A2E39)),
-              label: '', // Short label
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF00897B)),
-              activeIcon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF1A2E39)),
-              label: '', // Short label
-            ),
-          ],
-        )
-            : null,
+          ),
+        ],
       ),
     );
   }

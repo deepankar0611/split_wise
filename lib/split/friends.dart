@@ -44,10 +44,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       List<Map<String, dynamic>> fetchedFriends = [];
 
       for (String friendUid in friendUids) {
-        DocumentSnapshot friendDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(friendUid)
-            .get();
+        DocumentSnapshot friendDoc =
+        await FirebaseFirestore.instance.collection('users').doc(friendUid).get();
 
         if (friendDoc.exists) {
           final data = friendDoc.data() as Map<String, dynamic>?;
@@ -59,16 +57,20 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         }
       }
 
-      setState(() {
-        friends = fetchedFriends;
-        displayFriends = List.from(friends);
-      });
+      if (mounted) {
+        setState(() {
+          friends = fetchedFriends;
+          displayFriends = List.from(friends);
+        });
+      }
     } catch (e) {
       print("Error fetching friends: $e");
-      setState(() {
-        friends = [];
-        displayFriends = [];
-      });
+      if (mounted) {
+        setState(() {
+          friends = [];
+          displayFriends = [];
+        });
+      }
     }
   }
 
@@ -99,44 +101,49 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Non-nullable Color
-      appBar: AppBar(
-        title: const Text(
-          "Add Expense",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
-        backgroundColor: const Color(0xFF1A3C6D), // Solid background color
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: () {
-              // Placeholder for save action - replace with your logic
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const Placeholder(), // Replace Placeholder with your actual screen/widget
-                ),
-              );
-            },
-            child: const Text(
-              "Save",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(screenHeight * 0.08), // 8% of screen height
+        child: AppBar(
+          title: Text(
+            "Add Expense",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: screenWidth * 0.055, // Responsive font size
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
           ),
-        ],
-        shape: const RoundedRectangleBorder( // Apply shape to AppBar
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+          backgroundColor: const Color(0xFF1A3C6D),
+          elevation: 0,
+          centerTitle: true,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const Placeholder(), // Replace with your actual screen
+                  ),
+                );
+              },
+              child: Text(
+                "Save",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: screenWidth * 0.045,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -144,15 +151,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.fromLTRB(screenWidth * 0.04, screenHeight * 0.025, screenWidth * 0.04, screenHeight * 0.015),
+              decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
+                    blurRadius: screenWidth * 0.025,
+                    offset: Offset(0, screenWidth * 0.01),
                   ),
                 ],
               ),
@@ -162,73 +169,77 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         "Split With",
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: screenWidth * 0.05,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A3C6D),
+                          color: const Color(0xFF1A3C6D),
                         ),
                       ),
                       Text(
                         "${selectedPeople.length} selected",
-                        style: const TextStyle(
-                          fontSize: 14,
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.035,
                           color: Colors.grey,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: screenHeight * 0.015),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 400),
                     curve: Curves.easeInOut,
                     child: Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
+                      spacing: screenWidth * 0.025,
+                      runSpacing: screenHeight * 0.012,
                       children: selectedPeople.map((friend) {
                         return Chip(
                           label: Text(
                             friend['name'],
-                            style: const TextStyle(
-                              fontSize: 14,
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.035,
                               color: Colors.black87,
                             ),
                           ),
                           avatar: CircleAvatar(
-                            radius: 14,
+                            radius: screenWidth * 0.035,
                             backgroundImage: friend['profilePic'].isNotEmpty
                                 ? NetworkImage(friend['profilePic'])
                                 : null,
-                            backgroundColor: Colors.blueGrey[100]!, // Non-nullable
+                            backgroundColor: Colors.blueGrey[100]!,
                             child: friend['profilePic'].isEmpty
                                 ? Text(
                               friend['name'][0].toUpperCase(),
-                              style: const TextStyle(color: Colors.white),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: screenWidth * 0.035,
+                              ),
                             )
                                 : null,
                           ),
-                          deleteIcon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                          deleteIcon: Icon(Icons.close, size: screenWidth * 0.045, color: Colors.grey),
                           onDeleted: () => _toggleSelection(friend),
-                          backgroundColor: Colors.blueGrey[50]!, // Non-nullable
+                          backgroundColor: Colors.blueGrey[50]!,
                           elevation: 2,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.005),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(screenWidth * 0.05),
                           ),
                         );
                       }).toList(),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: screenHeight * 0.02),
                   TextField(
                     decoration: InputDecoration(
                       hintText: "Search friends...",
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      hintStyle: TextStyle(fontSize: screenWidth * 0.04),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey, size: screenWidth * 0.06),
                       suffixIcon: searchQuery.isNotEmpty
                           ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        icon: Icon(Icons.clear, color: Colors.grey, size: screenWidth * 0.06),
                         onPressed: () {
                           setState(() {
                             searchQuery = "";
@@ -238,13 +249,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       )
                           : null,
                       filled: true,
-                      fillColor: Colors.grey[100]!, // Non-nullable
+                      fillColor: Colors.grey[100]!,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(screenWidth * 0.075),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      contentPadding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
                     ),
+                    style: TextStyle(fontSize: screenWidth * 0.04),
                     onChanged: (value) {
                       setState(() {
                         searchQuery = value.toLowerCase();
@@ -258,16 +270,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
             ),
             Container(
-              height: 300,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              height: screenHeight * 0.35, // 35% of screen height
+              margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.015),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [
+                borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                boxShadow: [
                   BoxShadow(
                     color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
+                    blurRadius: screenWidth * 0.025,
+                    offset: Offset(0, screenWidth * 0.01),
                   ),
                 ],
               ),
@@ -275,22 +287,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 physics: const BouncingScrollPhysics(),
                 itemCount: displayFriends.length,
                 itemBuilder: (context, index) {
-                  return _buildFriendItem(displayFriends[index]);
+                  return _buildFriendItem(displayFriends[index], screenWidth, screenHeight);
                 },
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(screenWidth * 0.04),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A3C6D), // Non-nullable
-                  foregroundColor: Colors.white, // Non-nullable
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: const Color(0xFF1A3C6D),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(screenWidth * 0.03),
                   ),
                   elevation: 5,
-                  minimumSize: const Size(double.infinity, 60),
+                  minimumSize: Size(double.infinity, screenHeight * 0.075),
                 ),
                 onPressed: selectedPeople.isEmpty
                     ? null
@@ -304,13 +316,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   children: [
                     Text(
                       "Continue (${selectedPeople.length})",
-                      style: const TextStyle(
-                        fontSize: 18,
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.045,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward_ios, size: 18),
+                    SizedBox(width: screenWidth * 0.02),
+                    Icon(Icons.arrow_forward_ios, size: screenWidth * 0.045),
                   ],
                 ),
               ),
@@ -330,7 +342,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 );
               },
               child: showExpenseDetails
-                  ? _buildExpenseDetailsUI()
+                  ? _buildExpenseDetailsUI(screenWidth, screenHeight)
                   : const SizedBox.shrink(),
             ),
           ],
@@ -339,87 +351,99 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  Widget _buildFriendItem(Map<String, dynamic> friend) {
+  Widget _buildFriendItem(Map<String, dynamic> friend, double screenWidth, double screenHeight) {
     bool isSelected = selectedPeople.any((p) => p['uid'] == friend["uid"]);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.005),
       decoration: BoxDecoration(
-        color: isSelected ? Colors.blueGrey[50] : Colors.white, // Non-nullable
-        borderRadius: BorderRadius.circular(12),
+        color: isSelected ? Colors.blueGrey[50] : Colors.white,
+        borderRadius: BorderRadius.circular(screenWidth * 0.03),
         border: Border.all(
-          color: isSelected ? const Color(0xFF1A3C6D) : Colors.grey[200]!, // Non-nullable
+          color: isSelected ? const Color(0xFF1A3C6D) : Colors.grey[200]!,
           width: 1,
         ),
       ),
       child: ListTile(
         leading: CircleAvatar(
-          radius: 20,
-          backgroundImage: friend["profilePic"].isNotEmpty
-              ? NetworkImage(friend["profilePic"])
-              : null,
-          backgroundColor: Colors.blueGrey[100]!, // Non-nullable
+          radius: screenWidth * 0.05,
+          backgroundImage: friend["profilePic"].isNotEmpty ? NetworkImage(friend["profilePic"]) : null,
+          backgroundColor: Colors.blueGrey[100]!,
           child: friend["profilePic"].isEmpty
-              ? Text(friend["name"][0], style: const TextStyle(color: Colors.white))
+              ? Text(
+            friend["name"][0],
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: screenWidth * 0.04,
+            ),
+          )
               : null,
         ),
         title: Text(
           friend["name"],
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: screenWidth * 0.04,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         onTap: () => _toggleSelection(friend),
         trailing: isSelected
-            ? const Icon(Icons.check_circle, color: Color(0xFF1A3C6D))
+            ? Icon(Icons.check_circle, color: const Color(0xFF1A3C6D), size: screenWidth * 0.06)
             : null,
       ),
     );
   }
 
-  Widget _buildExpenseDetailsUI() {
+  Widget _buildExpenseDetailsUI(double screenWidth, double screenHeight) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(screenWidth * 0.075)),
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
-            blurRadius: 20,
-            offset: Offset(0, -5),
+            blurRadius: screenWidth * 0.05,
+            offset: Offset(0, -screenWidth * 0.012),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(screenWidth * 0.05),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Expense Details",
             style: TextStyle(
-              fontSize: 24,
+              fontSize: screenWidth * 0.06,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A3C6D),
+              color: const Color(0xFF1A3C6D),
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: screenHeight * 0.025),
+          Text(
             "Total Amount",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: screenHeight * 0.01),
           TextField(
             decoration: InputDecoration(
               hintText: "Enter amount",
-              prefixIcon: const Icon(Icons.currency_rupee, color: Color(0xFF1A3C6D)),
+              hintStyle: TextStyle(fontSize: screenWidth * 0.04),
+              prefixIcon: Icon(Icons.currency_rupee, color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
               filled: true,
-              fillColor: Colors.grey[100]!, // Non-nullable
+              fillColor: Colors.grey[100]!,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
                 borderSide: const BorderSide(color: Color(0xFF1A3C6D)),
               ),
             ),
+            style: TextStyle(fontSize: screenWidth * 0.04),
             keyboardType: TextInputType.number,
             onChanged: (value) {
               setState(() {
@@ -427,72 +451,86 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               });
             },
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: screenHeight * 0.025),
+          Text(
             "Category",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: screenHeight * 0.01),
           GestureDetector(
-            onTap: () => _showCategoryBackdrop(context),
+            onTap: () => _showCategoryBackdrop(context, screenWidth, screenHeight),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.017),
               decoration: BoxDecoration(
-                color: Colors.grey[100]!, // Non-nullable
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.grey[100]!,
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Icon(_getCategoryIcon(selectedCategory), color: const Color(0xFF1A3C6D)),
-                      const SizedBox(width: 10),
+                      Icon(_getCategoryIcon(selectedCategory), color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
+                      SizedBox(width: screenWidth * 0.025),
                       Text(
                         selectedCategory,
-                        style: const TextStyle(fontSize: 16, color: Colors.black87),
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.04,
+                          color: Colors.black87,
+                        ),
                       ),
                     ],
                   ),
-                  const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                  Icon(Icons.arrow_drop_down, color: Colors.grey, size: screenWidth * 0.06),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: screenHeight * 0.025),
+          Text(
             "Description",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: screenHeight * 0.01),
           TextField(
             decoration: InputDecoration(
               hintText: "What’s this expense for?",
-              prefixIcon: const Icon(Icons.description, color: Color(0xFF1A3C6D)),
+              hintStyle: TextStyle(fontSize: screenWidth * 0.04),
+              prefixIcon: Icon(Icons.description, color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
               filled: true,
-              fillColor: Colors.grey[100]!, // Non-nullable
+              fillColor: Colors.grey[100]!,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
                 borderSide: const BorderSide(color: Color(0xFF1A3C6D)),
               ),
             ),
+            style: TextStyle(fontSize: screenWidth * 0.04),
             onChanged: (value) {
               setState(() {
                 expenseDescription = value;
               });
             },
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: screenHeight * 0.025),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 "Paid By",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: screenWidth * 0.04,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -515,14 +553,20 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A3C6D), // Non-nullable
-                  foregroundColor: Colors.white, // Non-nullable
+                  backgroundColor: const Color(0xFF1A3C6D),
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(screenWidth * 0.025),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.04,
+                    vertical: screenHeight * 0.012,
+                  ),
                 ),
-                child: const Text("Select Payers"),
+                child: Text(
+                  "Select Payers",
+                  style: TextStyle(fontSize: screenWidth * 0.035),
+                ),
               ),
             ],
           ),
@@ -531,7 +575,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  void _showCategoryBackdrop(BuildContext context) {
+  void _showCategoryBackdrop(BuildContext context, double screenWidth, double screenHeight) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -539,28 +583,28 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.5,
-          decoration: const BoxDecoration(
+          height: screenHeight * 0.5,
+          decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(screenWidth * 0.06)),
           ),
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(screenWidth * 0.04),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       "Select Category",
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: screenWidth * 0.05,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A3C6D),
+                        color: const Color(0xFF1A3C6D),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.grey),
+                      icon: Icon(Icons.close, color: Colors.grey, size: screenWidth * 0.06),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -576,17 +620,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       leading: Icon(
                         _getCategoryIcon(category),
                         color: isSelected ? const Color(0xFF1A3C6D) : Colors.grey[600]!,
+                        size: screenWidth * 0.06,
                       ),
                       title: Text(
                         category,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: screenWidth * 0.04,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                           color: isSelected ? const Color(0xFF1A3C6D) : Colors.black87,
                         ),
                       ),
                       trailing: isSelected
-                          ? const Icon(Icons.check_circle, color: Color(0xFF1A3C6D))
+                          ? Icon(Icons.check_circle, color: const Color(0xFF1A3C6D), size: screenWidth * 0.06)
                           : null,
                       onTap: () {
                         setState(() {

@@ -92,7 +92,6 @@ class _HomeScreenState extends State<HomeScreen> {
         .snapshots()
         .map((QuerySnapshot snapshot) {
       Map<String, Map<String, dynamic>> categoryData = {};
-
       for (var splitDoc in snapshot.docs) {
         Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
         String category = splitData['category'] ?? 'Others';
@@ -107,7 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
               'lastInvolved': createdAt?.toDate(),
             };
           }
-
           categoryData[category]!['totalPaid'] = (categoryData[category]!['totalPaid'] as double) + userPaidAmount;
           if (createdAt != null &&
               (categoryData[category]!['lastInvolved'] == null ||
@@ -127,16 +125,15 @@ class _HomeScreenState extends State<HomeScreen> {
         .collection('settle')
         .doc(userId)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.exists ? (snapshot.get('settled') as bool? ?? false) : false;
-    }).handleError((error, stackTrace) {
-      return false;
-    });
+        .map((snapshot) => snapshot.exists ? (snapshot.get('settled') as bool? ?? false) : false)
+        .handleError((error, stackTrace) => false);
   }
-
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: const Color(0xFF234567),
       body: CustomScrollView(
@@ -145,28 +142,28 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverAppBar(
             pinned: true,
             floating: false,
-            expandedHeight: 220.0,
+            expandedHeight: screenHeight * 0.3, // 30% of screen height
             backgroundColor: const Color(0xFF234567),
             flexibleSpace: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
-                final collapseProgress = (220.0 - constraints.biggest.height) / (220.0 - kToolbarHeight);
+                final collapseProgress = (screenHeight * 0.3 - constraints.biggest.height) / (screenHeight * 0.3 - kToolbarHeight);
                 final cardAnimationProgress = collapseProgress.clamp(0.0, 1.0);
 
                 return FlexibleSpaceBar(
-                  titlePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
+                  titlePadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenHeight * 0.08),
                   background: Padding(
-                    padding: const EdgeInsets.only(top: 90.0),
+                    padding: EdgeInsets.only(top: screenHeight * 0.12), // Adjusted dynamically
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+                      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.03),
                       child: Transform.translate(
-                        offset: Offset(0, cardAnimationProgress * 70),
+                        offset: Offset(0, cardAnimationProgress * screenHeight * 0.1),
                         child: Transform.scale(
                           scale: 1.0 - cardAnimationProgress * 0.2,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.015),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(screenWidth * 0.05),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.grey.withOpacity(0.2),
@@ -179,8 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
-                                _buildReceiveCard(),
-                                _buildPayCard(),
+                                Expanded(child: _buildReceiveCard()),
+                                Expanded(child: _buildPayCard()),
                               ],
                             ),
                           ),
@@ -193,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             leading: IconButton(
               icon: CircleAvatar(
-                radius: 20,
+                radius: screenWidth * 0.05, // 5% of screen width
                 backgroundImage: userData["profileImageUrl"].isNotEmpty
                     ? NetworkImage(userData["profileImageUrl"])
                     : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
@@ -203,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(LucideIcons.bell, color: Colors.white),
+                icon: Icon(LucideIcons.bell, color: Colors.white, size: screenWidth * 0.06),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -225,6 +222,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildReceiveCard() {
     double amountToReceive = double.tryParse(userData["amountToReceive"]) ?? 0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -239,13 +239,13 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        width: 170,
-        height: 110,
-        padding: const EdgeInsets.all(10),
+        padding: EdgeInsets.all(screenWidth * 0.025),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3))],
+          borderRadius: BorderRadius.circular(screenWidth * 0.04),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3)),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -255,18 +255,27 @@ class _HomeScreenState extends State<HomeScreen> {
             Align(
               alignment: Alignment.topRight,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01, vertical: screenHeight * 0.005),
                 decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                child: const Text("Receive", style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: 9)),
+                child: Text(
+                  "Receive",
+                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: screenWidth * 0.025),
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(left: 6.0),
-              child: Text("₹${amountToReceive.toInt()}", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black)),
+              padding: EdgeInsets.only(left: screenWidth * 0.015),
+              child: Text(
+                "₹${amountToReceive.toInt()}",
+                style: TextStyle(fontSize: screenWidth * 0.07, fontWeight: FontWeight.bold, color: Colors.black),
+              ),
             ),
-            const Padding(
-              padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
-              child: Text("will get", style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13)),
+            Padding(
+              padding: EdgeInsets.only(left: screenWidth * 0.015, bottom: screenHeight * 0.005),
+              child: Text(
+                "will get",
+                style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: screenWidth * 0.035),
+              ),
             ),
           ],
         ),
@@ -276,6 +285,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPayCard() {
     double amountToPay = double.tryParse(userData["amountToPay"]) ?? 0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -291,13 +303,13 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        width: 170,
-        height: 120,
-        padding: const EdgeInsets.all(10),
+        padding: EdgeInsets.all(screenWidth * 0.025),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3))],
+          borderRadius: BorderRadius.circular(screenWidth * 0.04),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3)),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -307,18 +319,27 @@ class _HomeScreenState extends State<HomeScreen> {
             Align(
               alignment: Alignment.topRight,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01, vertical: screenHeight * 0.005),
                 decoration: BoxDecoration(color: Colors.red.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                child: const Text("Pay", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: 9)),
+                child: Text(
+                  "Pay",
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: screenWidth * 0.025),
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(left: 6.0),
-              child: Text("₹${amountToPay.toInt()}", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black)),
+              padding: EdgeInsets.only(left: screenWidth * 0.015),
+              child: Text(
+                "₹${amountToPay.toInt()}",
+                style: TextStyle(fontSize: screenWidth * 0.07, fontWeight: FontWeight.bold, color: Colors.black),
+              ),
             ),
-            const Padding(
-              padding: EdgeInsets.only(left: 6.0, bottom: 4.0),
-              child: Text("will pay", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 13)),
+            Padding(
+              padding: EdgeInsets.only(left: screenWidth * 0.015, bottom: screenHeight * 0.005),
+              child: Text(
+                "will pay",
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: screenWidth * 0.035),
+              ),
             ),
           ],
         ),
@@ -327,18 +348,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBodyCard() {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(screenWidth * 0.05),
       ),
-      padding: const EdgeInsets.only(top: 20.0),
+      padding: EdgeInsets.only(top: screenWidth * 0.05),
       child: Column(
         children: [
           _buildHistoryCardBox(),
-          const SizedBox(height: 20),
+          SizedBox(height: screenWidth * 0.05),
           _buildExclusiveFeatureCard(),
-          const SizedBox(height: 20),
+          SizedBox(height: screenWidth * 0.05),
           _buildTransactionList(),
         ],
       ),
@@ -346,6 +369,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHistoryCardBox() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('splits')
@@ -366,20 +392,25 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Recent Priority Bills", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-              const SizedBox(height: 10),
+              Text(
+                "Recent Priority Bills",
+                style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+              SizedBox(height: screenHeight * 0.015),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenHeight * 0.02),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3))],
+                  borderRadius: BorderRadius.circular(screenWidth * 0.025),
+                  boxShadow: [
+                    BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3)),
+                  ],
                 ),
-                height: 138,
+                height: screenHeight * 0.18, // 18% of screen height
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: snapshot.data!.docs.length,
@@ -423,6 +454,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildExclusiveFeatureCard() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final List<String> card = [
       "assets/logo/spend.jpg",
       "assets/images/expense.png",
@@ -430,21 +463,21 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "EXCLUSIVE FEATURE",
             style: TextStyle(
-              fontSize: 12,
+              fontSize: screenWidth * 0.03,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: screenHeight * 0.015),
           SizedBox(
-            height: MediaQuery.of(context).size.height * 0.2,
+            height: screenHeight * 0.2, // 20% of screen height
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('splits')
@@ -477,10 +510,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
                             : null,
                         child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          width: MediaQuery.of(context).size.width * 0.9,
+                          margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
+                          width: screenWidth * 0.9,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(screenWidth * 0.05),
                             image: DecorationImage(
                               image: AssetImage(card[index]),
                               fit: BoxFit.cover,
@@ -557,10 +590,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                           : null,
                       child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        width: MediaQuery.of(context).size.width * 0.9,
+                        margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
+                        width: screenWidth * 0.9,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(screenWidth * 0.05),
                           image: DecorationImage(
                             image: AssetImage(card[index]),
                             fit: BoxFit.cover,
@@ -594,18 +627,10 @@ class _HomeScreenState extends State<HomeScreen> {
     required String splitId,
     bool settled = false,
   }) {
+    final screenWidth = MediaQuery.of(context).size.width;
     DateTime createdAtDate = DateTime.parse(date);
     Duration difference = DateTime.now().difference(createdAtDate);
-    String timeAgo;
-    if (difference.inDays > 0) {
-      timeAgo = "${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago";
-    } else if (difference.inHours > 0) {
-      timeAgo = "${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago";
-    } else if (difference.inMinutes > 0) {
-      timeAgo = "${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago";
-    } else {
-      timeAgo = "Just now";
-    }
+    String timeAgo = _formatTimeAgo(createdAtDate);
 
     return StreamBuilder<bool>(
       stream: _isSplitSettledStream(splitId),
@@ -615,10 +640,10 @@ class _HomeScreenState extends State<HomeScreen> {
             baseColor: Colors.grey[300]!,
             highlightColor: Colors.grey[100]!,
             child: Container(
-              width: 150,
-              margin: const EdgeInsets.only(right: 15),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(12)),
+              width: screenWidth * 0.4,
+              margin: EdgeInsets.only(right: screenWidth * 0.04),
+              padding: EdgeInsets.all(screenWidth * 0.03),
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(screenWidth * 0.03)),
             ),
           );
         }
@@ -629,10 +654,10 @@ class _HomeScreenState extends State<HomeScreen> {
         bool isSettled = settleSnapshot.data ?? false;
 
         return Container(
-          width: 150,
-          margin: const EdgeInsets.only(right: 15),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+          width: screenWidth * 0.4,
+          margin: EdgeInsets.only(right: screenWidth * 0.04),
+          padding: EdgeInsets.all(screenWidth * 0.03),
+          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(screenWidth * 0.03)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -640,30 +665,45 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis, maxLines: 1),
-                  if (isSettled) const Icon(LucideIcons.zap, color: Colors.amber, size: 16),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.035),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  if (isSettled) Icon(LucideIcons.zap, color: Colors.amber, size: screenWidth * 0.04),
                 ],
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: screenWidth * 0.01),
               Text(
                 timeAgo,
-                style: TextStyle(color: Colors.grey[600], fontSize: 11, fontWeight: FontWeight.w500),
+                style: TextStyle(color: Colors.grey[600], fontSize: screenWidth * 0.03, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: screenWidth * 0.01),
               Text(
                 isSettled ? "Settled" : "Unsettled",
-                style: TextStyle(color: isSettled ? Colors.green[600] : Colors.grey[600], fontSize: 11, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  color: isSettled ? Colors.green[600] : Colors.grey[600],
+                  fontSize: screenWidth * 0.03,
+                  fontWeight: FontWeight.w500,
+                ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
               if (!isSettled)
                 Padding(
-                  padding: const EdgeInsets.only(top: 6.0),
+                  padding: EdgeInsets.only(top: screenWidth * 0.015),
                   child: Text(
                     amount,
-                    style: TextStyle(color: amount.startsWith('+') ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: TextStyle(
+                      color: amount.startsWith('+') ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: screenWidth * 0.035,
+                    ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),
@@ -676,27 +716,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildUnsettledHistoryItem(String title, String date, String amount, Color color, bool settled) {
+    final screenWidth = MediaQuery.of(context).size.width;
     DateTime createdAtDate = DateTime.parse(date);
-    Duration difference = DateTime.now().difference(createdAtDate);
-
-    String timeAgo;
-    if (difference.inDays > 0) {
-      timeAgo = "${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago";
-    } else if (difference.inHours > 0) {
-      timeAgo = "${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago";
-    } else if (difference.inMinutes > 0) {
-      timeAgo = "${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago";
-    } else {
-      timeAgo = "Just now";
-    }
+    String timeAgo = _formatTimeAgo(createdAtDate);
 
     return Container(
-      width: 140,
-      margin: const EdgeInsets.only(right: 15),
-      padding: const EdgeInsets.all(12),
+      width: screenWidth * 0.35,
+      margin: EdgeInsets.only(right: screenWidth * 0.04),
+      padding: EdgeInsets.all(screenWidth * 0.03),
       decoration: BoxDecoration(
         color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(screenWidth * 0.03),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -705,21 +735,23 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.035),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
-              if (settled) const Icon(LucideIcons.zap, color: Colors.amber, size: 16),
+              if (settled) Icon(LucideIcons.zap, color: Colors.amber, size: screenWidth * 0.04),
             ],
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: screenWidth * 0.01),
           Text(
             settled ? "Settled" : timeAgo,
             style: TextStyle(
               color: settled ? Colors.green[600] : Colors.grey[600],
-              fontSize: 11,
+              fontSize: screenWidth * 0.03,
               fontWeight: FontWeight.w500,
             ),
             overflow: TextOverflow.ellipsis,
@@ -727,13 +759,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           if (!settled)
             Padding(
-              padding: const EdgeInsets.only(top: 6.0),
+              padding: EdgeInsets.only(top: screenWidth * 0.015),
               child: Text(
                 amount,
                 style: TextStyle(
                   color: amount.startsWith('+') ? Colors.green : Colors.red,
                   fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                  fontSize: screenWidth * 0.035,
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
@@ -745,6 +777,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTransactionList() {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return StreamBuilder<Map<String, Map<String, dynamic>>>(
       stream: _streamTotalPaidByCategory(),
       builder: (context, AsyncSnapshot<Map<String, Map<String, dynamic>>> snapshot) {
@@ -772,14 +806,14 @@ class _HomeScreenState extends State<HomeScreen> {
           });
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "Overview",
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: screenWidth * 0.045,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
@@ -796,7 +830,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle,
                     "₹${totalPaid.toStringAsFixed(2)}",
                     categoryIcons[category]!['color'],
-                    category, // Pass the category to the item
+                    category,
                   );
                 }).toList(),
               ),
@@ -821,13 +855,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTransactionItem(IconData icon, String title, String subtitle, String amount, Color color, String category) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => ExpenseHistoryDetailedScreen(
-              category: category, // Pass the selected category
+              category: category,
               showFilter: '',
               splitId: '',
             ),
@@ -837,27 +873,33 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Card(
         elevation: 2,
         color: Colors.white,
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: EdgeInsets.symmetric(vertical: screenWidth * 0.02),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.03)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+          padding: EdgeInsets.symmetric(vertical: screenWidth * 0.025, horizontal: screenWidth * 0.03),
           child: ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(screenWidth * 0.02),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(screenWidth * 0.025),
               ),
-              child: Icon(icon, color: color, size: 26),
+              child: Icon(icon, color: color, size: screenWidth * 0.07),
             ),
-            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+            title: Text(
+              title,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.04),
+            ),
+            subtitle: Text(
+              subtitle,
+              style: TextStyle(color: Colors.grey[600], fontSize: screenWidth * 0.035),
+            ),
             trailing: Text(
               amount,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: screenWidth * 0.04,
                 color: Colors.green,
               ),
             ),

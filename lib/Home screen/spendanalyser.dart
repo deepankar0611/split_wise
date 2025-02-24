@@ -25,9 +25,8 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
   String _selectedChartType = 'Pie';
   DateTime _selectedDate = DateTime.now();
   String _selectedStatisticsCategory = 'Grocery';
-  int _touchedIndex = -1; // Track touched pie section
+  int _touchedIndex = -1;
 
-  // Categories and Icons from HomeScreen
   final List<String> categories = [
     "Grocery",
     "Medicine",
@@ -52,17 +51,11 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     "Others": {"icon": LucideIcons.circleDollarSign, "color": Colors.grey},
   };
 
-  final List<Color> chartColors = [
-    const Color(0xFFFFC107),
-    const Color(0xFFFF7043),
-    const Color(0xFF9575CD),
-    const Color(0xFFBA68C8),
-    const Color(0xFFFFD54F),
-  ];
   final lineChartColor = const Color(0xFF3F51B5);
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
     Map<String, double> currentSpending = _getSpendingForTimePeriod(widget.categoryData);
 
     return Scaffold(
@@ -84,13 +77,13 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
       ),
       backgroundColor: Colors.grey.shade50,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(screenSize.width * 0.04), // 4% of screen width
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTotalSpendReceiveCard(widget.amountToPay, widget.amountToReceive, context),
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: EdgeInsets.symmetric(vertical: screenSize.height * 0.01),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -98,16 +91,13 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                     value: _selectedChartType,
                     underline: const SizedBox(),
                     dropdownColor: Colors.grey.shade50,
-                    icon: Icon(LucideIcons.barChart, color: Colors.grey.shade700, size: 16),
+                    icon: Icon(LucideIcons.barChart, color: Colors.grey.shade700, size: screenSize.width * 0.04),
                     elevation: 1,
-                    hint: Text(_selectedChartType,
-                        style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
-                    items: <String>['Pie', 'Bar', 'Line', 'Histogram']
-                        .map<DropdownMenuItem<String>>((String value) {
+                    hint: Text(_selectedChartType, style: TextStyle(color: Colors.grey.shade700, fontSize: screenSize.width * 0.035)),
+                    items: <String>['Pie', 'Bar', 'Line'].map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
-                        child: Text(value,
-                            style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
+                        child: Text(value, style: TextStyle(color: Colors.grey.shade700, fontSize: screenSize.width * 0.035)),
                       );
                     }).toList(),
                     onChanged: (String? newValue) {
@@ -116,61 +106,61 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                       });
                     },
                   ),
-                  Row(
-                    children: [
-                      DropdownButton<String>(
-                        value: _timePeriod,
-                        underline: const SizedBox(),
-                        dropdownColor: Colors.grey.shade50,
-                        icon: Icon(LucideIcons.chevronDown, color: Colors.grey.shade700, size: 16),
-                        items: <String>['Day', 'Month']
-                            .map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value,
-                                style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _timePeriod = newValue!;
-                          });
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        DateFormat('yyyy-MM-dd').format(_selectedDate),
-                        style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-                      ),
-                      IconButton(
-                        icon: Icon(LucideIcons.calendar,
-                            color: Colors.grey.shade700, size: 16),
-                        onPressed: () async {
-                          final DateTime? pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: _selectedDate,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2025),
-                          );
-                          if (pickedDate != null && pickedDate != _selectedDate) {
+                  Flexible(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        DropdownButton<String>(
+                          value: _timePeriod,
+                          underline: const SizedBox(),
+                          dropdownColor: Colors.grey.shade50,
+                          icon: Icon(LucideIcons.chevronDown, color: Colors.grey.shade700, size: screenSize.width * 0.04),
+                          items: <String>['Day', 'Month'].map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value, style: TextStyle(color: Colors.grey.shade700, fontSize: screenSize.width * 0.035)),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
                             setState(() {
-                              _selectedDate = pickedDate;
+                              _timePeriod = newValue!;
                             });
-                          }
-                        },
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
+                          },
+                        ),
+                        SizedBox(width: screenSize.width * 0.02),
+                        Text(
+                          DateFormat('yyyy-MM-dd').format(_selectedDate),
+                          style: TextStyle(color: Colors.grey.shade700, fontSize: screenSize.width * 0.035),
+                        ),
+                        IconButton(
+                          icon: Icon(LucideIcons.calendar, color: Colors.grey.shade700, size: screenSize.width * 0.04),
+                          onPressed: () async {
+                            final DateTime? pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: _selectedDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2025),
+                            );
+                            if (pickedDate != null && pickedDate != _selectedDate) {
+                              setState(() {
+                                _selectedDate = pickedDate;
+                              });
+                            }
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            _buildChartSection(currentSpending, categories),
-            const SizedBox(height: 20),
-            _buildCategoryStackCard(currentSpending, categories),
-            const SizedBox(height: 20),
-            _buildStatisticsCard(widget.categoryData),
+            _buildChartSection(currentSpending, categories, screenSize),
+            SizedBox(height: screenSize.height * 0.02),
+            _buildCategoryStackCard(currentSpending, categories, screenSize),
+            SizedBox(height: screenSize.height * 0.02),
+            _buildStatisticsCard(widget.categoryData, screenSize),
           ],
         ),
       ),
@@ -204,34 +194,35 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
   }
 
   Widget _buildTotalSpendReceiveCard(double totalSpent, double totalReceived, BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
     return Card(
       elevation: 2,
       color: const Color(0xFF234567),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(screenSize.width * 0.04),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Column(
               children: [
-                const Text(
+                Text(
                   'Total to Pay',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: screenSize.width * 0.035,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(LucideIcons.arrowDown, color: Colors.redAccent.shade200, size: 20),
+                    Icon(LucideIcons.arrowDown, color: Colors.redAccent.shade200, size: screenSize.width * 0.05),
                     Text(
                       '₹${totalSpent.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: screenSize.width * 0.05,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -240,7 +231,8 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
               ],
             ),
             Container(
-              height: 40,
+              height: screenSize.height * 0.05,
+              padding: EdgeInsets.symmetric(horizontal: screenSize.width * 0.02),
               child: VerticalDivider(
                 color: Colors.grey.shade300,
                 thickness: 1,
@@ -248,23 +240,23 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
             ),
             Column(
               children: [
-                const Text(
+                Text(
                   'Total to Receive',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: screenSize.width * 0.035,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(LucideIcons.arrowUp, color: Colors.greenAccent.shade200, size: 20),
+                    Icon(LucideIcons.arrowUp, color: Colors.greenAccent.shade200, size: screenSize.width * 0.05),
                     Text(
                       '₹${totalReceived.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: screenSize.width * 0.05,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -278,67 +270,66 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     );
   }
 
-  Widget _buildChartSection(Map<String, double> spending, List<String> categories) {
+  Widget _buildChartSection(Map<String, double> spending, List<String> categories, Size screenSize) {
     return Card(
       elevation: 1,
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: _buildChartByType(_selectedChartType, 'Spend Categories', spending, categories),
+        padding: EdgeInsets.all(screenSize.width * 0.04),
+        child: _buildChartByType(_selectedChartType, 'Spend Categories', spending, categories, screenSize),
       ),
     );
   }
 
-  Widget _buildChartByType(String chartType, String title, Map<String, double> spending, List<String> categories) {
+  Widget _buildChartByType(String chartType, String title, Map<String, double> spending, List<String> categories, Size screenSize) {
     switch (chartType) {
       case 'Pie':
-        return _buildPieChartCard(title, spending, categories);
+        return _buildPieChartCard(title, spending, categories, screenSize);
       case 'Bar':
-        return _buildBarChartCard(title, spending, categories);
+        return _buildBarChartCard(title, spending, categories, screenSize);
       case 'Line':
-        return _buildLineChartCard(title, spending, categories);
-      case 'Histogram':
-        return _buildHistogramChartCard(title, spending, categories);
+        return _buildLineChartCard(title, spending, categories, screenSize);
       default:
-        return _buildPieChartCard(title, spending, categories);
+        return _buildPieChartCard(title, spending, categories, screenSize);
     }
   }
 
-  Widget _buildPieChartCard(String title, Map<String, double> spending, List<String> categories) {
+  Widget _buildPieChartCard(String title, Map<String, double> spending, List<String> categories, Size screenSize) {
     double totalSpending = spending.values.fold(0, (sum, amount) => sum + amount);
+    var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    List<String> sortedCategories = sortedEntries.map((e) => e.key).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.pieChart, color: Colors.grey.shade700, size: 20),
-            const SizedBox(width: 8),
+            Icon(LucideIcons.pieChart, color: Colors.grey.shade700, size: screenSize.width * 0.05),
+            SizedBox(width: screenSize.width * 0.02),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.black87,
-                fontSize: 16,
+                fontSize: screenSize.width * 0.04,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              height: 200,
-              child: PieChart(
+        SizedBox(height: screenSize.height * 0.015),
+        AspectRatio(
+          aspectRatio: 1.3,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
                 PieChartData(
                   pieTouchData: PieTouchData(
                     touchCallback: (FlTouchEvent event, PieTouchResponse? pieTouchResponse) {
                       setState(() {
-                        if (!event.isInterestedForInteractions ||
-                            pieTouchResponse == null ||
-                            pieTouchResponse.touchedSection == null) {
+                        if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) {
                           _touchedIndex = -1;
                           return;
                         }
@@ -348,78 +339,83 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                   ),
                   sections: _generatePieChartSections(spending, categories),
                   sectionsSpace: 0,
-                  centerSpaceRadius: 60,
+                  centerSpaceRadius: screenSize.width * 0.15,
                   centerSpaceColor: Colors.white,
                 ),
               ),
-            ),
-            _touchedIndex != -1
-                ? Column(
-              children: [
-                Text(
-                  categories[_touchedIndex],
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              _touchedIndex != -1
+                  ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    sortedCategories[_touchedIndex],
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: screenSize.width * 0.045,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  '₹${spending[categories[_touchedIndex]]?.toStringAsFixed(2) ?? '0.00'}',
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
+                  Text(
+                    '₹${spending[sortedCategories[_touchedIndex]]?.toStringAsFixed(2) ?? '0.00'}',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: screenSize.width * 0.035,
+                    ),
                   ),
+                ],
+              )
+                  : Text(
+                '₹${totalSpending.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: screenSize.width * 0.055,
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
-            )
-                : Text(
-              '₹${totalSpending.toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: Colors.black87,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: screenSize.height * 0.015),
         Wrap(
           alignment: WrapAlignment.center,
-          spacing: 16.0,
-          children: _buildPieChartLabels(spending, categories),
+          spacing: screenSize.width * 0.04,
+          runSpacing: screenSize.height * 0.01,
+          children: _buildPieChartLabels(spending, categories, screenSize),
         ),
       ],
     );
   }
 
-  Widget _buildBarChartCard(String title, Map<String, double> spending, List<String> categories) {
+  Widget _buildBarChartCard(String title, Map<String, double> spending, List<String> categories, Size screenSize) {
+    var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    List<String> sortedCategories = sortedEntries.map((e) => e.key).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.barChart, color: Colors.grey.shade700, size: 20),
-            const SizedBox(width: 8),
+            Icon(LucideIcons.barChart, color: Colors.grey.shade700, size: screenSize.width * 0.05),
+            SizedBox(width: screenSize.width * 0.02),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.black87,
-                fontSize: 16,
+                fontSize: screenSize.width * 0.04,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 200,
+        SizedBox(height: screenSize.height * 0.015),
+        AspectRatio(
+          aspectRatio: 1.5,
           child: BarChart(
             BarChartData(
               barGroups: _generateBarChartGroups(spending, categories),
               titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(sideTitles: _bottomBarChartTitles(categories)),
+                bottomTitles: AxisTitles(sideTitles: _bottomBarChartTitles(sortedCategories, screenSize)),
                 leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -429,78 +425,48 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: screenSize.height * 0.015),
         Wrap(
           alignment: WrapAlignment.center,
-          spacing: 16.0,
-          children: _buildPieChartLabels(spending, categories),
+          spacing: screenSize.width * 0.04,
+          runSpacing: screenSize.height * 0.01,
+          children: _buildPieChartLabels(spending, categories, screenSize),
         ),
       ],
     );
   }
 
-  List<BarChartGroupData> _generateBarChartGroups(Map<String, double> spending, List<String> categories) {
-    return categories.asMap().entries.map((entry) {
-      int index = entry.key;
-      String category = entry.value;
-      double amount = spending[category] ?? 0;
-      return BarChartGroupData(
-        x: index,
-        barRods: [
-          BarChartRodData(
-            toY: amount,
-            color: chartColors[index % chartColors.length],
-            width: 20,
-          ),
-        ],
-      );
-    }).toList();
-  }
+  Widget _buildLineChartCard(String title, Map<String, double> spending, List<String> categories, Size screenSize) {
+    var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    List<String> sortedCategories = sortedEntries.map((e) => e.key).toList();
 
-  SideTitles _bottomBarChartTitles(List<String> categories) {
-    return SideTitles(
-      showTitles: true,
-      getTitlesWidget: (double value, TitleMeta meta) {
-        final int index = value.toInt();
-        if (index >= 0 && index < categories.length) {
-          return Text(categories[index],
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 10));
-        }
-        return const Text('');
-      },
-      interval: 1,
-      reservedSize: 30,
-    );
-  }
-
-  Widget _buildLineChartCard(String title, Map<String, double> spending, List<String> categories) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.lineChart, color: Colors.grey.shade700, size: 20),
-            const SizedBox(width: 8),
+            Icon(LucideIcons.lineChart, color: Colors.grey.shade700, size: screenSize.width * 0.05),
+            SizedBox(width: screenSize.width * 0.02),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.black87,
-                fontSize: 16,
+                fontSize: screenSize.width * 0.04,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 200,
+        SizedBox(height: screenSize.height * 0.015),
+        AspectRatio(
+          aspectRatio: 1.5,
           child: LineChart(
             LineChartData(
-              lineBarsData: [_generateLineChartBarData(spending, categories)],
+              lineBarsData: [_generateLineChartBarData(spending, sortedCategories)],
               gridData: const FlGridData(show: false),
               titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(sideTitles: _bottomLineChartTitles(categories)),
+                bottomTitles: AxisTitles(sideTitles: _bottomLineChartTitles(sortedCategories, screenSize)),
                 leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -509,125 +475,33 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: screenSize.height * 0.015),
         Wrap(
           alignment: WrapAlignment.center,
-          spacing: 16.0,
-          children: _buildPieChartLabels(spending, categories),
+          spacing: screenSize.width * 0.04,
+          runSpacing: screenSize.height * 0.01,
+          children: _buildPieChartLabels(spending, categories, screenSize),
         ),
       ],
     );
-  }
-
-  LineChartBarData _generateLineChartBarData(Map<String, double> spending, List<String> categories) {
-    final List<FlSpot> spots = [];
-    categories.asMap().forEach((index, category) {
-      spots.add(FlSpot(index.toDouble(), spending[category] ?? 0));
-    });
-    return LineChartBarData(
-      spots: spots,
-      isCurved: true,
-      color: lineChartColor,
-      barWidth: 2,
-      belowBarData: BarAreaData(show: false),
-      dotData: const FlDotData(show: true),
-    );
-  }
-
-  SideTitles _bottomLineChartTitles(List<String> categories) {
-    return SideTitles(
-      showTitles: true,
-      getTitlesWidget: (double value, TitleMeta meta) {
-        final int index = value.toInt();
-        if (index >= 0 && index < categories.length) {
-          return Text(categories[index],
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 10),
-              textAlign: TextAlign.center);
-        }
-        return const Text('');
-      },
-      interval: 1,
-      reservedSize: 30,
-    );
-  }
-
-  Widget _buildHistogramChartCard(String title, Map<String, double> spending, List<String> categories) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(LucideIcons.history, color: Colors.grey.shade700, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.black87,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 200,
-          child: BarChart(
-            BarChartData(
-              barGroups: _generateHistogramChartGroups(spending, categories),
-              titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(sideTitles: _bottomBarChartTitles(categories)),
-                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              ),
-              gridData: const FlGridData(show: false),
-              borderData: FlBorderData(show: false),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 16.0,
-          children: _buildPieChartLabels(spending, categories),
-        ),
-      ],
-    );
-  }
-
-  List<BarChartGroupData> _generateHistogramChartGroups(Map<String, double> spending, List<String> categories) {
-    return categories.asMap().entries.map((entry) {
-      int index = entry.key;
-      String category = entry.value;
-      double amount = spending[category] ?? 0;
-      return BarChartGroupData(
-        x: index,
-        barRods: [
-          BarChartRodData(
-            toY: amount,
-            color: chartColors[index % chartColors.length],
-            width: 20,
-          ),
-        ],
-      );
-    }).toList();
   }
 
   List<PieChartSectionData> _generatePieChartSections(Map<String, double> spending, List<String> categories) {
     double totalSpending = spending.values.fold(0, (sum, amount) => sum + amount);
     if (totalSpending == 0) return [];
-    return categories.asMap().entries.map((entry) {
+
+    var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    return sortedEntries.asMap().entries.map((entry) {
       int index = entry.key;
-      String category = entry.value;
+      String category = entry.value.key;
       final isTouched = index == _touchedIndex;
-      final radius = isTouched ? 50.0 : 40.0;
-      double amount = spending[category] ?? 0;
+      final radius = isTouched ? MediaQuery.of(context).size.width * 0.12 : MediaQuery.of(context).size.width * 0.1;
+      double amount = entry.value.value;
       double percentage = (amount / totalSpending * 100);
       return PieChartSectionData(
         value: amount,
-        color: chartColors[index % chartColors.length],
+        color: categoryIcons[category]!['color'] as Color,
         radius: radius,
         showTitle: isTouched,
         title: '${percentage.toStringAsFixed(1)}%',
@@ -641,108 +515,204 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     }).toList();
   }
 
-  List<Widget> _buildPieChartLabels(Map<String, double> spending, List<String> categories) {
-    double totalSpending = spending.values.fold(0, (sum, amount) => sum + amount);
-    if (totalSpending == 0) return [const Text("No spending data")];
-    return categories.asMap().entries.map((entry) {
+  List<BarChartGroupData> _generateBarChartGroups(Map<String, double> spending, List<String> categories) {
+    var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    return sortedEntries.asMap().entries.map((entry) {
       int index = entry.key;
-      String category = entry.value;
-      double amount = spending[category] ?? 0;
-      double percentage = (amount / totalSpending * 100);
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: chartColors[index % chartColors.length],
-              shape: BoxShape.circle,
-            ),
-            margin: const EdgeInsets.only(right: 6),
+      String category = entry.value.key;
+      double amount = entry.value.value;
+      return BarChartGroupData(
+        x: index,
+        barRods: [
+          BarChartRodData(
+            toY: amount,
+            color: categoryIcons[category]!['color'] as Color,
+            width: MediaQuery.of(context).size.width * 0.05,
           ),
-          Text(
-            '$category ${percentage.toStringAsFixed(0)}%',
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
-          ),
-          const SizedBox(width: 16),
         ],
       );
     }).toList();
   }
 
-  Widget _buildCategoryStackCard(Map<String, double> spending, List<String> categories) {
+  SideTitles _bottomBarChartTitles(List<String> sortedCategories, Size screenSize) {
+    return SideTitles(
+      showTitles: true,
+      getTitlesWidget: (double value, TitleMeta meta) {
+        final int index = value.toInt();
+        if (index >= 0 && index < sortedCategories.length) {
+          return Text(
+            sortedCategories[index],
+            style: TextStyle(color: Colors.grey.shade700, fontSize: screenSize.width * 0.025),
+            textAlign: TextAlign.center,
+          );
+        }
+        return const Text('');
+      },
+      interval: 1,
+      reservedSize: screenSize.height * 0.03,
+    );
+  }
+
+  LineChartBarData _generateLineChartBarData(Map<String, double> spending, List<String> sortedCategories) {
+    var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    final List<FlSpot> spots = sortedEntries.asMap().entries.map((entry) {
+      int index = entry.key;
+      return FlSpot(index.toDouble(), entry.value.value);
+    }).toList();
+
+    return LineChartBarData(
+      spots: spots,
+      isCurved: true,
+      color: lineChartColor,
+      barWidth: 2,
+      belowBarData: BarAreaData(show: false),
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (spot, percent, barData, index) {
+          String category = sortedCategories[index];
+          return FlDotCirclePainter(
+            radius: MediaQuery.of(context).size.width * 0.01,
+            color: categoryIcons[category]!['color'] as Color,
+            strokeWidth: 1,
+            strokeColor: Colors.white,
+          );
+        },
+      ),
+    );
+  }
+
+  SideTitles _bottomLineChartTitles(List<String> sortedCategories, Size screenSize) {
+    return SideTitles(
+      showTitles: true,
+      getTitlesWidget: (double value, TitleMeta meta) {
+        final int index = value.toInt();
+        if (index >= 0 && index < sortedCategories.length) {
+          return Text(
+            sortedCategories[index],
+            style: TextStyle(color: Colors.grey.shade700, fontSize: screenSize.width * 0.025),
+            textAlign: TextAlign.center,
+          );
+        }
+        return const Text('');
+      },
+      interval: 1,
+      reservedSize: screenSize.height * 0.04,
+    );
+  }
+
+  List<Widget> _buildPieChartLabels(Map<String, double> spending, List<String> categories, Size screenSize) {
+    double totalSpending = spending.values.fold(0, (sum, amount) => sum + amount);
+    if (totalSpending == 0) return [const Text("No spending data")];
+
+    var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    return sortedEntries.asMap().entries.map((entry) {
+      String category = entry.value.key;
+      double amount = entry.value.value;
+      double percentage = (amount / totalSpending * 100);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: screenSize.width * 0.02,
+            height: screenSize.width * 0.02,
+            decoration: BoxDecoration(
+              color: categoryIcons[category]!['color'] as Color,
+              shape: BoxShape.circle,
+            ),
+            margin: EdgeInsets.only(right: screenSize.width * 0.015),
+          ),
+          Text(
+            '$category ${percentage.toStringAsFixed(0)}%',
+            style: TextStyle(
+              color: categoryIcons[category]!['color'] as Color,
+              fontSize: screenSize.width * 0.03,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(width: screenSize.width * 0.04),
+        ],
+      );
+    }).toList();
+  }
+
+  Widget _buildCategoryStackCard(Map<String, double> spending, List<String> categories, Size screenSize) {
     return Card(
       elevation: 1,
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: _buildCategoryStackContent(spending, categories),
+        padding: EdgeInsets.all(screenSize.width * 0.04),
+        child: _buildCategoryStackContent(spending, categories, screenSize),
       ),
     );
   }
 
-  Widget _buildCategoryStackContent(Map<String, double> spending, List<String> categories) {
+  Widget _buildCategoryStackContent(Map<String, double> spending, List<String> categories, Size screenSize) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(LucideIcons.list, color: Colors.grey.shade700, size: 20),
-            const SizedBox(width: 8),
-            const Text(
+            Icon(LucideIcons.list, color: Colors.grey.shade700, size: screenSize.width * 0.05),
+            SizedBox(width: screenSize.width * 0.02),
+            Text(
               'Categories',
               style: TextStyle(
                 color: Colors.black87,
-                fontSize: 16,
+                fontSize: screenSize.width * 0.04,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        ..._buildCategoryStackItems(spending, categories),
+        SizedBox(height: screenSize.height * 0.015),
+        ..._buildCategoryStackItems(spending, categories, screenSize),
       ],
     );
   }
 
-  List<Widget> _buildCategoryStackItems(Map<String, double> spending, List<String> categories) {
-    return categories.asMap().entries.map((entry) {
-      int index = entry.key;
-      String category = entry.value;
-      double amount = spending[category] ?? 0;
+  List<Widget> _buildCategoryStackItems(Map<String, double> spending, List<String> categories, Size screenSize) {
+    var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    return sortedEntries.map((entry) {
+      String category = entry.key;
+      double amount = entry.value;
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        padding: EdgeInsets.symmetric(vertical: screenSize.height * 0.01),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
                 Container(
-                  width: 10,
-                  height: 25,
+                  width: screenSize.width * 0.025,
+                  height: screenSize.height * 0.035,
                   decoration: BoxDecoration(
-                    color: chartColors[index % chartColors.length],
+                    color: categoryIcons[category]!['color'] as Color,
                     borderRadius: BorderRadius.circular(2),
                   ),
-                  margin: const EdgeInsets.only(right: 12),
+                  margin: EdgeInsets.only(right: screenSize.width * 0.03),
                 ),
-                Icon(categoryIcons[category]!['icon'] as IconData,
-                    color: Colors.grey.shade700, size: 20),
-                const SizedBox(width: 12),
+                Icon(categoryIcons[category]!['icon'] as IconData, color: Colors.grey.shade700, size: screenSize.width * 0.05),
+                SizedBox(width: screenSize.width * 0.03),
                 Text(
                   category,
-                  style: const TextStyle(
-                      color: Colors.black87, fontSize: 15, fontWeight: FontWeight.w400),
+                  style: TextStyle(
+                    color: categoryIcons[category]!['color'] as Color,
+                    fontSize: screenSize.width * 0.037,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
             Text(
               '₹${amount.toStringAsFixed(2)}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w500,
-                fontSize: 15,
+                fontSize: screenSize.width * 0.037,
                 color: Colors.black87,
               ),
             ),
@@ -752,19 +722,21 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     }).toList();
   }
 
-  Widget _buildStatisticsCard(Map<String, Map<String, dynamic>> categoryData) {
+  Widget _buildStatisticsCard(Map<String, Map<String, dynamic>> categoryData, Size screenSize) {
     return Card(
       elevation: 1,
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: _buildStatisticsContent(categories, categoryData),
+        padding: EdgeInsets.all(screenSize.width * 0.04),
+        child: _buildStatisticsContent(categories, categoryData, screenSize),
       ),
     );
   }
 
-  Widget _buildStatisticsContent(List<String> allCategoriesForStatistics, Map<String, Map<String, dynamic>> categoryData) {
+  Widget _buildStatisticsContent(List<String> allCategoriesForStatistics, Map<String, Map<String, dynamic>> categoryData, Size screenSize) {
+    Color categoryColor = categoryIcons[_selectedStatisticsCategory]!['color'] as Color;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -773,12 +745,12 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
           children: [
             Row(
               children: [
-                Icon(LucideIcons.activity, color: Colors.grey.shade700, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(LucideIcons.activity, color: Colors.grey.shade700, size: screenSize.width * 0.05),
+                SizedBox(width: screenSize.width * 0.02),
+                Text(
                   'Statistics',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: screenSize.width * 0.04,
                     fontWeight: FontWeight.w500,
                     color: Colors.black87,
                   ),
@@ -792,10 +764,9 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                   value: value,
                   child: Row(
                     children: [
-                      Icon(LucideIcons.tag, color: Colors.grey.shade700, size: 16),
-                      const SizedBox(width: 8),
-                      Text(value,
-                          style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
+                      Icon(LucideIcons.tag, color: Colors.grey.shade700, size: screenSize.width * 0.04),
+                      SizedBox(width: screenSize.width * 0.02),
+                      Text(value, style: TextStyle(color: Colors.grey.shade700, fontSize: screenSize.width * 0.035)),
                     ],
                   ),
                 );
@@ -806,20 +777,20 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                 });
               },
               underline: Container(),
-              icon: Icon(LucideIcons.chevronDown, color: Colors.grey.shade700, size: 16),
+              icon: Icon(LucideIcons.chevronDown, color: Colors.grey.shade700, size: screenSize.width * 0.04),
               elevation: 1,
               dropdownColor: Colors.grey.shade50,
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 140,
+        SizedBox(height: screenSize.height * 0.015),
+        AspectRatio(
+          aspectRatio: 1.5,
           child: LineChart(
             LineChartData(
               gridData: const FlGridData(show: false),
               titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(sideTitles: _bottomTitles()),
+                bottomTitles: AxisTitles(sideTitles: _bottomTitles(screenSize)),
                 leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -829,10 +800,18 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
                 LineChartBarData(
                   spots: _generateLineChartDataForCategory(categoryData),
                   isCurved: true,
-                  color: lineChartColor,
+                  color: categoryColor,
                   barWidth: 2,
                   belowBarData: BarAreaData(show: false),
-                  dotData: const FlDotData(show: false),
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                      radius: screenSize.width * 0.01,
+                      color: categoryColor,
+                      strokeWidth: 1,
+                      strokeColor: Colors.white,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -861,7 +840,7 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
     return spots;
   }
 
-  SideTitles _bottomTitles() {
+  SideTitles _bottomTitles(Size screenSize) {
     int daysInMonth = DateTime(_selectedDate.year, _selectedDate.month + 1, 0).day;
     return SideTitles(
       showTitles: true,
@@ -869,12 +848,14 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
       getTitlesWidget: (value, meta) {
         int day = value.toInt() + 1;
         if (day <= daysInMonth) {
-          return Text('Day $day',
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 10));
+          return Text(
+            'Day $day',
+            style: TextStyle(color: Colors.grey.shade700, fontSize: screenSize.width * 0.025),
+          );
         }
         return const Text('');
       },
-      reservedSize: 22,
+      reservedSize: screenSize.height * 0.03,
     );
   }
 }
