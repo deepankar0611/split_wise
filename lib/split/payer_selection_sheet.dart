@@ -28,6 +28,7 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
   double remainingAmount = 0.0;
   Map<String, String?> errorMessages = {};
   String? currentUserProfilePic;
+  Map<String, TextEditingController> amountControllers = {};
 
   final String userId = FirebaseAuth.instance.currentUser!.uid;
 
@@ -38,6 +39,21 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
     payerAmounts = Map.from(widget.payerAmounts);
     _updateRemainingAmount();
     _fetchCurrentUserProfilePic();
+    _initializeControllers();
+  }
+
+  void _initializeControllers() {
+    // Initialize for "You" explicitly
+    amountControllers["You"] = TextEditingController(
+      text: (payerAmounts["You"] ?? 0.0) > 0 ? payerAmounts["You"]!.toStringAsFixed(2) : "",
+    );
+    // Initialize for other friends
+    for (var friend in widget.friends) {
+      String name = friend["name"];
+      amountControllers[name] = TextEditingController(
+        text: (payerAmounts[name] ?? 0.0) > 0 ? payerAmounts[name]!.toStringAsFixed(2) : "",
+      );
+    }
   }
 
   Future<void> _fetchCurrentUserProfilePic() async {
@@ -46,7 +62,7 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
       if (doc.exists && mounted) {
         final data = doc.data() ?? {};
         setState(() {
-          currentUserProfilePic = (data['profileImageUrl'] as String?)?.isNotEmpty == true ? data['profileImageUrl'] : "";
+          currentUserProfilePic = data['profileImageUrl'] as String? ?? "";
         });
       } else if (mounted) {
         setState(() {
@@ -71,13 +87,19 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
   }
 
   @override
+  void dispose() {
+    amountControllers.values.forEach((controller) => controller.dispose());
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.06), // 7% of screen height
+        preferredSize: Size.fromHeight(screenHeight * 0.06),
         child: AppBar(
           backgroundColor: const Color(0xFF1A2E39),
           shape: RoundedRectangleBorder(
@@ -105,14 +127,14 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
           color: Colors.white,
         ),
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(screenWidth * 0.04), // 4% of screen width
+          padding: EdgeInsets.all(screenWidth * 0.04),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(height: screenHeight * 0.015),
               ListView.builder(
-                shrinkWrap: true, // Allow ListView to size itself within scrollable parent
-                physics: NeverScrollableScrollPhysics(), // Disable ListView scrolling, let parent handle it
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: widget.friends.length,
                 itemBuilder: (context, index) {
                   final friend = widget.friends[index];
@@ -136,8 +158,16 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                                     ? NetworkImage(friend["profilePic"])
                                     : null,
                                 backgroundColor: Colors.grey.shade300,
-                                child: (friend["name"] == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
-                                    (friend["profilePic"]?.isEmpty ?? true)
+                                child: friend["name"] == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)
+                                    ? Text(
+                                  "Y",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: screenWidth * 0.05,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                                    : friend["profilePic"]?.isEmpty == true
                                     ? Text(
                                   friend["name"][0].toUpperCase(),
                                   style: TextStyle(
@@ -202,10 +232,11 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                               setState(() {
                                 if (value) {
                                   selectedPayers.add(friend["name"]);
-                                  payerAmounts[friend["name"]] = 0.0;
+                                  payerAmounts[friend["name"]] = payerAmounts[friend["name"]] ?? 0.0;
                                 } else {
                                   selectedPayers.remove(friend["name"]);
                                   payerAmounts.remove(friend["name"]);
+                                  amountControllers[friend["name"]]!.clear();
                                 }
                                 _updateRemainingAmount();
                               });
@@ -300,8 +331,16 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                         ? NetworkImage(friend["profilePic"])
                         : null,
                     backgroundColor: Colors.grey.shade300,
-                    child: (payer == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
-                        friend["profilePic"].isEmpty
+                    child: payer == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)
+                        ? Text(
+                      "Y",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: screenWidth * 0.04,
+                      ),
+                    )
+                        : friend["profilePic"].isEmpty
                         ? Text(
                       payer[0],
                       style: TextStyle(
@@ -337,8 +376,9 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
                   ),
                   SizedBox(width: screenWidth * 0.025),
                   SizedBox(
-                    width: screenWidth * 0.25, // 25% of screen width
+                    width: screenWidth * 0.25,
                     child: TextField(
+                      controller: amountControllers[payer],
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.right,
                       style: TextStyle(
@@ -399,7 +439,7 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
           SizedBox(height: screenHeight * 0.025),
           Container(
             padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.05,
+              horizontal: screenWidth * 0.04,
               vertical: screenHeight * 0.017,
             ),
             decoration: BoxDecoration(

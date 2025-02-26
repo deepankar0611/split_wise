@@ -25,14 +25,54 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Map<String, double> payerAmounts = {};
   double totalAmount = 0.0;
   String expenseDescription = "";
+  String? currentUserProfilePic;
 
   final List<String> categories = [
-    "Grocery", "Medicine", "Food","Rent", "Travel", "Shopping", "Entertainment", "Utilities", "Others"];
+    "Grocery",
+    "Medicine",
+    "Food",
+    "Rent",
+    "Travel",
+    "Shopping",
+    "Entertainment",
+    "Utilities",
+    "Others"
+  ];
+
   @override
   void initState() {
     super.initState();
     payerAmounts = Map.from(widget.payerAmounts);
     _fetchFriends();
+    _fetchCurrentUserProfilePic();
+  }
+
+  void _resetState() {
+    setState(() {
+      selectedPeople = [];
+      searchQuery = "";
+      showExpenseDetails = false;
+      selectedCategory = "Grocery";
+      selectedPayers = ["You"];
+      payerAmounts = {};
+      totalAmount = 0.0;
+      expenseDescription = "";
+      displayFriends = List.from(friends);
+    });
+  }
+
+  Future<void> _fetchCurrentUserProfilePic() async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (doc.exists && mounted) {
+        final data = doc.data() ?? {};
+        setState(() {
+          currentUserProfilePic = (data['profileImageUrl'] as String?)?.isNotEmpty == true ? data['profileImageUrl'] : "";
+        });
+      }
+    } catch (e) {
+      print("Error fetching current user's profile picture: $e");
+    }
   }
 
   Future<void> _fetchFriends() async {
@@ -106,14 +146,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: PreferredSize(
-        preferredSize:
-        Size.fromHeight(screenHeight * 0.06), // 8% of screen height
+        preferredSize: Size.fromHeight(screenHeight * 0.06),
         child: AppBar(
           title: Text(
             "Add Expense",
             style: TextStyle(
               color: Colors.white,
-              fontSize: screenWidth * 0.045, // Responsive font size
+              fontSize: screenWidth * 0.045,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
             ),
@@ -123,19 +162,32 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           centerTitle: true,
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FinalSplitScreen(
+              onPressed: () async {
+                // Validation check for totalAmount and expenseDescription
+                if (totalAmount == 0.0 || expenseDescription.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Please enter both amount and description"),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                } else {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FinalSplitScreen(
                         selectedPeople: selectedPeople,
                         payerAmounts: payerAmounts,
                         totalAmount: totalAmount,
                         expenseDescription: expenseDescription,
-                        selectedCategory:
-                        selectedCategory), // Replace with your actual screen
-                  ),
-                );
+                        selectedCategory: selectedCategory,
+                      ),
+                    ),
+                  );
+                  if (result == true && mounted) {
+                    _resetState(); // Reset state if split was finalized
+                  }
+                }
               },
               child: Text(
                 "Save",
@@ -148,12 +200,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ),
           ],
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(screenWidth * 0.05)),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
           ),
         ),
       ),
-      body: Stack( // Wrap body in Stack to allow modal sheet to blur background
+      body: Stack(
         children: [
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -167,8 +218,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       screenHeight * 0.015),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                        bottom: Radius.circular(screenWidth * 0.05)),
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black12,
@@ -242,8 +292,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                   horizontal: screenWidth * 0.025,
                                   vertical: screenHeight * 0.005),
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                BorderRadius.circular(screenWidth * 0.05),
+                                borderRadius: BorderRadius.circular(screenWidth * 0.05),
                               ),
                             );
                           }).toList(),
@@ -271,8 +320,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           filled: true,
                           fillColor: Colors.grey[100]!,
                           border: OutlineInputBorder(
-                            borderRadius:
-                            BorderRadius.circular(screenWidth * 0.075),
+                            borderRadius: BorderRadius.circular(screenWidth * 0.075),
                             borderSide: BorderSide.none,
                           ),
                           contentPadding:
@@ -294,7 +342,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                 ),
                 Container(
-                  height: screenHeight * 0.35, // 35% of screen height
+                  height: screenHeight * 0.35,
                   margin: EdgeInsets.symmetric(
                       horizontal: screenWidth * 0.04,
                       vertical: screenHeight * 0.015),
@@ -347,7 +395,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           ),
                         ),
                         SizedBox(width: screenWidth * 0.02),
-                        Icon(Icons.arrow_forward_ios, size: screenWidth * 0.045,color: Colors.white,),
+                        Icon(Icons.arrow_forward_ios,
+                            size: screenWidth * 0.045, color: Colors.white),
                       ],
                     ),
                   ),
@@ -355,26 +404,26 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ],
             ),
           ),
-          if (showExpenseDetails) // Conditionally render the modal sheet
+          if (showExpenseDetails)
             GestureDetector(
-              onTap: () { // To dismiss modal sheet when tapping outside
+              onTap: () {
                 setState(() {
                   showExpenseDetails = false;
                 });
               },
-              behavior: HitTestBehavior.translucent, // Make entire screen tappable
-              child: Stack( // Use Stack to overlay blur and modal
+              behavior: HitTestBehavior.translucent,
+              child: Stack(
                 children: [
-                  BackdropFilter( // Blur effect for background
+                  BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                     child: Container(
-                      color: Colors.transparent, // Transparent background to allow blur to show
+                      color: Colors.transparent,
                     ),
                   ),
-                  Align( // Align the modal sheet to the bottom
+                  Align(
                     alignment: Alignment.bottomCenter,
                     child: Container(
-                      height: screenHeight * 0.55, // Half screen width
+                      height: screenHeight * 0.55,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius:
@@ -397,7 +446,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       showExpenseDetails = true;
     });
   }
-
 
   Widget _buildFriendItem(
       Map<String, dynamic> friend, double screenWidth, double screenHeight) {
@@ -447,7 +495,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   Widget _buildExpenseDetailsUI(double screenWidth, double screenHeight) {
-    return SingleChildScrollView( // Wrap the Column with SingleChildScrollView
+    final paidPayers = selectedPayers.where((payer) => (payerAmounts[payer] ?? 0.0) > 0).toList();
+
+    return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -456,7 +506,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             style: TextStyle(
               fontSize: screenWidth * 0.06,
               fontWeight: FontWeight.bold,
-              color:  Colors.black,
+              color: Colors.black,
             ),
           ),
           SizedBox(height: screenHeight * 0.025),
@@ -571,18 +621,61 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             },
           ),
           SizedBox(height: screenHeight * 0.025),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Paid By",
-                style: TextStyle(
-                  fontSize: screenWidth * 0.04,
-                  fontWeight: FontWeight.w600,
+          Text(
+            "Paid By",
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.01),
+          paidPayers.isEmpty
+              ? ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PayerSelectionSheet(
+                    friends: selectedPeople,
+                    selectedPayers: selectedPayers,
+                    payerAmounts: payerAmounts,
+                    totalAmount: totalAmount,
+                    onSelectionDone: (updatedPayers, updatedAmounts) {
+                      setState(() {
+                        selectedPayers = updatedPayers;
+                        payerAmounts = updatedAmounts;
+                      });
+                    },
+                  ),
                 ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A3C6D),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(screenWidth * 0.025),
               ),
-              ElevatedButton(
-                onPressed: () {
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.04,
+                vertical: screenHeight * 0.012,
+              ),
+            ),
+            child: Text(
+              "Select Payers",
+              style: TextStyle(fontSize: screenWidth * 0.035),
+            ),
+          )
+              : Wrap(
+            spacing: screenWidth * 0.02,
+            runSpacing: screenHeight * 0.01,
+            children: paidPayers.map((payer) {
+              final friend = selectedPeople.firstWhere(
+                    (f) => f["name"] == payer,
+                orElse: () => {"name": payer, "profilePic": ""},
+              );
+              return GestureDetector(
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -601,23 +694,27 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     ),
                   );
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A3C6D),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(screenWidth * 0.025),
-                  ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.04,
-                    vertical: screenHeight * 0.012,
-                  ),
+                child: CircleAvatar(
+                  radius: screenWidth * 0.05,
+                  backgroundImage: payer == "You" && currentUserProfilePic != null && currentUserProfilePic!.isNotEmpty
+                      ? NetworkImage(currentUserProfilePic!)
+                      : friend["profilePic"].isNotEmpty
+                      ? NetworkImage(friend["profilePic"])
+                      : null,
+                  backgroundColor: Colors.grey[300],
+                  child: (payer == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
+                      friend["profilePic"].isEmpty
+                      ? Text(
+                    payer[0].toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: screenWidth * 0.035,
+                    ),
+                  )
+                      : null,
                 ),
-                child: Text(
-                  "Select Payers",
-                  style: TextStyle(fontSize: screenWidth * 0.035),
-                ),
-              ),
-            ],
+              );
+            }).toList(),
           ),
         ],
       ),
