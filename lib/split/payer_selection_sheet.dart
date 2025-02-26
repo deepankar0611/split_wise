@@ -104,118 +104,118 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
         decoration: const BoxDecoration(
           color: Colors.white,
         ),
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.all(screenWidth * 0.04), // 4% of screen width
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(height: screenHeight * 0.015),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: widget.friends.length,
-                  itemBuilder: (context, index) {
-                    final friend = widget.friends[index];
-                    final bool isSelected = selectedPayers.contains(friend["name"]);
-                    return Card(
-                      elevation: screenWidth * 0.005,
-                      color: Colors.grey[50],
-                      margin: EdgeInsets.symmetric(vertical: screenHeight * 0.007),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.03)),
-                      child: Padding(
-                        padding: EdgeInsets.all(screenWidth * 0.02),
-                        child: Row(
-                          children: [
-                            Stack(
-                              children: [
-                                CircleAvatar(
-                                  radius: screenWidth * 0.06,
-                                  backgroundImage: friend["name"] == "You" && currentUserProfilePic != null && currentUserProfilePic!.isNotEmpty
-                                      ? NetworkImage(currentUserProfilePic!)
-                                      : friend["profilePic"]?.isNotEmpty == true
-                                      ? NetworkImage(friend["profilePic"])
-                                      : null,
-                                  backgroundColor: Colors.grey.shade300,
-                                  child: (friend["name"] == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
-                                      (friend["profilePic"]?.isEmpty ?? true)
-                                      ? Text(
-                                    friend["name"][0].toUpperCase(),
-                                    style: TextStyle(
+              ListView.builder(
+                shrinkWrap: true, // Allow ListView to size itself within scrollable parent
+                physics: NeverScrollableScrollPhysics(), // Disable ListView scrolling, let parent handle it
+                itemCount: widget.friends.length,
+                itemBuilder: (context, index) {
+                  final friend = widget.friends[index];
+                  final bool isSelected = selectedPayers.contains(friend["name"]);
+                  return Card(
+                    elevation: screenWidth * 0.005,
+                    color: Colors.grey[50],
+                    margin: EdgeInsets.symmetric(vertical: screenHeight * 0.007),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.03)),
+                    child: Padding(
+                      padding: EdgeInsets.all(screenWidth * 0.02),
+                      child: Row(
+                        children: [
+                          Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: screenWidth * 0.06,
+                                backgroundImage: friend["name"] == "You" && currentUserProfilePic != null && currentUserProfilePic!.isNotEmpty
+                                    ? NetworkImage(currentUserProfilePic!)
+                                    : friend["profilePic"]?.isNotEmpty == true
+                                    ? NetworkImage(friend["profilePic"])
+                                    : null,
+                                backgroundColor: Colors.grey.shade300,
+                                child: (friend["name"] == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
+                                    (friend["profilePic"]?.isEmpty ?? true)
+                                    ? Text(
+                                  friend["name"][0].toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: screenWidth * 0.05,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                                    : null,
+                              ),
+                              if (isSelected)
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: EdgeInsets.all(screenWidth * 0.005),
+                                    decoration: const BoxDecoration(
                                       color: Colors.white,
-                                      fontSize: screenWidth * 0.05,
-                                      fontWeight: FontWeight.bold,
+                                      shape: BoxShape.circle,
                                     ),
-                                  )
-                                      : null,
-                                ),
-                                if (isSelected)
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      padding: EdgeInsets.all(screenWidth * 0.005),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.check_circle,
-                                        size: screenWidth * 0.04,
-                                        color: Colors.teal.shade700,
-                                      ),
+                                    child: Icon(
+                                      Icons.check_circle,
+                                      size: screenWidth * 0.04,
+                                      color: Colors.teal.shade700,
                                     ),
                                   ),
+                                ),
+                            ],
+                          ),
+                          SizedBox(width: screenWidth * 0.03),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  friend["name"],
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.04,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                SizedBox(height: screenHeight * 0.002),
+                                Text(
+                                  payerAmounts[friend["name"]] != null && payerAmounts[friend["name"]]! > 0
+                                      ? "Paid: ₹ ${payerAmounts[friend["name"]]!.toStringAsFixed(2)}"
+                                      : "Not paid yet",
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.03,
+                                    color: payerAmounts[friend["name"]] != null && payerAmounts[friend["name"]]! > 0
+                                        ? Colors.green.shade700
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
                               ],
                             ),
-                            SizedBox(width: screenWidth * 0.03),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    friend["name"],
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  SizedBox(height: screenHeight * 0.002),
-                                  Text(
-                                    payerAmounts[friend["name"]] != null && payerAmounts[friend["name"]]! > 0
-                                        ? "Paid: ₹ ${payerAmounts[friend["name"]]!.toStringAsFixed(2)}"
-                                        : "Not paid yet",
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.03,
-                                      color: payerAmounts[friend["name"]] != null && payerAmounts[friend["name"]]! > 0
-                                          ? Colors.green.shade700
-                                          : Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Switch(
-                              value: isSelected,
-                              activeColor: Colors.teal.shade700,
-                              onChanged: (value) {
-                                setState(() {
-                                  if (value) {
-                                    selectedPayers.add(friend["name"]);
-                                    payerAmounts[friend["name"]] = 0.0;
-                                  } else {
-                                    selectedPayers.remove(friend["name"]);
-                                    payerAmounts.remove(friend["name"]);
-                                  }
-                                  _updateRemainingAmount();
-                                });
-                              },
-                            ),
-                          ],
-                        ),
+                          ),
+                          Switch(
+                            value: isSelected,
+                            activeColor: Colors.teal.shade700,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value) {
+                                  selectedPayers.add(friend["name"]);
+                                  payerAmounts[friend["name"]] = 0.0;
+                                } else {
+                                  selectedPayers.remove(friend["name"]);
+                                  payerAmounts.remove(friend["name"]);
+                                }
+                                _updateRemainingAmount();
+                              });
+                            },
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
               if (selectedPayers.isNotEmpty) buildAmountEntry(screenWidth, screenHeight),
               SizedBox(height: screenHeight * 0.025),

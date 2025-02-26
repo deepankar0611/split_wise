@@ -247,37 +247,41 @@ class _HomeScreenState extends State<HomeScreen> {
             BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3)),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01, vertical: screenHeight * 0.005),
-                decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                child: Text(
-                  "Receive",
-                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: screenWidth * 0.025),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: screenHeight * 0.15), // Adjust as needed
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01, vertical: screenHeight * 0.005),
+                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                    child: Text(
+                      "Receive",
+                      style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: screenWidth * 0.025),
+                    ),
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: EdgeInsets.only(left: screenWidth * 0.015),
+                  child: Text(
+                    "₹${amountToReceive.toInt()}",
+                    style: TextStyle(fontSize: screenWidth * 0.07, fontWeight: FontWeight.bold, color: Colors.black),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(left: screenWidth * 0.015, bottom: screenHeight * 0.005),
+                  child: Text(
+                    "will get",
+                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: screenWidth * 0.035),
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: EdgeInsets.only(left: screenWidth * 0.015),
-              child: Text(
-                "₹${amountToReceive.toInt()}",
-                style: TextStyle(fontSize: screenWidth * 0.07, fontWeight: FontWeight.bold, color: Colors.black),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(left: screenWidth * 0.015, bottom: screenHeight * 0.005),
-              child: Text(
-                "will get",
-                style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: screenWidth * 0.035),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -308,40 +312,70 @@ class _HomeScreenState extends State<HomeScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(screenWidth * 0.04),
           boxShadow: [
-            BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3)),
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 1,
+              blurRadius: 7,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01, vertical: screenHeight * 0.005),
-                decoration: BoxDecoration(color: Colors.red.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                child: Text(
-                  "Pay",
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: screenWidth * 0.025),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: screenHeight * 0.15), // Adjust as needed
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.01,
+                      vertical: screenHeight * 0.005,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "Pay",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w500,
+                        fontSize: screenWidth * 0.025,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: EdgeInsets.only(left: screenWidth * 0.015),
+                  child: Text(
+                    "₹${amountToPay.toInt()}",
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.07,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: screenWidth * 0.015,
+                    bottom: screenHeight * 0.005,
+                  ),
+                  child: Text(
+                    "will pay",
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w600,
+                      fontSize: screenWidth * 0.035,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: EdgeInsets.only(left: screenWidth * 0.015),
-              child: Text(
-                "₹${amountToPay.toInt()}",
-                style: TextStyle(fontSize: screenWidth * 0.07, fontWeight: FontWeight.bold, color: Colors.black),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(left: screenWidth * 0.015, bottom: screenHeight * 0.005),
-              child: Text(
-                "will pay",
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: screenWidth * 0.035),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -629,7 +663,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     DateTime createdAtDate = DateTime.parse(date);
-    Duration difference = DateTime.now().difference(createdAtDate);
     String timeAgo = _formatTimeAgo(createdAtDate);
 
     return StreamBuilder<bool>(
@@ -643,7 +676,10 @@ class _HomeScreenState extends State<HomeScreen> {
               width: screenWidth * 0.4,
               margin: EdgeInsets.only(right: screenWidth * 0.04),
               padding: EdgeInsets.all(screenWidth * 0.03),
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(screenWidth * 0.03)),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
+              ),
             ),
           );
         }
@@ -657,10 +693,13 @@ class _HomeScreenState extends State<HomeScreen> {
           width: screenWidth * 0.4,
           margin: EdgeInsets.only(right: screenWidth * 0.04),
           padding: EdgeInsets.all(screenWidth * 0.03),
-          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(screenWidth * 0.03)),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(screenWidth * 0.03),
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -668,22 +707,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Text(
                       title,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.035),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: screenWidth * 0.035,
+                      ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
                   ),
-                  if (isSettled) Icon(LucideIcons.zap, color: Colors.amber, size: screenWidth * 0.04),
+                  if (isSettled)
+                    Icon(
+                      LucideIcons.zap,
+                      color: Colors.amber,
+                      size: screenWidth * 0.04,
+                    ),
                 ],
               ),
-              SizedBox(height: screenWidth * 0.01),
+              SizedBox(height: screenWidth * 0.005), // Reduced from 0.01
               Text(
                 timeAgo,
-                style: TextStyle(color: Colors.grey[600], fontSize: screenWidth * 0.03, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: screenWidth * 0.03,
+                  fontWeight: FontWeight.w500,
+                ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
-              SizedBox(height: screenWidth * 0.01),
+              SizedBox(height: screenWidth * 0.005), // Reduced from 0.01
               Text(
                 isSettled ? "Settled" : "Unsettled",
                 style: TextStyle(
@@ -696,7 +747,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               if (!isSettled)
                 Padding(
-                  padding: EdgeInsets.only(top: screenWidth * 0.015),
+                  padding: EdgeInsets.only(top: screenWidth * 0.01), // Reduced from 0.015
                   child: Text(
                     amount,
                     style: TextStyle(

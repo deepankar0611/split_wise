@@ -27,8 +27,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   String expenseDescription = "";
 
   final List<String> categories = [
-    "Grocery", "Medicine", "Food", "Rent", "Travel",
-    "Shopping", "Entertainment", "Utilities", "Others"
+    "Grocery",
+    "Medicine",
+    "Food",
+    "Rent",
+    "Travel",
+    "Shopping",
+    "Entertainment",
+    "Utilities",
+    "Others"
   ];
 
   @override
@@ -44,8 +51,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       List<Map<String, dynamic>> fetchedFriends = [];
 
       for (String friendUid in friendUids) {
-        DocumentSnapshot friendDoc =
-        await FirebaseFirestore.instance.collection('users').doc(friendUid).get();
+        DocumentSnapshot friendDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(friendUid)
+            .get();
 
         if (friendDoc.exists) {
           final data = friendDoc.data() as Map<String, dynamic>?;
@@ -107,7 +116,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.08), // 8% of screen height
+        preferredSize:
+            Size.fromHeight(screenHeight * 0.08), // 8% of screen height
         child: AppBar(
           title: Text(
             "Add Expense",
@@ -127,7 +137,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const Placeholder(), // Replace with your actual screen
+                    builder: (context) => FinalSplitScreen(
+                        selectedPeople: selectedPeople,
+                        payerAmounts: payerAmounts,
+                        totalAmount: totalAmount,
+                        expenseDescription: expenseDescription,
+                        selectedCategory:
+                            selectedCategory), // Replace with your actual screen
                   ),
                 );
               },
@@ -142,7 +158,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ),
           ],
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+            borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(screenWidth * 0.05)),
           ),
         ),
       ),
@@ -151,10 +168,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         child: Column(
           children: [
             Container(
-              padding: EdgeInsets.fromLTRB(screenWidth * 0.04, screenHeight * 0.025, screenWidth * 0.04, screenHeight * 0.015),
+              padding: EdgeInsets.fromLTRB(
+                  screenWidth * 0.04,
+                  screenHeight * 0.025,
+                  screenWidth * 0.04,
+                  screenHeight * 0.015),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+                borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(screenWidth * 0.05)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black12,
@@ -211,21 +233,25 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             backgroundColor: Colors.blueGrey[100]!,
                             child: friend['profilePic'].isEmpty
                                 ? Text(
-                              friend['name'][0].toUpperCase(),
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: screenWidth * 0.035,
-                              ),
-                            )
+                                    friend['name'][0].toUpperCase(),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: screenWidth * 0.035,
+                                    ),
+                                  )
                                 : null,
                           ),
-                          deleteIcon: Icon(Icons.close, size: screenWidth * 0.045, color: Colors.grey),
+                          deleteIcon: Icon(Icons.close,
+                              size: screenWidth * 0.045, color: Colors.grey),
                           onDeleted: () => _toggleSelection(friend),
                           backgroundColor: Colors.blueGrey[50]!,
                           elevation: 2,
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.005),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.025,
+                              vertical: screenHeight * 0.005),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                            borderRadius:
+                                BorderRadius.circular(screenWidth * 0.05),
                           ),
                         );
                       }).toList(),
@@ -236,32 +262,38 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     decoration: InputDecoration(
                       hintText: "Search friends...",
                       hintStyle: TextStyle(fontSize: screenWidth * 0.04),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey, size: screenWidth * 0.06),
+                      prefixIcon: Icon(Icons.search,
+                          color: Colors.grey, size: screenWidth * 0.06),
                       suffixIcon: searchQuery.isNotEmpty
                           ? IconButton(
-                        icon: Icon(Icons.clear, color: Colors.grey, size: screenWidth * 0.06),
-                        onPressed: () {
-                          setState(() {
-                            searchQuery = "";
-                            displayFriends = List.from(friends);
-                          });
-                        },
-                      )
+                              icon: Icon(Icons.clear,
+                                  color: Colors.grey, size: screenWidth * 0.06),
+                              onPressed: () {
+                                setState(() {
+                                  searchQuery = "";
+                                  displayFriends = List.from(friends);
+                                });
+                              },
+                            )
                           : null,
                       filled: true,
                       fillColor: Colors.grey[100]!,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(screenWidth * 0.075),
+                        borderRadius:
+                            BorderRadius.circular(screenWidth * 0.075),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: screenHeight * 0.02),
                     ),
                     style: TextStyle(fontSize: screenWidth * 0.04),
                     onChanged: (value) {
                       setState(() {
                         searchQuery = value.toLowerCase();
                         displayFriends = friends
-                            .where((friend) => friend["name"].toLowerCase().contains(searchQuery))
+                            .where((friend) => friend["name"]
+                                .toLowerCase()
+                                .contains(searchQuery))
                             .toList();
                       });
                     },
@@ -271,7 +303,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ),
             Container(
               height: screenHeight * 0.35, // 35% of screen height
-              margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.015),
+              margin: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.04,
+                  vertical: screenHeight * 0.015),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(screenWidth * 0.05),
@@ -287,7 +321,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 physics: const BouncingScrollPhysics(),
                 itemCount: displayFriends.length,
                 itemBuilder: (context, index) {
-                  return _buildFriendItem(displayFriends[index], screenWidth, screenHeight);
+                  return _buildFriendItem(
+                      displayFriends[index], screenWidth, screenHeight);
                 },
               ),
             ),
@@ -307,10 +342,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 onPressed: selectedPeople.isEmpty
                     ? null
                     : () {
-                  setState(() {
-                    showExpenseDetails = true;
-                  });
-                },
+                        setState(() {
+                          showExpenseDetails = true;
+                        });
+                      },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -351,10 +386,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  Widget _buildFriendItem(Map<String, dynamic> friend, double screenWidth, double screenHeight) {
+  Widget _buildFriendItem(
+      Map<String, dynamic> friend, double screenWidth, double screenHeight) {
     bool isSelected = selectedPeople.any((p) => p['uid'] == friend["uid"]);
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.005),
+      margin: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.025, vertical: screenHeight * 0.005),
       decoration: BoxDecoration(
         color: isSelected ? Colors.blueGrey[50] : Colors.white,
         borderRadius: BorderRadius.circular(screenWidth * 0.03),
@@ -366,16 +403,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       child: ListTile(
         leading: CircleAvatar(
           radius: screenWidth * 0.05,
-          backgroundImage: friend["profilePic"].isNotEmpty ? NetworkImage(friend["profilePic"]) : null,
+          backgroundImage: friend["profilePic"].isNotEmpty
+              ? NetworkImage(friend["profilePic"])
+              : null,
           backgroundColor: Colors.blueGrey[100]!,
           child: friend["profilePic"].isEmpty
               ? Text(
-            friend["name"][0],
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: screenWidth * 0.04,
-            ),
-          )
+                  friend["name"][0],
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: screenWidth * 0.04,
+                  ),
+                )
               : null,
         ),
         title: Text(
@@ -387,7 +426,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         ),
         onTap: () => _toggleSelection(friend),
         trailing: isSelected
-            ? Icon(Icons.check_circle, color: const Color(0xFF1A3C6D), size: screenWidth * 0.06)
+            ? Icon(Icons.check_circle,
+                color: const Color(0xFF1A3C6D), size: screenWidth * 0.06)
             : null,
       ),
     );
@@ -397,7 +437,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(screenWidth * 0.075)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(screenWidth * 0.075)),
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
@@ -431,7 +472,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             decoration: InputDecoration(
               hintText: "Enter amount",
               hintStyle: TextStyle(fontSize: screenWidth * 0.04),
-              prefixIcon: Icon(Icons.currency_rupee, color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
+              prefixIcon: Icon(Icons.currency_rupee,
+                  color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
               filled: true,
               fillColor: Colors.grey[100]!,
               border: OutlineInputBorder(
@@ -461,9 +503,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           ),
           SizedBox(height: screenHeight * 0.01),
           GestureDetector(
-            onTap: () => _showCategoryBackdrop(context, screenWidth, screenHeight),
+            onTap: () =>
+                _showCategoryBackdrop(context, screenWidth, screenHeight),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.017),
+              padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.04,
+                  vertical: screenHeight * 0.017),
               decoration: BoxDecoration(
                 color: Colors.grey[100]!,
                 borderRadius: BorderRadius.circular(screenWidth * 0.03),
@@ -473,7 +518,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(_getCategoryIcon(selectedCategory), color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
+                      Icon(_getCategoryIcon(selectedCategory),
+                          color: const Color(0xFF1A3C6D),
+                          size: screenWidth * 0.06),
                       SizedBox(width: screenWidth * 0.025),
                       Text(
                         selectedCategory,
@@ -484,7 +531,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       ),
                     ],
                   ),
-                  Icon(Icons.arrow_drop_down, color: Colors.grey, size: screenWidth * 0.06),
+                  Icon(Icons.arrow_drop_down,
+                      color: Colors.grey, size: screenWidth * 0.06),
                 ],
               ),
             ),
@@ -502,7 +550,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             decoration: InputDecoration(
               hintText: "What’s this expense for?",
               hintStyle: TextStyle(fontSize: screenWidth * 0.04),
-              prefixIcon: Icon(Icons.description, color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
+              prefixIcon: Icon(Icons.description,
+                  color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
               filled: true,
               fillColor: Colors.grey[100]!,
               border: OutlineInputBorder(
@@ -575,7 +624,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  void _showCategoryBackdrop(BuildContext context, double screenWidth, double screenHeight) {
+  void _showCategoryBackdrop(
+      BuildContext context, double screenWidth, double screenHeight) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -586,7 +636,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           height: screenHeight * 0.5,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(screenWidth * 0.06)),
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(screenWidth * 0.06)),
           ),
           child: Column(
             children: [
@@ -604,7 +655,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, color: Colors.grey, size: screenWidth * 0.06),
+                      icon: Icon(Icons.close,
+                          color: Colors.grey, size: screenWidth * 0.06),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -619,19 +671,26 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     return ListTile(
                       leading: Icon(
                         _getCategoryIcon(category),
-                        color: isSelected ? const Color(0xFF1A3C6D) : Colors.grey[600]!,
+                        color: isSelected
+                            ? const Color(0xFF1A3C6D)
+                            : Colors.grey[600]!,
                         size: screenWidth * 0.06,
                       ),
                       title: Text(
                         category,
                         style: TextStyle(
                           fontSize: screenWidth * 0.04,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? const Color(0xFF1A3C6D) : Colors.black87,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? const Color(0xFF1A3C6D)
+                              : Colors.black87,
                         ),
                       ),
                       trailing: isSelected
-                          ? Icon(Icons.check_circle, color: const Color(0xFF1A3C6D), size: screenWidth * 0.06)
+                          ? Icon(Icons.check_circle,
+                              color: const Color(0xFF1A3C6D),
+                              size: screenWidth * 0.06)
                           : null,
                       onTap: () {
                         setState(() {

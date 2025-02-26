@@ -305,6 +305,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
+            heroTag: "generatePdfFab", // Unique tag
             onPressed: _generatePdf,
             backgroundColor: const Color(0xFF234567),
             elevation: 6,
@@ -314,6 +315,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           ),
           SizedBox(height: screenHeight * 0.015),
           FloatingActionButton(
+            heroTag: "refreshFab", // Unique tag
             onPressed: _fetchSplitData,
             backgroundColor: const Color(0xFF234567),
             elevation: 6,
@@ -376,45 +378,48 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       color: Colors.white,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.02),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Total Amount",
-              style: TextStyle(fontSize: screenWidth * 0.045, color: Colors.grey.shade700),
-            ),
-            Text(
-              "₹${(splitData!['totalAmount'] as num?)?.toStringAsFixed(2) ?? '0.00'}",
-              style: TextStyle(
-                fontSize: screenWidth * 0.08,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Total Amount",
+                style: TextStyle(fontSize: screenWidth * 0.04, color: Colors.grey.shade700),
               ),
-            ),
-            SizedBox(height: screenHeight * 0.01),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(
-                  children: [
-                    Text("Pay", style: TextStyle(fontSize: screenWidth * 0.035, color: Colors.red.shade700)),
-                    Text("₹${totalPay.toStringAsFixed(2)}",
-                        style: TextStyle(fontSize: screenWidth * 0.04, fontWeight: FontWeight.w600)),
-                  ],
+              Text(
+                "₹${(splitData!['totalAmount'] as num?)?.toStringAsFixed(2) ?? '0.00'}",
+                style: TextStyle(
+                  fontSize: screenWidth * 0.07,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
-                Container(height: screenHeight * 0.03, child: VerticalDivider(color: Colors.grey.shade300)),
-                Column(
-                  children: [
-                    Text("Receive",
-                        style: TextStyle(fontSize: screenWidth * 0.035, color: Colors.green.shade700)),
-                    Text("₹${totalReceive.toStringAsFixed(2)}",
-                        style: TextStyle(fontSize: screenWidth * 0.04, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ],
-            ),
-          ],
+              ),
+              SizedBox(height: screenHeight * 0.005),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
+                    children: [
+                      Text("Pay", style: TextStyle(fontSize: screenWidth * 0.035, color: Colors.red.shade700)),
+                      Text("₹${totalPay.toStringAsFixed(2)}",
+                          style: TextStyle(fontSize: screenWidth * 0.035, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  Container(height: screenHeight * 0.03, child: VerticalDivider(color: Colors.grey.shade300)),
+                  Column(
+                    children: [
+                      Text("Receive",
+                          style: TextStyle(fontSize: screenWidth * 0.035, color: Colors.green.shade700)),
+                      Text("₹${totalReceive.toStringAsFixed(2)}",
+                          style: TextStyle(fontSize: screenWidth * 0.035, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
