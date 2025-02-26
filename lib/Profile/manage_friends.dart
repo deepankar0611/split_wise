@@ -40,17 +40,39 @@ class _FriendsListState extends State<FriendsList> {
       List<String> friendUids = friendsSnapshot.docs.map((doc) => doc.id).toList();
 
       for (String uid in friendUids) {
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        if (userDoc.exists) { // Check if the document exists
-          var data = userDoc.data() as Map<String, dynamic>?;
-          friendDetails[uid] = {
-            "name": data?['name'] ?? "Unknown ($uid)",
-            "profileImageUrl": data?['profileImageUrl'] ?? "",
-          };
+        DocumentSnapshot friendDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('friends')
+            .doc(uid)
+            .get();
+
+        if (friendDoc.exists) {
+          Timestamp? addedAt = friendDoc.get('addedAt') as Timestamp?;
+          DocumentSnapshot userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .get();
+
+          if (userDoc.exists) {
+            var data = userDoc.data() as Map<String, dynamic>?;
+            friendDetails[uid] = {
+              "name": data?['name'] ?? "Unknown ($uid)",
+              "profileImageUrl": data?['profileImageUrl'] ?? "",
+              "addedAt": addedAt?.toDate().toString() ?? "Unknown date",
+            };
+          } else {
+            friendDetails[uid] = {
+              "name": "User Not Found ($uid)",
+              "profileImageUrl": "",
+              "addedAt": "Unknown date",
+            };
+          }
         } else {
           friendDetails[uid] = {
-            "name": "User Not Found ($uid)",
+            "name": "Friend Not Found ($uid)",
             "profileImageUrl": "",
+            "addedAt": "Unknown date",
           };
         }
       }

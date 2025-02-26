@@ -27,8 +27,8 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     "email": "",
     "profileImageUrl": "",
     "phone_number": "",
-    "amountToPay": "",
-    "amountToReceive": "",
+    "amountToPay": "0",
+    "amountToReceive": "0",
   };
 
   @override
@@ -45,11 +45,12 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         final data = doc.data() ?? {};
         setState(() {
           userData = {
-            "name": data["name"] ?? "User",
-            "email": data["email"] ?? "",
-            "profileImageUrl": data.containsKey("profileImageUrl") ? data["profileImageUrl"] : "",
-            "amountToPay": data["amountToPay"] ?? "0",
-            "amountToReceive": data["amountToReceive"] ?? "0",
+            "name": data["name"] as String? ?? "User",
+            "email": data["email"] as String? ?? "",
+            "profileImageUrl": data["profileImageUrl"] as String? ?? "",
+            "phone_number": data["phone"] as String? ?? "",
+            "amountToPay": data["amountToPay"]?.toString() ?? "0",
+            "amountToReceive": data["amountToReceive"]?.toString() ?? "0",
           };
         });
       }
@@ -66,14 +67,14 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.06), // 8% of screen height
+        preferredSize: Size.fromHeight(screenHeight * 0.06),
         child: AppBar(
           title: Text(
             "Profile Overview",
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: screenWidth * 0.045, // Responsive font size
+              fontSize: screenWidth * 0.045,
             ),
           ),
           backgroundColor: const Color(0xFF234567),
@@ -94,11 +95,11 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(screenWidth * 0.04), // 4% of screen width
+        padding: EdgeInsets.all(screenWidth * 0.04),
         child: Column(
           children: [
             _buildProfileHeader(screenWidth, screenHeight),
-            SizedBox(height: screenHeight * 0.03), // 3% of screen height
+            SizedBox(height: screenHeight * 0.03),
             _buildFinanceSummary(screenWidth, screenHeight),
             SizedBox(height: screenHeight * 0.03),
             _buildProfileOptions(context),
@@ -126,14 +127,16 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         }
 
         final userData = snapshot.data!.data() as Map<String, dynamic>;
+        final profileImageUrl = userData['profileImageUrl'] as String? ?? '';
+
         return Card(
-          elevation: screenWidth * 0.02, // Responsive elevation
+          elevation: screenWidth * 0.02,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.05)),
           shadowColor: Colors.black.withOpacity(0.2),
           child: Stack(
             children: [
               Container(
-                height: screenHeight * 0.18, // 18% of screen height
+                height: screenHeight * 0.18,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Colors.teal.shade700, Colors.teal.shade400],
@@ -149,9 +152,9 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 child: Row(
                   children: [
                     CircleAvatar(
-                      radius: screenWidth * 0.1, // 10% of screen width
-                      backgroundImage: userData.containsKey('profileImageUrl') && userData['profileImageUrl'].isNotEmpty
-                          ? NetworkImage(userData['profileImageUrl'] as String)
+                      radius: screenWidth * 0.1,
+                      backgroundImage: profileImageUrl.isNotEmpty
+                          ? NetworkImage(profileImageUrl)
                           : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
                       backgroundColor: Colors.white,
                     ),
@@ -160,7 +163,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          userData['name'] ?? 'User',
+                          userData['name'] as String? ?? 'User',
                           style: GoogleFonts.poppins(
                             fontSize: screenWidth * 0.055,
                             fontWeight: FontWeight.bold,
@@ -169,14 +172,14 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                           ),
                         ),
                         Text(
-                          userData['email'] ?? '',
+                          userData['email'] as String? ?? '',
                           style: GoogleFonts.poppins(
                             fontSize: screenWidth * 0.035,
                             color: Colors.white70,
                           ),
                         ),
                         Text(
-                          userData['phone'] ?? '',
+                          userData['phone'] as String? ?? '',
                           style: GoogleFonts.poppins(
                             fontSize: screenWidth * 0.035,
                             color: Colors.white70,
@@ -234,17 +237,9 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildSummaryTile("Total Balance", "₹${totalBalance.toStringAsFixed(2)}", Colors.white, screenWidth),
-                  VerticalDivider(
-                    color: Colors.white,
-                    thickness: 1,
-                    width: screenWidth * 0.04,
-                  ),
+                  VerticalDivider(color: Colors.white, thickness: 1, width: screenWidth * 0.04),
                   _buildSummaryTile("Pay", "₹${amountToPay.toStringAsFixed(2)}", Colors.white, screenWidth),
-                  VerticalDivider(
-                    color: Colors.white,
-                    thickness: 1,
-                    width: screenWidth * 0.04,
-                  ),
+                  VerticalDivider(color: Colors.white, thickness: 1, width: screenWidth * 0.04),
                   _buildSummaryTile("Receive", "₹${amountToReceive.toStringAsFixed(2)}", Colors.white, screenWidth),
                 ],
               ),
@@ -262,17 +257,14 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         Text(
           value,
           style: GoogleFonts.poppins(
-            fontSize: screenWidth * 0.04, // Responsive font size
+            fontSize: screenWidth * 0.04,
             fontWeight: FontWeight.bold,
             color: color ?? Colors.white,
           ),
         ),
         Text(
           label,
-          style: GoogleFonts.poppins(
-            fontSize: screenWidth * 0.03,
-            color: Colors.white,
-          ),
+          style: GoogleFonts.poppins(fontSize: screenWidth * 0.03, color: Colors.white),
         ),
       ],
     );
@@ -283,7 +275,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return SizedBox(
-      height: screenHeight * 0.5, // 40% of screen height to accommodate 5 items
+      height: screenHeight * 0.5,
       child: ListView.builder(
         itemCount: 5,
         itemBuilder: (context, index) {
@@ -412,7 +404,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
             duration: const Duration(milliseconds: 200),
             transform: Matrix4.identity()..scale(scale),
             child: FloatingActionButton(
-              onPressed: null, // Handled by GestureDetector
+              onPressed: null,
               backgroundColor: const Color(0xFF234567),
               elevation: screenWidth * 0.015,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.075)),
@@ -457,10 +449,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
           borderRadius: BorderRadius.circular(screenWidth * 0.03),
         ),
         child: ListTile(
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.03,
-            vertical: screenHeight * 0.005,
-          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03, vertical: screenHeight * 0.005),
           leading: Container(
             padding: EdgeInsets.all(screenWidth * 0.02),
             decoration: BoxDecoration(
@@ -471,17 +460,9 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
           ),
           title: Text(
             title,
-            style: GoogleFonts.poppins(
-              fontSize: screenWidth * 0.04,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
+            style: GoogleFonts.poppins(fontSize: screenWidth * 0.04, fontWeight: FontWeight.w600, color: Colors.black87),
           ),
-          trailing: Icon(
-            Icons.arrow_forward_ios,
-            color: Colors.teal.shade700,
-            size: screenWidth * 0.05,
-          ),
+          trailing: Icon(Icons.arrow_forward_ios, color: Colors.teal.shade700, size: screenWidth * 0.05),
           onTap: onTap,
         ),
       ),

@@ -20,7 +20,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final ImagePicker _picker = ImagePicker();
   final supabase = Supabase.instance.client;
   File? _image;
+  String? _selectedAvatar;
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
+
+  // List of avatar options using the Supabase URL
+  final List<String> avatarOptions = [
+    'https://xzoyevujxvqaumrdskhd.supabase.co/storage/v1/object/public/profile_pictures/profile_pictures/new%201.png',
+    'https://xzoyevujxvqaumrdskhd.supabase.co/storage/v1/object/public/profile_pictures/profile_pictures/androgynous-avatar-non-binary-queer-person.png',
+    'https://xzoyevujxvqaumrdskhd.supabase.co/storage/v1/object/public/profile_pictures/profile_pictures/3d-rendered-illustration-cartoon-character-with-face-picture-frame.jpg',
+  ];
 
   @override
   void initState() {
@@ -37,6 +45,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         setState(() {
           _nameController.text = data["name"] ?? "User";
           _phoneController.text = data["phone"] ?? "";
+          _selectedAvatar = data["profileImageUrl"]; // Use profileImageUrl instead of avatarUrl
         });
       }
     } catch (e) {
@@ -49,6 +58,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
+        _selectedAvatar = null; // Clear avatar if custom image is selected
       });
       await _uploadImage();
     }
@@ -59,7 +69,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final user = firebase_auth.FirebaseAuth.instance.currentUser;
       if (user == null) return;
-      final filePath = 'profile_pictures/${user.uid}${DateTime.now()}.jpg';
+      final filePath = 'profile_pictures/${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       await supabase.storage.from('profile_pictures').upload(filePath, _image!);
       final imageUrl = supabase.storage.from('profile_pictures').getPublicUrl(filePath);
 
@@ -68,6 +78,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
     } catch (e) {
       print('Image upload failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to upload image: $e')),
+      );
+    }
+  }
+
+  Future<void> _selectAvatar(String avatarUrl) async {
+    try {
+      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      setState(() {
+        _selectedAvatar = avatarUrl; // Store the Supabase URL
+        _image = null; // Clear custom image if avatar is selected
+      });
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'profileImageUrl': avatarUrl, // Store the Supabase URL in profileImageUrl
+      });
+    } catch (e) {
+      print('Avatar selection failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to select avatar: $e')),
+      );
     }
   }
 
@@ -86,7 +118,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       } catch (e) {
         print('Error updating profile: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile. Try again.')),
+          SnackBar(content: Text('Failed to update profile: $e')),
         );
       }
     }
@@ -105,15 +137,48 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
   }
 
+  void _showAvatarPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          height: 200,
+          child: GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: avatarOptions.length,
+            itemBuilder: (context, index) {
+              return GestureDetector(
+                onTap: () {
+                  _selectAvatar(avatarOptions[index]);
+                  Navigator.pop(context);
+                },
+                child: CircleAvatar(
+                  backgroundImage: NetworkImage(avatarOptions[index]), // Load from Supabase URL
+                  onBackgroundImageError: (exception, stackTrace) {
+                    print('Error loading avatar: $exception');
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Get screen dimensions
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.06), // 8% of screen height
+        preferredSize: Size.fromHeight(screenHeight * 0.06),
         child: AppBar(
           backgroundColor: Color(0xFF234567),
           elevation: 0,
@@ -122,7 +187,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              fontSize: screenWidth * 0.045, // Responsive font size
+              fontSize: screenWidth * 0.045,
             ),
           ),
           centerTitle: true,
@@ -161,12 +226,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               }
 
               final userData = snapshot.data!.data();
-              final profileImageUrl = userData?['profileImageUrl'] ?? '';
+              final profileImageUrl = userData?['profileImageUrl'] as String? ?? '';
 
               return Form(
                 key: _formKey,
                 child: ListView(
-                  padding: EdgeInsets.all(screenWidth * 0.05), // 5% padding
+                  padding: EdgeInsets.all(screenWidth * 0.05),
                   children: [
                     Center(
                       child: Stack(
@@ -185,16 +250,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ],
                             ),
                             child: CircleAvatar(
-                              radius: screenWidth * 0.18, // 18% of screen width
+                              radius: screenWidth * 0.18,
                               backgroundColor: Colors.white,
-                              backgroundImage: profileImageUrl.isNotEmpty
-                                  ? NetworkImage(profileImageUrl)
+                              backgroundImage: _image != null
+                                  ? FileImage(_image!)
+                                  : _selectedAvatar != null && _selectedAvatar!.isNotEmpty
+                                  ? NetworkImage(_selectedAvatar!) // Supabase URL
+                                  : profileImageUrl.isNotEmpty
+                                  ? NetworkImage(profileImageUrl) // Supabase URL
                                   : AssetImage('assets/logo/intro.jpeg') as ImageProvider,
+                              onBackgroundImageError: (exception, stackTrace) {
+                                print('Error loading profile image: $exception');
+                              },
                             ),
                           ),
                           Positioned(
                             bottom: screenWidth * 0.025,
-                            right: 0,
+                            right: -screenWidth * 0.05,
                             child: CupertinoButton(
                               padding: EdgeInsets.zero,
                               onPressed: _pickImage,
@@ -212,14 +284,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   ],
                                 ),
                                 padding: EdgeInsets.all(screenWidth * 0.02),
-                                child: Icon(CupertinoIcons.add, color: Colors.green, size: screenWidth * 0.06),
+                                child: Icon(CupertinoIcons.photo, color: Colors.green, size: screenWidth * 0.06),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: screenWidth * 0.025,
+                            right: screenWidth * 0.05,
+                            child: CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: _showAvatarPicker,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.grey.shade300, width: screenWidth * 0.002),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: screenWidth * 0.01,
+                                      offset: Offset(0, screenWidth * 0.005),
+                                    ),
+                                  ],
+                                ),
+                                padding: EdgeInsets.all(screenWidth * 0.02),
+                                child: Icon(CupertinoIcons.person_circle, color: Colors.blue, size: screenWidth * 0.06),
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(height: screenHeight * 0.04), // 4% of screen height
+                    SizedBox(height: screenHeight * 0.04),
                     buildTextField(
                       "Name",
                       "Enter your name",
@@ -237,47 +333,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     SizedBox(height: screenHeight * 0.02),
                     CupertinoButton(
-                      padding: EdgeInsets.symmetric(
-                        vertical: screenHeight * 0.015, // Reduced vertical padding (from 0.02 to 0.015)
-                        horizontal: screenWidth * 0.02,  // Slightly increased horizontal padding (from 0.01 to 0.02)
-                      ),
+                      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.015, horizontal: screenWidth * 0.02),
                       color: const Color(0xFF234567),
-                      borderRadius: BorderRadius.circular(screenWidth * 0.03), // Added border radius for slightly rounded corners
+                      borderRadius: BorderRadius.circular(screenWidth * 0.03),
                       onPressed: _saveProfile,
-                      child: Container( // Wrapped with Container to add shadow
+                      child: Container(
                         decoration: BoxDecoration(
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black26.withOpacity(0.3), // Subtle shadow
+                              color: Colors.black26.withOpacity(0.3),
                               spreadRadius: 0.5,
                               blurRadius: 5,
                               offset: const Offset(0, 3),
                             ),
                           ],
                         ),
-                        padding: EdgeInsets.zero, // Reset padding to avoid double padding
+                        padding: EdgeInsets.zero,
                         child: RichText(
                           text: TextSpan(
                             text: 'Save ',
-                            style: TextStyle(
-                              fontSize: screenWidth * 0.04, // Slightly smaller font size (from 0.045 to 0.04)
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                            style: TextStyle(fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold, color: Colors.white),
                             children: [
                               TextSpan(
                                 text: 'Update',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.04, // Slightly smaller font size (from 0.045 to 0.04)
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                                style: TextStyle(fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold, color: Colors.white),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               );
@@ -339,14 +424,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 hintText: hintText,
                 hintStyle: TextStyle(fontSize: fontSize * 0.9, color: Colors.grey.shade500),
                 prefixIcon: Icon(prefixIcon, color: Colors.grey.shade600, size: fontSize * 1.2),
-                suffixIcon: suffixIcon != null
-                    ? Icon(suffixIcon, color: Colors.grey.shade600, size: fontSize * 1.2)
-                    : null,
+                suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: Colors.grey.shade600, size: fontSize * 1.2) : null,
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.05,
-                  vertical: screenWidth * 0.045,
-                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenWidth * 0.045),
               ),
             ),
           ),
@@ -372,12 +452,7 @@ class FloatingBackgroundPainter extends CustomPainter {
       final center = Offset(size.width * random.nextDouble(), size.height * random.nextDouble());
       final radius = random.nextDouble() * (size.width * 0.04) + (size.width * 0.012);
       final paint = Paint()
-        ..color = Color.fromRGBO(
-          random.nextInt(256),
-          random.nextInt(256),
-          random.nextInt(256),
-          0.1,
-        );
+        ..color = Color.fromRGBO(random.nextInt(256), random.nextInt(256), random.nextInt(256), 0.1);
       canvas.drawCircle(center, radius, paint);
     }
   }

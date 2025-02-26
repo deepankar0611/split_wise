@@ -9,7 +9,6 @@ import 'package:split_wise/Home%20screen/spendanalyser.dart';
 import 'package:split_wise/Profile/all%20expense%20history%20detals.dart';
 import 'package:split_wise/Home%20screen/split%20details.dart';
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.scrollController});
   final ScrollController scrollController;
@@ -73,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (mounted) {
           setState(() {
             userData = {
-              "profileImageUrl": data.containsKey("profileImageUrl") ? data["profileImageUrl"] : "",
+              "profileImageUrl": data["profileImageUrl"] as String? ?? "",
               "amountToPay": data["amountToPay"]?.toString() ?? "0",
               "amountToReceive": data["amountToReceive"]?.toString() ?? "0",
             };
@@ -149,9 +148,9 @@ class _HomeScreenState extends State<HomeScreen> {
             title: Text(
               'Settle Up',
               style: GoogleFonts.lobster(
-                 textStyle: TextStyle( // Removed redundant TextStyle constructor and added const
+                textStyle: const TextStyle(
                   color: Colors.white,
-                  fontSize: 24.0, // Adjust font size for stylish fonts
+                  fontSize: 24.0,
                   shadows: [
                     Shadow(
                       blurRadius: 3.0,
@@ -168,7 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 final cardAnimationProgress = collapseProgress.clamp(0.0, 1.0);
 
                 return FlexibleSpaceBar(
-                  titlePadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenHeight * 0.08), // Padding for FlexibleSpaceBar title (not used now)
                   background: Padding(
                     padding: EdgeInsets.only(top: screenHeight * 0.12),
                     child: Padding(
@@ -209,8 +207,8 @@ class _HomeScreenState extends State<HomeScreen> {
             leading: IconButton(
               icon: CircleAvatar(
                 radius: screenWidth * 0.05,
-                backgroundImage: userData["profileImageUrl"].isNotEmpty
-                    ? NetworkImage(userData["profileImageUrl"])
+                backgroundImage: userData["profileImageUrl"] != null && (userData["profileImageUrl"] as String).isNotEmpty
+                    ? NetworkImage(userData["profileImageUrl"] as String)
                     : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
                 backgroundColor: Colors.grey,
               ),
@@ -239,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildReceiveCard() {
-    double amountToReceive = double.tryParse(userData["amountToReceive"]) ?? 0;
+    double amountToReceive = double.tryParse(userData["amountToReceive"] as String? ?? "0") ?? 0;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -266,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: screenHeight * 0.15), // Adjust as needed
+          constraints: BoxConstraints(maxHeight: screenHeight * 0.15),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -306,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPayCard() {
-    double amountToPay = double.tryParse(userData["amountToPay"]) ?? 0;
+    double amountToPay = double.tryParse(userData["amountToPay"] as String? ?? "0") ?? 0;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -339,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: screenHeight * 0.15), // Adjust as needed
+          constraints: BoxConstraints(maxHeight: screenHeight * 0.15),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -348,21 +346,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 Align(
                   alignment: Alignment.topRight,
                   child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.01,
-                      vertical: screenHeight * 0.005,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01, vertical: screenHeight * 0.005),
+                    decoration: BoxDecoration(color: Colors.red.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
                     child: Text(
                       "Pay",
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
-                        fontSize: screenWidth * 0.025,
-                      ),
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: screenWidth * 0.025),
                     ),
                   ),
                 ),
@@ -370,25 +358,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.only(left: screenWidth * 0.015),
                   child: Text(
                     "₹${amountToPay.toInt()}",
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.07,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
+                    style: TextStyle(fontSize: screenWidth * 0.07, fontWeight: FontWeight.bold, color: Colors.black),
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(
-                    left: screenWidth * 0.015,
-                    bottom: screenHeight * 0.005,
-                  ),
+                  padding: EdgeInsets.only(left: screenWidth * 0.015, bottom: screenHeight * 0.005),
                   child: Text(
                     "will pay",
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                      fontSize: screenWidth * 0.035,
-                    ),
+                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: screenWidth * 0.035),
                   ),
                 ),
               ],
@@ -462,7 +439,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3)),
                   ],
                 ),
-                height: screenHeight * 0.18, // 18% of screen height
+                height: screenHeight * 0.18,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: snapshot.data!.docs.length,
@@ -529,7 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: screenHeight * 0.015),
           SizedBox(
-            height: screenHeight * 0.2, // 20% of screen height
+            height: screenHeight * 0.2,
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('splits')
@@ -725,34 +702,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Text(
                       title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: screenWidth * 0.035,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.035),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
                   ),
-                  if (isSettled)
-                    Icon(
-                      LucideIcons.zap,
-                      color: Colors.amber,
-                      size: screenWidth * 0.04,
-                    ),
+                  if (isSettled) Icon(LucideIcons.zap, color: Colors.amber, size: screenWidth * 0.04),
                 ],
               ),
-              SizedBox(height: screenWidth * 0.005), // Reduced from 0.01
+              SizedBox(height: screenWidth * 0.005),
               Text(
                 timeAgo,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: screenWidth * 0.03,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: screenWidth * 0.03, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
-              SizedBox(height: screenWidth * 0.005), // Reduced from 0.01
+              SizedBox(height: screenWidth * 0.005),
               Text(
                 isSettled ? "Settled" : "Unsettled",
                 style: TextStyle(
@@ -765,7 +730,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               if (!isSettled)
                 Padding(
-                  padding: EdgeInsets.only(top: screenWidth * 0.01), // Reduced from 0.015
+                  padding: EdgeInsets.only(top: screenWidth * 0.01),
                   child: Text(
                     amount,
                     style: TextStyle(
@@ -863,8 +828,7 @@ class _HomeScreenState extends State<HomeScreen> {
             category,
             categoryData[category] ?? {'totalPaid': 0.0, 'lastInvolved': null},
           );
-        })
-            .toList()
+        }).toList()
           ..sort((a, b) {
             DateTime? timeA = a.value['lastInvolved'] as DateTime?;
             DateTime? timeB = b.value['lastInvolved'] as DateTime?;
@@ -881,11 +845,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 "Overview",
-                style: TextStyle(
-                  fontSize: screenWidth * 0.045,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
               Column(
                 children: sortedCategories.map((entry) {
@@ -966,11 +926,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             trailing: Text(
               amount,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: screenWidth * 0.04,
-                color: Colors.green,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.04, color: Colors.green),
             ),
           ),
         ),
