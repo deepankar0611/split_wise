@@ -77,7 +77,7 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.07), // 7% of screen height
+        preferredSize: Size.fromHeight(screenHeight * 0.06), // 7% of screen height
         child: AppBar(
           backgroundColor: const Color(0xFF1A2E39),
           shape: RoundedRectangleBorder(
@@ -91,10 +91,10 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
           title: Text(
             "Choose Payers",
             style: TextStyle(
-              fontSize: screenWidth * 0.06,
+              fontSize: screenWidth * 0.05,
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              letterSpacing: 1.1,
+              letterSpacing: 1.0,
             ),
           ),
           centerTitle: true,

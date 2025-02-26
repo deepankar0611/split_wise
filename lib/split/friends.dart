@@ -27,17 +27,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   String expenseDescription = "";
 
   final List<String> categories = [
-    "Grocery",
-    "Medicine",
-    "Food",
-    "Rent",
-    "Travel",
-    "Shopping",
-    "Entertainment",
-    "Utilities",
-    "Others"
-  ];
-
+    "Grocery", "Medicine", "Food","Rent", "Travel", "Shopping", "Entertainment", "Utilities", "Others"];
   @override
   void initState() {
     super.initState();
@@ -117,7 +107,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: PreferredSize(
         preferredSize:
-            Size.fromHeight(screenHeight * 0.06), // 8% of screen height
+        Size.fromHeight(screenHeight * 0.06), // 8% of screen height
         child: AppBar(
           title: Text(
             "Add Expense",
@@ -143,7 +133,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         totalAmount: totalAmount,
                         expenseDescription: expenseDescription,
                         selectedCategory:
-                            selectedCategory), // Replace with your actual screen
+                        selectedCategory), // Replace with your actual screen
                   ),
                 );
               },
@@ -163,228 +153,251 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          children: [
-            Container(
-              padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.04,
-                  screenHeight * 0.025,
-                  screenWidth * 0.04,
-                  screenHeight * 0.015),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(screenWidth * 0.05)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: screenWidth * 0.025,
-                    offset: Offset(0, screenWidth * 0.01),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Split With",
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.05,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1A3C6D),
-                        ),
-                      ),
-                      Text(
-                        "${selectedPeople.length} selected",
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.035,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
+      body: Stack( // Wrap body in Stack to allow modal sheet to blur background
+        children: [
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                      screenWidth * 0.04,
+                      screenHeight * 0.025,
+                      screenWidth * 0.04,
+                      screenHeight * 0.015),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                        bottom: Radius.circular(screenWidth * 0.05)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: screenWidth * 0.025,
+                        offset: Offset(0, screenWidth * 0.01),
                       ),
                     ],
                   ),
-                  SizedBox(height: screenHeight * 0.015),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeInOut,
-                    child: Wrap(
-                      spacing: screenWidth * 0.025,
-                      runSpacing: screenHeight * 0.012,
-                      children: selectedPeople.map((friend) {
-                        return Chip(
-                          label: Text(
-                            friend['name'],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Split With",
                             style: TextStyle(
-                              fontSize: screenWidth * 0.035,
-                              color: Colors.black87,
+                              fontSize: screenWidth * 0.05,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1A3C6D),
                             ),
                           ),
-                          avatar: CircleAvatar(
-                            radius: screenWidth * 0.035,
-                            backgroundImage: friend['profilePic'].isNotEmpty
-                                ? NetworkImage(friend['profilePic'])
-                                : null,
-                            backgroundColor: Colors.blueGrey[100]!,
-                            child: friend['profilePic'].isEmpty
-                                ? Text(
-                                    friend['name'][0].toUpperCase(),
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: screenWidth * 0.035,
-                                    ),
-                                  )
-                                : null,
+                          Text(
+                            "${selectedPeople.length} selected",
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.035,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                          deleteIcon: Icon(Icons.close,
-                              size: screenWidth * 0.045, color: Colors.grey),
-                          onDeleted: () => _toggleSelection(friend),
-                          backgroundColor: Colors.blueGrey[50]!,
-                          elevation: 2,
-                          padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.025,
-                              vertical: screenHeight * 0.005),
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(screenWidth * 0.05),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: "Search friends...",
-                      hintStyle: TextStyle(fontSize: screenWidth * 0.04),
-                      prefixIcon: Icon(Icons.search,
-                          color: Colors.grey, size: screenWidth * 0.06),
-                      suffixIcon: searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear,
-                                  color: Colors.grey, size: screenWidth * 0.06),
-                              onPressed: () {
-                                setState(() {
-                                  searchQuery = "";
-                                  displayFriends = List.from(friends);
-                                });
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.grey[100]!,
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(screenWidth * 0.075),
-                        borderSide: BorderSide.none,
+                        ],
                       ),
-                      contentPadding:
+                      SizedBox(height: screenHeight * 0.015),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                        child: Wrap(
+                          spacing: screenWidth * 0.025,
+                          runSpacing: screenHeight * 0.012,
+                          children: selectedPeople.map((friend) {
+                            return Chip(
+                              label: Text(
+                                friend['name'],
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.035,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              avatar: CircleAvatar(
+                                radius: screenWidth * 0.035,
+                                backgroundImage: friend['profilePic'].isNotEmpty
+                                    ? NetworkImage(friend['profilePic'])
+                                    : null,
+                                backgroundColor: Colors.blueGrey[100]!,
+                                child: friend['profilePic'].isEmpty
+                                    ? Text(
+                                  friend['name'][0].toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: screenWidth * 0.035,
+                                  ),
+                                )
+                                    : null,
+                              ),
+                              deleteIcon: Icon(Icons.close,
+                                  size: screenWidth * 0.045, color: Colors.grey),
+                              onDeleted: () => _toggleSelection(friend),
+                              backgroundColor: Colors.blueGrey[50]!,
+                              elevation: 2,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.025,
+                                  vertical: screenHeight * 0.005),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(screenWidth * 0.05),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: "Search friends...",
+                          hintStyle: TextStyle(fontSize: screenWidth * 0.04),
+                          prefixIcon: Icon(Icons.search,
+                              color: Colors.grey, size: screenWidth * 0.06),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                            icon: Icon(Icons.clear,
+                                color: Colors.grey, size: screenWidth * 0.06),
+                            onPressed: () {
+                              setState(() {
+                                searchQuery = "";
+                                displayFriends = List.from(friends);
+                              });
+                            },
+                          )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.grey[100]!,
+                          border: OutlineInputBorder(
+                            borderRadius:
+                            BorderRadius.circular(screenWidth * 0.075),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding:
                           EdgeInsets.symmetric(vertical: screenHeight * 0.02),
-                    ),
-                    style: TextStyle(fontSize: screenWidth * 0.04),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value.toLowerCase();
-                        displayFriends = friends
-                            .where((friend) => friend["name"]
+                        ),
+                        style: TextStyle(fontSize: screenWidth * 0.04),
+                        onChanged: (value) {
+                          setState(() {
+                            searchQuery = value.toLowerCase();
+                            displayFriends = friends
+                                .where((friend) => friend["name"]
                                 .toLowerCase()
                                 .contains(searchQuery))
-                            .toList();
-                      });
+                                .toList();
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  height: screenHeight * 0.35, // 35% of screen height
+                  margin: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.04,
+                      vertical: screenHeight * 0.015),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: screenWidth * 0.025,
+                        offset: Offset(0, screenWidth * 0.01),
+                      ),
+                    ],
+                  ),
+                  child: ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: displayFriends.length,
+                    itemBuilder: (context, index) {
+                      return _buildFriendItem(
+                          displayFriends[index], screenWidth, screenHeight);
                     },
                   ),
-                ],
-              ),
-            ),
-            Container(
-              height: screenHeight * 0.35, // 35% of screen height
-              margin: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.04,
-                  vertical: screenHeight * 0.015),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(screenWidth * 0.05),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: screenWidth * 0.025,
-                    offset: Offset(0, screenWidth * 0.01),
-                  ),
-                ],
-              ),
-              child: ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                itemCount: displayFriends.length,
-                itemBuilder: (context, index) {
-                  return _buildFriendItem(
-                      displayFriends[index], screenWidth, screenHeight);
-                },
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(screenWidth * 0.04),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A3C6D),
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(screenWidth * 0.03),
-                  ),
-                  elevation: 5,
-                  minimumSize: Size(double.infinity, screenHeight * 0.075),
                 ),
-                onPressed: selectedPeople.isEmpty
-                    ? null
-                    : () {
-                        setState(() {
-                          showExpenseDetails = true;
-                        });
-                      },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Continue (${selectedPeople.length})",
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.045,
-                        fontWeight: FontWeight.bold,
+                Padding(
+                  padding: EdgeInsets.all(screenWidth * 0.04),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A3C6D),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(screenWidth * 0.03),
                       ),
+                      elevation: 5,
+                      minimumSize: Size(double.infinity, screenHeight * 0.075),
                     ),
-                    SizedBox(width: screenWidth * 0.02),
-                    Icon(Icons.arrow_forward_ios, size: screenWidth * 0.045),
-                  ],
+                    onPressed: selectedPeople.isEmpty
+                        ? null
+                        : () {
+                      _showExpenseDetailModal(screenWidth, screenHeight);
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Continue (${selectedPeople.length})",
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.045,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: screenWidth * 0.02),
+                        Icon(Icons.arrow_forward_ios, size: screenWidth * 0.045,color: Colors.white,),
+                      ],
+                    ),
+                  ),
                 ),
+              ],
+            ),
+          ),
+          if (showExpenseDetails) // Conditionally render the modal sheet
+            GestureDetector(
+              onTap: () { // To dismiss modal sheet when tapping outside
+                setState(() {
+                  showExpenseDetails = false;
+                });
+              },
+              behavior: HitTestBehavior.translucent, // Make entire screen tappable
+              child: Stack( // Use Stack to overlay blur and modal
+                children: [
+                  BackdropFilter( // Blur effect for background
+                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                    child: Container(
+                      color: Colors.transparent, // Transparent background to allow blur to show
+                    ),
+                  ),
+                  Align( // Align the modal sheet to the bottom
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      height: screenHeight * 0.55, // Half screen width
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(screenWidth * 0.075)),
+                      ),
+                      padding: EdgeInsets.all(screenWidth * 0.05),
+                      child: _buildExpenseDetailsUI(screenWidth, screenHeight),
+                    ),
+                  ),
+                ],
               ),
             ),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 600),
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                return SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 1),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  )),
-                  child: FadeTransition(opacity: animation, child: child),
-                );
-              },
-              child: showExpenseDetails
-                  ? _buildExpenseDetailsUI(screenWidth, screenHeight)
-                  : const SizedBox.shrink(),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
+
+  void _showExpenseDetailModal(double screenWidth, double screenHeight) {
+    setState(() {
+      showExpenseDetails = true;
+    });
+  }
+
 
   Widget _buildFriendItem(
       Map<String, dynamic> friend, double screenWidth, double screenHeight) {
@@ -409,12 +422,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           backgroundColor: Colors.blueGrey[100]!,
           child: friend["profilePic"].isEmpty
               ? Text(
-                  friend["name"][0],
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: screenWidth * 0.04,
-                  ),
-                )
+            friend["name"][0],
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: screenWidth * 0.04,
+            ),
+          )
               : null,
         ),
         title: Text(
@@ -427,27 +440,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         onTap: () => _toggleSelection(friend),
         trailing: isSelected
             ? Icon(Icons.check_circle,
-                color: const Color(0xFF1A3C6D), size: screenWidth * 0.06)
+            color: const Color(0xFF1A3C6D), size: screenWidth * 0.06)
             : null,
       ),
     );
   }
 
   Widget _buildExpenseDetailsUI(double screenWidth, double screenHeight) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(screenWidth * 0.075)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: screenWidth * 0.05,
-            offset: Offset(0, -screenWidth * 0.012),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.all(screenWidth * 0.05),
+    return SingleChildScrollView( // Wrap the Column with SingleChildScrollView
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -456,7 +456,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             style: TextStyle(
               fontSize: screenWidth * 0.06,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF1A3C6D),
+              color:  Colors.black,
             ),
           ),
           SizedBox(height: screenHeight * 0.025),
@@ -637,7 +637,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius:
-                BorderRadius.vertical(top: Radius.circular(screenWidth * 0.06)),
+            BorderRadius.vertical(top: Radius.circular(screenWidth * 0.06)),
           ),
           child: Column(
             children: [
@@ -681,7 +681,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         style: TextStyle(
                           fontSize: screenWidth * 0.04,
                           fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                           color: isSelected
                               ? const Color(0xFF1A3C6D)
                               : Colors.black87,
@@ -689,8 +689,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       ),
                       trailing: isSelected
                           ? Icon(Icons.check_circle,
-                              color: const Color(0xFF1A3C6D),
-                              size: screenWidth * 0.06)
+                          color: const Color(0xFF1A3C6D),
+                          size: screenWidth * 0.06)
                           : null,
                       onTap: () {
                         setState(() {

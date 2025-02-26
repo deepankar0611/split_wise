@@ -346,9 +346,9 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("About Us", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.05)),
+        title: Text("About Us", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.06)),
         content: Text(
-          "Welcome to SplitWise! We help you manage your expenses and split bills with friends effortlessly. Contact us at support@splitwise.com for more information.",
+          "Welcome to SplitWise, your premier solution for seamlessly managing expenses and equitably dividing bills among friends. Designed with precision by our adept developers, Aryan Bansal and Depankar Singh, SplitWise ensures a sophisticated yet effortless experience in financial coordination. For further details or assistance, please feel free to reach out to us at support@splitwise.com. Should you encounter any issues or wish to lodge a complaint, we encourage you to raise your concerns via the same email address, where our dedicated team stands ready to assist you.",
           style: GoogleFonts.poppins(fontSize: screenWidth * 0.04),
         ),
         actions: [

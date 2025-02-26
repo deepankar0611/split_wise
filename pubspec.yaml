@@ -41,7 +41,7 @@ dependencies:
   pdf:
   http:
   googleapis_auth:
-
+  flutter_spinkit: ^5.2.1
 
 
 dev_dependencies:
