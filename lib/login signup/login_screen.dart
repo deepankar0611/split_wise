@@ -5,6 +5,7 @@ import 'package:split_wise/bottom_bar.dart';
 import 'package:split_wise/login%20signup/sign_up.dart';
 import '../Home screen/home_screen.dart';
 import '../Helper/local.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPage extends StatefulWidget {
   LoginPage({Key? key, this.title}) : super(key: key);
@@ -19,37 +20,110 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
   Future<void> _signIn() async {
     try {
+      // Attempt to sign in with email and password
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      User? user = _auth.currentUser;
+      // Get the signed-in user
+      User? user = userCredential.user;
 
-      if (user != null && user.emailVerified) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Login Successful!")),
-        );
-        // Navigate to HomeScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  BottomBar()), // Ensure HomeScreen is imported
-        );
-      } else {
-        await _auth.signOut(); // Prevent access if email is not verified
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Please verify your email before logging in.")),
-        );
+      if (user != null) {
+        if (user.emailVerified) {
+          // Email is verified: Show success message and navigate
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 24),
+                  SizedBox(width: 10),
+                  Text(
+                    "Login Successful!",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green.shade700,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              behavior: SnackBarBehavior.floating,
+              elevation: 6,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => BottomBar()),
+          );
+        } else {
+          // Email not verified: Sign out and show verification message
+          await _auth.signOut();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Colors.white, size: 24),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Please verify your email before logging in.",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Color(0xFF1A2E39),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              behavior: SnackBarBehavior.floating,
+              elevation: 6,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } catch (e) {
+      // Login failed (e.g., wrong password, invalid email)
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login Failed: ${e.toString()}")),
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white, size: 24),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Login Failed: $e",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFF1A2E39),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          behavior: SnackBarBehavior.floating,
+          elevation: 6,
+          duration: Duration(seconds: 4),
+        ),
       );
     }
   }
@@ -64,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      await googleUser.authentication;
 
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -72,12 +146,92 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       final UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      await FirebaseAuth.instance.signInWithCredential(credential);
 
-      print("Google Sign-In Successful: ${userCredential.user?.email}");
+      User? user = userCredential.user;
+
+      if (user != null) {
+        String uid = user.uid;
+        final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+        Map<String, dynamic> userData = {
+          'name': user.displayName ?? 'User_$uid',
+          'email': user.email,
+          'profileImageUrl': user.photoURL,
+          'createdAt': FieldValue.serverTimestamp(),
+          'uid': uid,
+        };
+
+        await firestore.collection('users').doc(uid).set(
+          userData,
+          SetOptions(merge: true),
+        );
+
+        print("Google Sign-In Successful: ${user.email}");
+        print("User data saved to Firestore");
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 24),
+                SizedBox(width: 10),
+                Text(
+                  "Google Sign-In Successful!",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade700,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            behavior: SnackBarBehavior.floating,
+            elevation: 6,
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => BottomBar()),
+        );
+      }
+
       return userCredential;
     } catch (e, stackTrace) {
       print("Google Sign-In Failed: $e\n$stackTrace");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white, size: 24),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Google Sign-In Failed: $e",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFF1A2E39),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          behavior: SnackBarBehavior.floating,
+          elevation: 6,
+          duration: Duration(seconds: 4),
+        ),
+      );
       return null;
     }
   }
@@ -95,7 +249,7 @@ class _LoginPageState extends State<LoginPage> {
           SizedBox(height: 10),
           TextField(
             controller:
-                title == "Email id" ? _emailController : _passwordController,
+            title == "Email id" ? _emailController : _passwordController,
             obscureText: isPassword,
             decoration: InputDecoration(
               border: InputBorder.none,
@@ -110,7 +264,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _submitButton() {
     return GestureDetector(
-      onTap: _signIn, // Firebase login function
+      onTap: _signIn,
       child: Container(
         width: MediaQuery.of(context).size.width,
         padding: EdgeInsets.symmetric(vertical: 15),
@@ -167,10 +321,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _googleSignInButton() {
     return GestureDetector(
       onTap: () {
-        signInWithGoogle().then((value) {
-          Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (context) => BottomBar()));
-        });
+        signInWithGoogle();
       },
       child: Container(
         height: 50,

@@ -22,6 +22,7 @@ class ExpenseHistoryDetailedScreen extends StatefulWidget {
     this.isReceiver,
     required String showFilter,
     required String splitId,
+    required String sendFilter,
   });
 
   @override
@@ -602,7 +603,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
   Widget _buildFriendDetailCard(double screenWidth, double screenHeight) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: screenHeight * 0.015),
-      padding: EdgeInsets.all(screenWidth * 0.05), // Increased padding for breathing room
+      padding: EdgeInsets.all(screenWidth * 0.05),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.teal.shade700, Colors.teal.shade400],
@@ -612,13 +613,13 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         borderRadius: BorderRadius.circular(screenWidth * 0.05),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.15), // Softer shadow
+            color: Colors.grey.withOpacity(0.15),
             spreadRadius: 2,
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: Colors.grey.shade200, width: 1), // Subtle border
+        border: Border.all(color: Colors.grey.shade200, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,15 +627,22 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CircleAvatar(
-                radius: screenWidth * 0.09, // Slightly larger avatar
-                backgroundColor: Colors.grey.shade200,
-                foregroundImage: friendProfileImageUrl != null && friendProfileImageUrl!.isNotEmpty
-                    ? CachedNetworkImageProvider(friendProfileImageUrl!)
-                    : null,
-                child: friendProfileImageUrl == null || friendProfileImageUrl!.isEmpty
-                    ? Icon(Icons.person, size: screenWidth * 0.09, color: Colors.grey.shade600)
-                    : null,
+              GestureDetector(
+                onTap: () {
+                  if (friendProfileImageUrl != null && friendProfileImageUrl!.isNotEmpty) {
+                    _showFullImage(context, friendProfileImageUrl!, screenWidth);
+                  }
+                },
+                child: CircleAvatar(
+                  radius: screenWidth * 0.09,
+                  backgroundColor: Colors.grey.shade200,
+                  foregroundImage: friendProfileImageUrl != null && friendProfileImageUrl!.isNotEmpty
+                      ? CachedNetworkImageProvider(friendProfileImageUrl!)
+                      : null,
+                  child: friendProfileImageUrl == null || friendProfileImageUrl!.isEmpty
+                      ? Icon(Icons.person, size: screenWidth * 0.09, color: Colors.grey.shade600)
+                      : null,
+                ),
               ),
               SizedBox(width: screenWidth * 0.04),
               Expanded(
@@ -644,7 +652,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                     Text(
                       friendName ?? "Friend",
                       style: GoogleFonts.poppins(
-                        fontSize: screenWidth * 0.055, // Slightly larger for emphasis
+                        fontSize: screenWidth * 0.055,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                       ),
@@ -656,7 +664,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                         "Friends Since: $friendSinceDate",
                         style: GoogleFonts.poppins(
                           fontSize: screenWidth * 0.035,
-                          fontWeight: FontWeight.w400, // Lighter weight for secondary info
+                          fontWeight: FontWeight.w400,
                           color: Colors.white,
                         ),
                       ),
@@ -665,11 +673,11 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
               ),
             ],
           ),
-          SizedBox(height: screenHeight * 0.025), // Increased spacing
+          SizedBox(height: screenHeight * 0.025),
           Container(
             padding: EdgeInsets.all(screenWidth * 0.03),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50, // Light background for stats section
+              color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(screenWidth * 0.03),
             ),
             child: Row(
@@ -692,6 +700,37 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
           ),
         ],
       ),
+    );
+  }
+
+  void _showFullImage(BuildContext context, String imageUrl, double screenWidth) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (context) {
+        return GestureDetector(
+          onTap: () {
+            Navigator.pop(context);
+          },
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.all(screenWidth * 0.1),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              width: screenWidth * 0.6,
+              height: screenWidth * 0.6,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: CachedNetworkImageProvider(imageUrl),
+                  fit: BoxFit.cover,
+                ),
+                borderRadius: BorderRadius.circular(screenWidth * 0.05),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

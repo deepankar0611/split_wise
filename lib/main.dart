@@ -4,8 +4,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:split_wise/bottom_bar.dart';
+import 'package:split_wise/get_started.dart';
+import 'package:split_wise/login%20signup/login%20and%20signup.dart';
 import 'package:split_wise/login%20signup/login_screen.dart';
+import 'package:split_wise/login%20signup/splash_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'login signup/welcome.dart';
 //
 
 // FCM Background Handler
@@ -79,9 +84,9 @@ class MyApp extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasData) {
-            return BottomBar();
+            return SplashScreen();
           } else {
-            return LoginPage();
+            return SplashScreen();
           }
         },
       ),

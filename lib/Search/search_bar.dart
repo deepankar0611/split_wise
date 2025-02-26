@@ -85,10 +85,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
           ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white, size: screenWidth * 0.06),
-            onPressed: () => Navigator.pop(context),
-          ),
         ),
       ),
       body: Padding(

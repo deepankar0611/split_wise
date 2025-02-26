@@ -151,12 +151,17 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 bottom: screenHeight * 0.02,
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: screenWidth * 0.1,
-                      backgroundImage: profileImageUrl.isNotEmpty
-                          ? NetworkImage(profileImageUrl)
-                          : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
-                      backgroundColor: Colors.white,
+                    GestureDetector(
+                      onTap: () {
+                        _showFullImage(context, profileImageUrl, screenWidth);
+                      },
+                      child: CircleAvatar(
+                        radius: screenWidth * 0.1,
+                        backgroundImage: profileImageUrl.isNotEmpty
+                            ? NetworkImage(profileImageUrl)
+                            : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
+                        backgroundColor: Colors.white,
+                      ),
                     ),
                     SizedBox(width: screenWidth * 0.03),
                     Column(
@@ -191,6 +196,39 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFullImage(BuildContext context, String imageUrl, double screenWidth) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (context) {
+        return GestureDetector(
+          onTap: () {
+            Navigator.pop(context);
+          },
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.all(screenWidth * 0.1),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              width: screenWidth * 0.6,
+              height: screenWidth * 0.6,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: imageUrl.isNotEmpty
+                      ? NetworkImage(imageUrl)
+                      : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
+                  fit: BoxFit.cover,
+                ),
+                borderRadius: BorderRadius.circular(screenWidth * 0.05),
+              ),
+            ),
           ),
         );
       },
@@ -296,7 +334,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 title: "Expense History",
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ExpenseHistoryDetailedScreen(showFilter: '', splitId: '')),
+                  MaterialPageRoute(builder: (context) => ExpenseHistoryDetailedScreen(sendFilter: '', splitId: '', showFilter: '',)),
                 ),
                 iconColor: const Color(0xFF7B1FA2),
                 backgroundColor: Colors.white,

@@ -84,6 +84,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _refreshData() async {
+    await _fetchUserData();
+    // Adding a small delay to show the refresh indicator
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
   Stream<Map<String, Map<String, dynamic>>> _streamTotalPaidByCategory() {
     return FirebaseFirestore.instance
         .collection('splits')
@@ -136,102 +142,105 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF234567),
-      body: CustomScrollView(
-        controller: widget.scrollController,
-        slivers: <Widget>[
-          SliverAppBar(
-            pinned: true,
-            floating: false,
-            expandedHeight: screenHeight * 0.3,
-            backgroundColor: const Color(0xFF234567),
-            centerTitle: true,
-            title: Text(
-              'Settle Up',
-              style: GoogleFonts.lobster(
-                textStyle: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24.0,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 3.0,
-                      color: Colors.black26,
-                      offset: Offset(1.0, 1.0),
-                    ),
-                  ],
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        child: CustomScrollView(
+          controller: widget.scrollController,
+          slivers: <Widget>[
+            SliverAppBar(
+              pinned: true,
+              floating: false,
+              expandedHeight: screenHeight * 0.3,
+              backgroundColor: const Color(0xFF234567),
+              centerTitle: true,
+              title: Text(
+                'Settle Up',
+                style: GoogleFonts.lobster(
+                  textStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24.0,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 3.0,
+                        color: Colors.black26,
+                        offset: Offset(1.0, 1.0),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            flexibleSpace: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final collapseProgress = (screenHeight * 0.3 - constraints.biggest.height) / (screenHeight * 0.3 - kToolbarHeight);
-                final cardAnimationProgress = collapseProgress.clamp(0.0, 1.0);
+              flexibleSpace: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final collapseProgress = (screenHeight * 0.3 - constraints.biggest.height) / (screenHeight * 0.3 - kToolbarHeight);
+                  final cardAnimationProgress = collapseProgress.clamp(0.0, 1.0);
 
-                return FlexibleSpaceBar(
-                  background: Padding(
-                    padding: EdgeInsets.only(top: screenHeight * 0.12),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.03),
-                      child: Transform.translate(
-                        offset: Offset(0, cardAnimationProgress * screenHeight * 0.1),
-                        child: Transform.scale(
-                          scale: 1.0 - cardAnimationProgress * 0.2,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.015),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(screenWidth * 0.05),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.2),
-                                  spreadRadius: 1,
-                                  blurRadius: 7,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Expanded(child: _buildReceiveCard()),
-                                Expanded(child: _buildPayCard()),
-                              ],
+                  return FlexibleSpaceBar(
+                    background: Padding(
+                      padding: EdgeInsets.only(top: screenHeight * 0.12),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.03),
+                        child: Transform.translate(
+                          offset: Offset(0, cardAnimationProgress * screenHeight * 0.1),
+                          child: Transform.scale(
+                            scale: 1.0 - cardAnimationProgress * 0.2,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.015),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.2),
+                                    spreadRadius: 1,
+                                    blurRadius: 7,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Expanded(child: _buildReceiveCard()),
+                                  Expanded(child: _buildPayCard()),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-            leading: IconButton(
-              icon: CircleAvatar(
-                radius: screenWidth * 0.05,
-                backgroundImage: userData["profileImageUrl"] != null && (userData["profileImageUrl"] as String).isNotEmpty
-                    ? NetworkImage(userData["profileImageUrl"] as String)
-                    : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
-                backgroundColor: Colors.grey,
-              ),
-              onPressed: () {},
-            ),
-            actions: [
-              IconButton(
-                icon: Icon(LucideIcons.bell, color: Colors.white, size: screenWidth * 0.06),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const NotificationScreen()),
                   );
                 },
               ),
-            ],
-          ),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              _buildBodyCard(),
-            ]),
-          ),
-        ],
+              leading: IconButton(
+                icon: CircleAvatar(
+                  radius: screenWidth * 0.05,
+                  backgroundImage: userData["profileImageUrl"] != null && (userData["profileImageUrl"] as String).isNotEmpty
+                      ? NetworkImage(userData["profileImageUrl"] as String)
+                      : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
+                  backgroundColor: Colors.grey,
+                ),
+                onPressed: () {},
+              ),
+              actions: [
+                IconButton(
+                  icon: Icon(LucideIcons.bell, color: Colors.white, size: screenWidth * 0.06),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+            SliverList(
+              delegate: SliverChildListDelegate([
+                _buildBodyCard(),
+              ]),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -249,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context) => ExpenseHistoryDetailedScreen(
               isReceiver: true,
               showFilter: '',
-              splitId: '',
+              splitId: '', sendFilter: '',
             ),
           ),
         );
@@ -317,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
               isPayer: false,
               showFilter: '',
               splitId: '',
-              friendUid: '',
+              friendUid: '', sendFilter: '',
             ),
           ),
         );
@@ -396,6 +405,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // Remaining methods remain unchanged (_buildHistoryCardBox, _buildExclusiveFeatureCard, etc.)
+  // I'm omitting them here to keep the response concise, but they should remain as they were in your original code
 
   Widget _buildHistoryCardBox() {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -894,7 +906,7 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context) => ExpenseHistoryDetailedScreen(
               category: category,
               showFilter: '',
-              splitId: '',
+              splitId: '', sendFilter: '',
             ),
           ),
         );

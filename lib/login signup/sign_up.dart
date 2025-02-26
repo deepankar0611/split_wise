@@ -21,12 +21,19 @@ class _SignUpPageState extends State<SignUpPage> {
 
   Future<void> signUpUser(String email, String password, String name) async {
     try {
+      // Validate inputs before proceeding
+      if (email.isEmpty || password.isEmpty || name.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Please fill all fields")),
+        );
+        return;
+      }
+
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Get the user ID
       User? user = userCredential.user;
       if (user != null) {
         String uid = user.uid;
@@ -43,10 +50,43 @@ class _SignUpPageState extends State<SignUpPage> {
         if (!user.emailVerified) {
           await user.sendEmailVerification();
           print("Verification email sent!");
+
+          // Show alert dialog
+          if (mounted) { // Check if widget is still mounted
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text("Email Verification"),
+                  content: Text("Please check your email and verify your account."),
+                  actions: [
+                    TextButton(
+                      child: Text("OK"),
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close the dialog
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => LoginPage()),
+                        ); // Navigate to LoginPage
+                      },
+                    ),
+                  ],
+                );
+              },
+            );
+          } else {
+            print("Widget not mounted, dialog not shown");
+          }
         }
+      } else {
+        print("User is null after sign-up");
       }
     } catch (e) {
-      print("Error: $e");
+      print("Error during sign-up: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Sign Up Failed: $e")),
+      );
     }
   }
 
@@ -99,7 +139,7 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget _submitButton() {
     return GestureDetector(
       onTap: () {
-        signUpUser(_emailController.text, _passwordController.text, _usernameController.text);
+        signUpUser(_emailController.text.trim(), _passwordController.text.trim(), _usernameController.text.trim());
       },
       child: Container(
         width: MediaQuery.of(context).size.width,
@@ -128,7 +168,6 @@ class _SignUpPageState extends State<SignUpPage> {
       ),
     );
   }
-
 
   Widget _loginAccountLabel() {
     return InkWell(
@@ -179,7 +218,8 @@ class _SignUpPageState extends State<SignUpPage> {
           TextSpan(
             text: 'tle',
             style: TextStyle(color: Color(0xFF1A2E39), fontSize: 30),
-          ),TextSpan(
+          ),
+          TextSpan(
             text: 'up',
             style: TextStyle(color: Color(0xFF3C7986), fontSize: 30),
           ),

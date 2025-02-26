@@ -180,7 +180,7 @@ class _FriendsListState extends State<FriendsList> {
                           showFilter: '',
                           splitId: '',
                           isReceiver: false,
-                          isPayer: false,
+                          isPayer: false, sendFilter: '',
                         ),
                       ),
                     );

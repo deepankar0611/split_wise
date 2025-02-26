@@ -9,6 +9,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:split_wise/Home%20screen/upi%20payment.dart';
 
 import '../Helper/FCM Service.dart';
 
@@ -59,11 +60,11 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         }
         _calculateBalances();
       } else {
-        splitData = {}; // Initialize as empty map instead of null
+        splitData = {};
       }
     } catch (e) {
       print("⚠ Error fetching split data: $e");
-      splitData = {}; // Fallback to empty map on error
+      splitData = {};
     } finally {
       setState(() => _isLoading = false);
     }
@@ -74,10 +75,10 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       DocumentSnapshot userDoc =
       await FirebaseFirestore.instance.collection('users').doc(uid).get();
       return (userDoc.data() as Map<String, dynamic>?)?['profileImageUrl'] ??
-          'https://via.placeholder.com/150'; // Default placeholder URL
+          'https://via.placeholder.com/150';
     } catch (e) {
       print("Error fetching profile image URL for UID $uid: $e");
-      return 'https://via.placeholder.com/150'; // Fallback on error
+      return 'https://via.placeholder.com/150';
     }
   }
 
@@ -162,6 +163,48 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           content: Text("Failed to send reminder: $e", style: GoogleFonts.poppins()),
           backgroundColor: Colors.red.shade600,
         ),
+      );
+    }
+  }
+
+  Future<void> _settleSplit() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('splits')
+          .doc(widget.splitId)
+          .collection('settle')
+          .doc(userId)
+          .set({
+        'settled': true,
+        'timestamp': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(userId);
+      DocumentSnapshot userDoc = await userRef.get();
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>? ?? {};
+
+      double currentAmountToPay = (userData['amountToPay'] as num?)?.toDouble() ?? 0.0;
+      double currentAmountToReceive = (userData['amountToReceive'] as num?)?.toDouble() ?? 0.0;
+
+      if (totalPay > 0) {
+        double newAmountToPay = (currentAmountToPay - totalPay).clamp(0, double.infinity);
+        await userRef.update({'amountToPay': newAmountToPay});
+      } else if (totalReceive > 0) {
+        double newAmountToReceive = (currentAmountToReceive - totalReceive).clamp(0, double.infinity);
+        await userRef.update({'amountToReceive': newAmountToReceive});
+      }
+
+      setState(() {
+        _fetchSplitData();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Split settled successfully", style: GoogleFonts.poppins())),
+      );
+    } catch (e) {
+      print("Error settling split: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to settle split: $e", style: GoogleFonts.poppins())),
       );
     }
   }
@@ -252,6 +295,10 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     );
   }
 
+  bool _isUserInvolvedInTransactions() {
+    return splitData?['participants']?.contains(userId) ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -303,8 +350,10 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                                 mini: true,
                                 backgroundColor: const Color(0xFF234567),
                                 elevation: 4,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                child: Icon(Icons.picture_as_pdf, color: Colors.white, size: screenWidth * 0.05),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                                child: Icon(Icons.picture_as_pdf,
+                                    color: Colors.white, size: screenWidth * 0.05),
                                 tooltip: 'Generate PDF',
                               ),
                             ),
@@ -324,7 +373,9 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: (splitData != null && splitData!.isNotEmpty && splitData!['participants'].length > 1)
+      floatingActionButton: (splitData != null &&
+          splitData!.isNotEmpty &&
+          splitData!['participants'].length > 1)
           ? FloatingActionButton.extended(
         heroTag: "remindFab",
         onPressed: _sendReminder,
@@ -332,7 +383,8 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         elevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         icon: Icon(LucideIcons.bell, color: Colors.white, size: screenWidth * 0.06),
-        label: Text("Remind All", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+        label: Text("Remind All",
+            style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
       )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -577,8 +629,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     );
   }
 
-  Widget _buildSummaryRow(
-      double screenWidth, String label, String value, Color color, IconData iconData) {
+  Widget _buildSummaryRow(double screenWidth, String label, String value, Color color, IconData iconData) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: screenWidth * 0.015),
       child: Row(
@@ -612,35 +663,41 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
   }
 
   Widget _buildEnhancedSummaryRow(double screenWidth, String label, String value, Color color, IconData iconData) {
-    List<String> dateTimeParts = value.split(', ');
-    String datePart = dateTimeParts.isNotEmpty ? dateTimeParts[0] : "";
-    String timePart = dateTimeParts.length > 1 ? dateTimeParts[1] : "";
+    List<String> dateTimeParts = value.contains(', ') ? value.split(', ') : [value];
+    String mainPart = dateTimeParts.isNotEmpty ? dateTimeParts[0] : "";
+    String secondaryPart = dateTimeParts.length > 1 ? dateTimeParts[1] : "";
 
     return Padding(
       padding: EdgeInsets.symmetric(vertical: screenWidth * 0.015),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(iconData, color: const Color(0xFF234567), size: screenWidth * 0.045),
           SizedBox(width: screenWidth * 0.03),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-                fontSize: screenWidth * 0.038, color: color, fontWeight: FontWeight.w500),
+          Expanded(
+            flex: 1,
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                  fontSize: screenWidth * 0.038, color: color, fontWeight: FontWeight.w500),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          const Spacer(),
-          Flexible(
+          Expanded(
+            flex: 1,
             child: RichText(
               textAlign: TextAlign.right,
               text: TextSpan(
                 style: GoogleFonts.poppins(fontSize: screenWidth * 0.038, color: Colors.black87),
                 children: <TextSpan>[
-                  TextSpan(text: datePart, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  if (timePart.isNotEmpty)
-                    TextSpan(text: ', ', style: TextStyle(color: Colors.grey.shade700)),
-                  TextSpan(text: timePart, style: TextStyle(color: Colors.grey.shade700)),
+                  TextSpan(text: mainPart, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  if (secondaryPart.isNotEmpty)
+                    TextSpan(
+                      text: ', $secondaryPart',
+                      style: TextStyle(color: Colors.grey.shade700),
+                    ),
                 ],
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -678,7 +735,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                 String participantUid = participants[index];
                 double paidAmount = (paidBy[participantUid] as num?)?.toDouble() ?? 0.0;
                 double netAmount = sharePerPerson - paidAmount;
-                return _buildParticipantRow(screenWidth, participantUid, paidAmount, netAmount);
+                return _buildParticipantRow(screenWidth, screenHeight, participantUid, paidAmount, netAmount);
               },
             ),
           ],
@@ -687,7 +744,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     );
   }
 
-  Widget _buildParticipantRow(double screenWidth, String participantUid, double paidAmount, double netAmount) {
+  Widget _buildParticipantRow(double screenWidth, double screenHeight, String participantUid, double paidAmount, double netAmount) {
     return FutureBuilder<String>(
       future: _getUserName(participantUid),
       builder: (context, snapshot) {
@@ -695,55 +752,98 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Expanded(
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.grey.shade300,
+                    radius: screenWidth * 0.035,
+                    child: FutureBuilder<String?>(
+                      future: _getProfileImageUrl(participantUid),
+                      builder: (context, imageSnapshot) {
+                        if (imageSnapshot.connectionState == ConnectionState.done) {
+                          String? imageUrl = imageSnapshot.data;
+                          if (imageUrl != null && imageUrl.isNotEmpty) {
+                            return ClipOval(
+                              child: Image.network(
+                                imageUrl,
+                                width: screenWidth * 0.07,
+                                height: screenWidth * 0.07,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(LucideIcons.user,
+                                      size: screenWidth * 0.04, color: Colors.white);
+                                },
+                              ),
+                            );
+                          }
+                        }
+                        return Icon(LucideIcons.user, size: screenWidth * 0.04, color: Colors.white);
+                      },
+                    ),
+                  ),
+                  SizedBox(width: screenWidth * 0.03),
+                  Flexible(
+                    child: Text(
+                      userName,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(fontSize: screenWidth * 0.042, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: Colors.grey.shade300,
-                  radius: screenWidth * 0.035,
-                  child: FutureBuilder<String?>(
-                    future: _getProfileImageUrl(participantUid),
-                    builder: (context, imageSnapshot) {
-                      if (imageSnapshot.connectionState == ConnectionState.done) {
-                        String? imageUrl = imageSnapshot.data;
-                        if (imageUrl != null && imageUrl.isNotEmpty) {
-                          return ClipOval(
-                            child: Image.network(
-                              imageUrl,
-                              width: screenWidth * 0.07,
-                              height: screenWidth * 0.07,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(LucideIcons.user,
-                                    size: screenWidth * 0.04, color: Colors.white);
-                              },
-                            ),
-                          );
-                        }
-                      }
-                      return Icon(LucideIcons.user, size: screenWidth * 0.04, color: Colors.white);
-                    },
+                Text(
+                  netAmount == 0
+                      ? "Settled Up"
+                      : (netAmount > 0
+                      ? "-₹${netAmount.toStringAsFixed(2)}"
+                      : "+₹${(netAmount.abs()).toStringAsFixed(2)}"),
+                  style: GoogleFonts.poppins(
+                    fontSize: screenWidth * 0.04,
+                    fontWeight: FontWeight.w600,
+                    color: netAmount == 0
+                        ? Colors.green.shade600
+                        : (netAmount > 0 ? Colors.red.shade700 : Colors.green.shade700),
                   ),
                 ),
-                SizedBox(width: screenWidth * 0.03),
-                Text(
-                  userName,
-                  style: GoogleFonts.poppins(fontSize: screenWidth * 0.042, fontWeight: FontWeight.w500),
-                ),
+                if (participantUid != userId && netAmount > 0) ...[
+                  SizedBox(width: screenWidth * 0.03),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UPIPaymentScreen(
+                            splitId: widget.splitId,
+                            amountToPay: netAmount,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth * 0.02,
+                        vertical: screenHeight * 0.005,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF234567),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        "Pay Now",
+                        style: GoogleFonts.poppins(
+                          fontSize: screenWidth * 0.035,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ),
-            Text(
-              netAmount == 0
-                  ? "Settled Up"
-                  : (netAmount > 0
-                  ? "-₹${netAmount.toStringAsFixed(2)}"
-                  : "+₹${(netAmount.abs()).toStringAsFixed(2)}"),
-              style: GoogleFonts.poppins(
-                fontSize: screenWidth * 0.04,
-                fontWeight: FontWeight.w600,
-                color: netAmount == 0
-                    ? Colors.green.shade600
-                    : (netAmount > 0 ? Colors.red.shade700 : Colors.green.shade700),
-              ),
             ),
           ],
         );
@@ -765,12 +865,62 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildCardHeader(screenWidth, LucideIcons.list, "Transactions", null),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildCardHeader(screenWidth, LucideIcons.list, "Transactions", null),
+                _buildSettleButton(screenWidth, screenHeight),
+              ],
+            ),
             SizedBox(height: screenHeight * 0.02),
             _buildTransactionsList(screenWidth, screenHeight),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSettleButton(double screenWidth, double screenHeight) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('splits')
+          .doc(widget.splitId)
+          .collection('settle')
+          .doc(userId)
+          .snapshots(),
+      builder: (context, settleSnapshot) {
+        final isSplitSettled = settleSnapshot.data?.exists == true
+            ? (settleSnapshot.data!.get('settled') as bool? ?? false)
+            : false;
+        if (settleSnapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        return GestureDetector(
+          onTap: isSplitSettled || !_isUserInvolvedInTransactions() ? null : _settleSplit,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth * 0.03,
+              vertical: screenHeight * 0.01,
+            ),
+            decoration: BoxDecoration(
+              color: isSplitSettled || !_isUserInvolvedInTransactions()
+                  ? Colors.grey.shade300
+                  : const Color(0xFF234567),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              isSplitSettled ? "Settled" : "Settle",
+              style: GoogleFonts.poppins(
+                fontSize: screenWidth * 0.04,
+                fontWeight: FontWeight.w600,
+                color: isSplitSettled || !_isUserInvolvedInTransactions()
+                    ? Colors.grey.shade600
+                    : Colors.white,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
