@@ -69,13 +69,13 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.08),
+        preferredSize: Size.fromHeight(screenHeight * 0.06),
         child: AppBar(
           title: Text(
             "Find Friends",
             style: GoogleFonts.poppins(
               color: Colors.white,
-              fontSize: screenWidth * 0.055,
+              fontSize: screenWidth * 0.045,
               fontWeight: FontWeight.bold,
             ),
           ),

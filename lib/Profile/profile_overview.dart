@@ -66,14 +66,14 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.08), // 8% of screen height
+        preferredSize: Size.fromHeight(screenHeight * 0.06), // 8% of screen height
         child: AppBar(
           title: Text(
             "Profile Overview",
             style: GoogleFonts.poppins(
               color: Colors.white,
-              fontWeight: FontWeight.w500,
-              fontSize: screenWidth * 0.055, // Responsive font size
+              fontWeight: FontWeight.bold,
+              fontSize: screenWidth * 0.045, // Responsive font size
             ),
           ),
           backgroundColor: const Color(0xFF234567),
@@ -283,7 +283,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return SizedBox(
-      height: screenHeight * 0.4, // 40% of screen height to accommodate 5 items
+      height: screenHeight * 0.5, // 40% of screen height to accommodate 5 items
       child: ListView.builder(
         itemCount: 5,
         itemBuilder: (context, index) {

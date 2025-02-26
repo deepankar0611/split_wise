@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:split_wise/Home%20screen/notification.dart';
@@ -8,9 +9,9 @@ import 'package:split_wise/Home%20screen/spendanalyser.dart';
 import 'package:split_wise/Profile/all%20expense%20history%20detals.dart';
 import 'package:split_wise/Home%20screen/split%20details.dart';
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.scrollController});
-
   final ScrollController scrollController;
 
   @override
@@ -142,17 +143,34 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverAppBar(
             pinned: true,
             floating: false,
-            expandedHeight: screenHeight * 0.3, // 30% of screen height
+            expandedHeight: screenHeight * 0.3,
             backgroundColor: const Color(0xFF234567),
+            centerTitle: true,
+            title: Text(
+              'Settle Up',
+              style: GoogleFonts.lobster(
+                 textStyle: TextStyle( // Removed redundant TextStyle constructor and added const
+                  color: Colors.white,
+                  fontSize: 24.0, // Adjust font size for stylish fonts
+                  shadows: [
+                    Shadow(
+                      blurRadius: 3.0,
+                      color: Colors.black26,
+                      offset: Offset(1.0, 1.0),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             flexibleSpace: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final collapseProgress = (screenHeight * 0.3 - constraints.biggest.height) / (screenHeight * 0.3 - kToolbarHeight);
                 final cardAnimationProgress = collapseProgress.clamp(0.0, 1.0);
 
                 return FlexibleSpaceBar(
-                  titlePadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenHeight * 0.08),
+                  titlePadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenHeight * 0.08), // Padding for FlexibleSpaceBar title (not used now)
                   background: Padding(
-                    padding: EdgeInsets.only(top: screenHeight * 0.12), // Adjusted dynamically
+                    padding: EdgeInsets.only(top: screenHeight * 0.12),
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.03),
                       child: Transform.translate(
@@ -190,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             leading: IconButton(
               icon: CircleAvatar(
-                radius: screenWidth * 0.05, // 5% of screen width
+                radius: screenWidth * 0.05,
                 backgroundImage: userData["profileImageUrl"].isNotEmpty
                     ? NetworkImage(userData["profileImageUrl"])
                     : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,

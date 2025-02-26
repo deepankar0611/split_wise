@@ -117,13 +117,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: PreferredSize(
         preferredSize:
-            Size.fromHeight(screenHeight * 0.08), // 8% of screen height
+            Size.fromHeight(screenHeight * 0.06), // 8% of screen height
         child: AppBar(
           title: Text(
             "Add Expense",
             style: TextStyle(
               color: Colors.white,
-              fontSize: screenWidth * 0.055, // Responsive font size
+              fontSize: screenWidth * 0.045, // Responsive font size
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
             ),

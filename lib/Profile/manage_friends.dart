@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import 'all expense history detals.dart'; // Ensure this import matches your file name
+import 'all expense history detals.dart'; // Ensure this matches your file name
 
 class FriendsList extends StatefulWidget {
   const FriendsList({super.key});
@@ -17,6 +17,7 @@ class FriendsList extends StatefulWidget {
 class _FriendsListState extends State<FriendsList> {
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
   Map<String, Map<String, String>> friendDetails = {};
+  bool isLoading = true; // Add loading state
 
   @override
   void initState() {
@@ -26,6 +27,10 @@ class _FriendsListState extends State<FriendsList> {
 
   Future<void> _fetchFriendDetails() async {
     try {
+      setState(() {
+        isLoading = true; // Show loading initially
+      });
+
       QuerySnapshot friendsSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
@@ -36,38 +41,52 @@ class _FriendsListState extends State<FriendsList> {
 
       for (String uid in friendUids) {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        var data = userDoc.data() as Map<String, dynamic>?;
-        friendDetails[uid] = {
-          "name": data?['name'] ?? "Unknown ($uid)",
-          "profileImageUrl": data?.containsKey('profileImageUrl') ?? false ? data!['profileImageUrl'] : "",
-        };
+        if (userDoc.exists) { // Check if the document exists
+          var data = userDoc.data() as Map<String, dynamic>?;
+          friendDetails[uid] = {
+            "name": data?['name'] ?? "Unknown ($uid)",
+            "profileImageUrl": data?['profileImageUrl'] ?? "",
+          };
+        } else {
+          friendDetails[uid] = {
+            "name": "User Not Found ($uid)",
+            "profileImageUrl": "",
+          };
+        }
       }
-      if (mounted) setState(() {});
     } catch (e) {
       print("Error fetching friend details: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load friends: $e")),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false; // Hide loading when done
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get screen dimensions
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.08), // 8% of screen height
+        preferredSize: Size.fromHeight(screenHeight * 0.06),
         child: AppBar(
           title: Text(
             "My Friends",
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontWeight: FontWeight.w500,
-              fontSize: screenWidth * 0.055, // Responsive font size
+              fontSize: screenWidth * 0.045,
             ),
           ),
-          backgroundColor: const Color(0xFF234567),
+          backgroundColor: const Color(0xFF234567), // Kept the AppBar color as it is not teal
           elevation: 4,
           centerTitle: true,
           shape: RoundedRectangleBorder(
@@ -79,7 +98,9 @@ class _FriendsListState extends State<FriendsList> {
           ),
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
+      body: isLoading
+          ? Center(child: CircularProgressIndicator(color: Colors.grey)) // Changed loading indicator to grey for visibility on white
+          : StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
@@ -87,7 +108,7 @@ class _FriendsListState extends State<FriendsList> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator(color: Colors.teal));
+            return Center(child: CircularProgressIndicator(color: Colors.grey)); // Changed loading indicator to grey for visibility on white
           }
           if (snapshot.hasError) {
             return Center(
@@ -116,8 +137,8 @@ class _FriendsListState extends State<FriendsList> {
 
           return Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.04, // 4% of screen width
-              vertical: screenHeight * 0.02, // 2% of screen height
+              horizontal: screenWidth * 0.04,
+              vertical: screenHeight * 0.02,
             ),
             child: ListView.builder(
               itemCount: friends.length,
@@ -140,27 +161,19 @@ class _FriendsListState extends State<FriendsList> {
                           isPayer: false,
                         ),
                       ),
-                    ).then((value) {
-                      print("Returned from ExpenseHistoryDetailedScreen");
-                    }).catchError((error) {
-                      print("Navigation error: $error");
-                    });
+                    );
                   },
                   child: FadeInUp(
                     delay: Duration(milliseconds: 100 * index),
                     child: Card(
-                      elevation: screenWidth * 0.015, // Responsive elevation
+                      elevation: 0, // Removed shadow for white background
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(screenWidth * 0.04),
                       ),
-                      shadowColor: Colors.teal.withOpacity(0.3),
+                      shadowColor: Colors.transparent, // Removed shadow for white background
                       child: Container(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.white, Colors.teal.shade50],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: Colors.white, // Changed container background to white
                           borderRadius: BorderRadius.circular(screenWidth * 0.04),
                         ),
                         child: ListTile(
@@ -169,8 +182,8 @@ class _FriendsListState extends State<FriendsList> {
                             vertical: screenHeight * 0.01,
                           ),
                           leading: CircleAvatar(
-                            radius: screenWidth * 0.06, // 6% of screen width
-                            backgroundColor: Colors.teal.shade100,
+                            radius: screenWidth * 0.06,
+                            backgroundColor: Colors.white, // Changed CircleAvatar background to white
                             foregroundImage: profileImageUrl.isNotEmpty
                                 ? CachedNetworkImageProvider(profileImageUrl)
                                 : null,
@@ -179,7 +192,7 @@ class _FriendsListState extends State<FriendsList> {
                               friendName.isNotEmpty ? friendName[0].toUpperCase() : "U",
                               style: TextStyle(
                                 fontSize: screenWidth * 0.05,
-                                color: Colors.teal.shade900,
+                                color: Colors.black87, // Changed text color in CircleAvatar to black
                                 fontWeight: FontWeight.bold,
                               ),
                             )
@@ -188,15 +201,15 @@ class _FriendsListState extends State<FriendsList> {
                           title: Text(
                             friendName,
                             style: GoogleFonts.poppins(
-                              fontSize: screenWidth * 0.045, // Responsive font size
+                              fontSize: screenWidth * 0.045,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: Colors.black87, // Changed title text color to black
                             ),
                           ),
                           trailing: Icon(
                             Icons.person,
-                            color: Colors.teal.shade700,
-                            size: screenWidth * 0.07, // Responsive icon size
+                            color: Colors.black, // Kept the icon color as teal
+                            size: screenWidth * 0.07,
                           ),
                         ),
                       ),

@@ -113,7 +113,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.08), // 8% of screen height
+        preferredSize: Size.fromHeight(screenHeight * 0.06), // 8% of screen height
         child: AppBar(
           backgroundColor: Color(0xFF234567),
           elevation: 0,
@@ -122,7 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              fontSize: screenWidth * 0.05, // Responsive font size
+              fontSize: screenWidth * 0.045, // Responsive font size
             ),
           ),
           centerTitle: true,
@@ -235,35 +235,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       keyboardType: TextInputType.phone,
                       fontSize: screenWidth * 0.04,
                     ),
-                    SizedBox(height: screenHeight * 0.04),
+                    SizedBox(height: screenHeight * 0.02),
                     CupertinoButton(
                       padding: EdgeInsets.symmetric(
-                        vertical: screenHeight * 0.02,
-                        horizontal: screenWidth * 0.03,
+                        vertical: screenHeight * 0.015, // Reduced vertical padding (from 0.02 to 0.015)
+                        horizontal: screenWidth * 0.02,  // Slightly increased horizontal padding (from 0.01 to 0.02)
                       ),
                       color: const Color(0xFF234567),
+                      borderRadius: BorderRadius.circular(screenWidth * 0.03), // Added border radius for slightly rounded corners
                       onPressed: _saveProfile,
-                      child: RichText(
-                        text: TextSpan(
-                          text: 'Save ',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.045,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: 'Update',
-                              style: TextStyle(
-                                fontSize: screenWidth * 0.045,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                      child: Container( // Wrapped with Container to add shadow
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26.withOpacity(0.3), // Subtle shadow
+                              spreadRadius: 0.5,
+                              blurRadius: 5,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
+                        padding: EdgeInsets.zero, // Reset padding to avoid double padding
+                        child: RichText(
+                          text: TextSpan(
+                            text: 'Save ',
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.04, // Slightly smaller font size (from 0.045 to 0.04)
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Update',
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.04, // Slightly smaller font size (from 0.045 to 0.04)
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    )
                   ],
                 ),
               );

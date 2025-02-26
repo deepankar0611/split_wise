@@ -121,93 +121,67 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final bottomBarHeight = screenHeight * 0.1; // Increased to 10% to avoid overflow
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          AnimatedBuilder(
-            animation: _animation,
-            builder: (context, child) {
-              return IndexedStack(
-                index: _selectedIndex,
-                children: _screens.map((widget) {
-                  final isCurrent = _screens.indexOf(widget) == _selectedIndex;
-                  return AnimatedBuilder(
-                    animation: _animation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: isCurrent ? 1.0 : (1.0 - _animation.value * 0.1),
-                        child: Opacity(
-                          opacity: isCurrent ? 1.0 : (1.0 - _animation.value),
-                          child: Transform.translate(
-                            offset: Offset(0, _animation.value * (isCurrent ? -10 : 10)),
-                            child: widget,
-                          ),
-                        ),
-                      );
-                    },
+      backgroundColor: Colors.white,
+      body: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          return IndexedStack(
+            index: _selectedIndex,
+            children: _screens.map((widget) {
+              final isCurrent = _screens.indexOf(widget) == _selectedIndex;
+              return AnimatedBuilder(
+                animation: _animation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: isCurrent ? 1.0 : (1.0 - _animation.value * 0.1),
+                    child: Opacity(
+                      opacity: isCurrent ? 1.0 : (1.0 - _animation.value),
+                      child: Transform.translate(
+                        offset: Offset(0, _animation.value * (isCurrent ? -10 : 10)),
+                        child: widget,
+                      ),
+                    ),
                   );
-                }).toList(),
+                },
               );
-            },
+            }).toList(),
+          );
+        },
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        selectedItemColor: const Color(0xFF1A2E39),
+        unselectedItemColor: Colors.grey[400],
+        selectedFontSize: screenWidth * 0.03,
+        unselectedFontSize: screenWidth * 0.025,
+        iconSize: screenWidth * 0.06,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.home, color: Color(0xFF0288D1)),
+            activeIcon: Icon(CupertinoIcons.home, color: Color(0xFF1A2E39)),
+            label: '',
           ),
-          // Bottom Navigation Bar positioned at the bottom
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            bottom: _isBottomBarVisible ? 0 : -bottomBarHeight,
-            left: 0,
-            right: 0,
-            height: bottomBarHeight,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: screenWidth * 0.025,
-                    offset: Offset(0, -screenWidth * 0.005),
-                  ),
-                ],
-              ),
-              child: BottomNavigationBar(
-                currentIndex: _selectedIndex,
-                onTap: _onItemTapped,
-                type: BottomNavigationBarType.fixed,
-                backgroundColor: Colors.transparent,
-                elevation: 0, // Elevation handled by container
-                selectedItemColor: const Color(0xFF1A2E39),
-                unselectedItemColor: Colors.grey[400],
-                selectedFontSize: screenWidth * 0.03,
-                unselectedFontSize: screenWidth * 0.025,
-                iconSize: screenWidth * 0.06,
-                items: [
-                  BottomNavigationBarItem(
-                    icon: Icon(CupertinoIcons.home, color: const Color(0xFF0288D1)),
-                    activeIcon: Icon(CupertinoIcons.home, color: const Color(0xFF1A2E39)),
-                    label: '',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(CupertinoIcons.search, color: const Color(0xFF7B1FA2)),
-                    activeIcon: Icon(CupertinoIcons.search, color: const Color(0xFF1A2E39)),
-                    label: '',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(CupertinoIcons.add_circled, color: const Color(0xFFD81B60)),
-                    activeIcon: Icon(CupertinoIcons.add_circled, color: const Color(0xFF1A2E39)),
-                    label: '',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(CupertinoIcons.profile_circled, color: const Color(0xFF00897B)),
-                    activeIcon: Icon(CupertinoIcons.profile_circled, color: const Color(0xFF1A2E39)),
-                    label: '',
-                  ),
-                ],
-              ),
-            ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.search, color: Color(0xFF7B1FA2)),
+            activeIcon: Icon(CupertinoIcons.search, color: Color(0xFF1A2E39)),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.add_circled, color: Color(0xFFD81B60)),
+            activeIcon: Icon(CupertinoIcons.add_circled, color: Color(0xFF1A2E39)),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF00897B)),
+            activeIcon: Icon(CupertinoIcons.profile_circled, color: Color(0xFF1A2E39)),
+            label: '',
           ),
         ],
       ),

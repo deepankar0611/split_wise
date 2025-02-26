@@ -253,7 +253,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFF234567),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.grey))
           : splitData == null
