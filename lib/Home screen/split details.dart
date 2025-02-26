@@ -286,7 +286,25 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        FadeInUp(child: _buildSummaryCard(screenWidth, screenHeight)),
+                        Stack( // Stack to position PDF button
+                          children: [
+                            FadeInUp(child: _buildSummaryCard(screenWidth, screenHeight)),
+                            Positioned(
+                              right: 10,
+                              top: 10,
+                              child: FloatingActionButton(
+                                heroTag: "generatePdfFab", // Unique tag
+                                onPressed: _generatePdf,
+                                mini: true, // Make it a smaller FAB
+                                backgroundColor: const Color(0xFF234567),
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                child: Icon(Icons.picture_as_pdf, color: Colors.white, size: screenWidth * 0.05),
+                                tooltip: 'Generate PDF',
+                              ),
+                            ),
+                          ],
+                        ),
                         SizedBox(height: screenHeight * 0.02),
                         FadeInUp(child: _buildParticipantsCard(screenWidth, screenHeight)),
                         SizedBox(height: screenHeight * 0.02),
@@ -301,29 +319,16 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: "generatePdfFab", // Unique tag
-            onPressed: _generatePdf,
-            backgroundColor: const Color(0xFF234567),
-            elevation: 6,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            child: Icon(Icons.picture_as_pdf, color: Colors.white, size: screenWidth * 0.06),
-            tooltip: 'Generate PDF',
-          ),
-          SizedBox(height: screenHeight * 0.015),
-          FloatingActionButton(
-            heroTag: "refreshFab", // Unique tag
-            onPressed: _fetchSplitData,
-            backgroundColor: const Color(0xFF234567),
-            elevation: 6,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            child: Icon(LucideIcons.refreshCw, color: Colors.white, size: screenWidth * 0.06),
-          ),
-        ],
-      ),
+      floatingActionButton:  splitData!['participants'].length > 1 ? FloatingActionButton.extended(
+        heroTag: "remindFab",
+        onPressed: _sendReminder,
+        backgroundColor: const Color(0xFF234567),
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        icon: Icon(LucideIcons.bell, color: Colors.white, size: screenWidth * 0.06),
+        label: Text("Remind All", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+      ) : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -331,12 +336,29 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     return SliverAppBar(
       pinned: true,
       floating: false,
-      expandedHeight: screenHeight * 0.28,
-      backgroundColor: Colors.white,
+      expandedHeight: screenHeight * 0.25, // Reduced expanded height
+      backgroundColor: Color(0xFF234567),
+      centerTitle: true,
+      title: Text(
+        'Settle Up',
+        style: GoogleFonts.lobster(
+          textStyle: TextStyle( // Removed redundant TextStyle constructor and added const
+            color: Colors.white,
+            fontSize: 24.0, // Adjust font size for stylish fonts
+            shadows: [
+              Shadow(
+                blurRadius: 3.0,
+                color: Colors.black26,
+                offset: Offset(1.0, 1.0),
+              ),
+            ],
+          ),
+        ),
+      ),
       flexibleSpace: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final collapseProgress =
-              (screenHeight * 0.28 - constraints.biggest.height) / (screenHeight * 0.28 - kToolbarHeight);
+              (screenHeight * 0.22 - constraints.biggest.height) / (screenHeight * 0.22 - kToolbarHeight);
           final cardAnimationProgress = collapseProgress.clamp(0.0, 1.0);
 
           return FlexibleSpaceBar(
@@ -351,9 +373,9 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                     vertical: screenHeight * 0.01,
                   ),
                   child: Transform.translate(
-                    offset: Offset(0, cardAnimationProgress * screenHeight * 0.06),
+                    offset: Offset(0, cardAnimationProgress * screenHeight * 0.04), // Reduced offset
                     child: Transform.scale(
-                      scale: 1.0 - cardAnimationProgress * 0.1,
+                      scale: 1.0 - cardAnimationProgress * 0.05, // Reduced scale
                       child: _buildTotalAmountCard(screenWidth, screenHeight),
                     ),
                   ),
@@ -371,55 +393,106 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
   }
 
   Widget _buildTotalAmountCard(double screenWidth, double screenHeight) {
-    return Card(
-      elevation: 12,
-      shadowColor: Colors.grey.shade200.withOpacity(0.5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.05)),
-      color: Colors.white,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(screenWidth * 0.025), // Further reduced corner radius
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300.withOpacity(0.6),
+            spreadRadius: 1,
+            blurRadius: 6,    // Further reduced blur radius
+            offset: const Offset(0, 3), // Further reduced offset
+          ),
+        ],
+        gradient: LinearGradient(
+          colors: [Colors.white, Colors.grey.shade50],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.02),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Total Amount",
-                style: TextStyle(fontSize: screenWidth * 0.04, color: Colors.grey.shade700),
-              ),
-              Text(
+        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.015, vertical: screenHeight * 0.0045), // Further reduced padding
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.analytics_outlined, color: const Color(0xFF234567), size: screenWidth * 0.04), // Further reduced icon size
+                SizedBox(width: screenWidth * 0.01),
+                Flexible(
+                  child: Text(
+                    "Total Amount",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: screenWidth * 0.035, // Further reduced font size
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: screenHeight * 0.005), // Further reduced SizedBox height
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
                 "₹${(splitData!['totalAmount'] as num?)?.toStringAsFixed(2) ?? '0.00'}",
-                style: TextStyle(
-                  fontSize: screenWidth * 0.07,
+                style: GoogleFonts.poppins(
+                  fontSize: screenWidth * 0.055, // Further reduced amount font size
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: const Color(0xFF234567),
                 ),
               ),
-              SizedBox(height: screenHeight * 0.005),
-              Row(
+            ),
+            SizedBox(height: screenHeight * 0.01), // Further reduced SizedBox height
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01), // Further reduced padding
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Column(
-                    children: [
-                      Text("Pay", style: TextStyle(fontSize: screenWidth * 0.035, color: Colors.red.shade700)),
-                      Text("₹${totalPay.toStringAsFixed(2)}",
-                          style: TextStyle(fontSize: screenWidth * 0.035, fontWeight: FontWeight.w600)),
-                    ],
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.arrow_upward, color: Colors.red.shade700, size: screenWidth * 0.04), // Further reduced icon size
+                        Text("Pay",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(fontSize: screenWidth * 0.028, color: Colors.red.shade700)), // Further reduced font size
+                        Text("₹${totalPay.toStringAsFixed(2)}",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(fontSize: screenWidth * 0.03, fontWeight: FontWeight.w600)), // Further reduced font size
+                      ],
+                    ),
                   ),
-                  Container(height: screenHeight * 0.03, child: VerticalDivider(color: Colors.grey.shade300)),
-                  Column(
-                    children: [
-                      Text("Receive",
-                          style: TextStyle(fontSize: screenWidth * 0.035, color: Colors.green.shade700)),
-                      Text("₹${totalReceive.toStringAsFixed(2)}",
-                          style: TextStyle(fontSize: screenWidth * 0.035, fontWeight: FontWeight.w600)),
-                    ],
+                  Container(
+                    height: screenHeight * 0.025, // Further reduced height
+                    decoration: BoxDecoration(
+                      border: Border(left: BorderSide(color: Colors.grey.shade300, width: 0.8)), // Further reduced border width
+                    ),
+                  ),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.arrow_downward, color: Colors.green.shade700, size: screenWidth * 0.04), // Further reduced icon size
+                        Text("Receive",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(fontSize: screenWidth * 0.028, color: Colors.green.shade700)), // Further reduced font size
+                        Text("₹${totalReceive.toStringAsFixed(2)}",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(fontSize: screenWidth * 0.03, fontWeight: FontWeight.w600)), // Further reduced font size
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -435,95 +508,87 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     int participantCount = (splitData!['participants'] as List<dynamic>).length;
     double amountPerPerson = totalAmount / participantCount;
 
-    return Card(
-      elevation: 8,
-      shadowColor: Colors.grey.shade200.withOpacity(0.3),
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(screenWidth * 0.06),
-          bottomRight: Radius.circular(screenWidth * 0.06),
+    return Container( // Changed to Container for gradient background
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+        gradient: LinearGradient( // Subtle gradient for background
+          colors: [Colors.white, Colors.grey.shade50],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        boxShadow: [ // Refined shadow
+          BoxShadow(
+            color: Colors.grey.shade200.withOpacity(0.4),
+            spreadRadius: 1,
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(screenWidth * 0.04),
+        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenHeight * 0.025), // Adjusted padding
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _buildCardHeader(screenWidth, LucideIcons.info, "Summary", null),
-            SizedBox(height: screenWidth * 0.03),
-            _buildSummaryRow(
-                screenWidth, "Category", splitData!['category'] ?? "Others", Colors.grey.shade600, LucideIcons.tag),
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
-              child: _buildEnhancedSummaryRow(
-                  screenWidth, "Created By", userNames[splitData!['createdBy']] ?? "Unknown", LucideIcons.user),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
-              child: _buildEnhancedSummaryRow(screenWidth, "Date", formattedDate, LucideIcons.calendar),
-            ),
-            _buildSummaryRow(
-                screenWidth, "Participants", "$participantCount", Colors.grey.shade600, LucideIcons.users),
-            _buildSummaryRow(screenWidth, "Amount Per Person", "₹${amountPerPerson.toStringAsFixed(2)}",
-                Colors.grey.shade600, LucideIcons.dollarSign),
-            SizedBox(height: screenWidth * 0.03),
-            Center(child: _buildSendReminderButton(screenWidth)),
+            _buildCardHeader(screenWidth, LucideIcons.info, "Split Summary", const Color(0xFF234567)), // Branded header color
+            SizedBox(height: screenHeight * 0.015), // Adjusted spacing
+
+            _buildSummaryRow(screenWidth, "Category", splitData!['category'] ?? "Others",
+                const Color(0xFF757575), LucideIcons.tag), // Muted label color
+            SizedBox(height: screenHeight * 0.01),
+
+            _buildEnhancedSummaryRow(screenWidth, "Created By", userNames[splitData!['createdBy']] ?? "Unknown",
+                const Color(0xFF757575), LucideIcons.user), // Muted label color
+            SizedBox(height: screenHeight * 0.01),
+
+            _buildEnhancedSummaryRow(screenWidth, "Date", formattedDate,
+                const Color(0xFF757575), LucideIcons.calendar), // Muted label color
+            SizedBox(height: screenHeight * 0.01),
+
+            _buildSummaryRow(screenWidth, "Participants", "$participantCount",
+                const Color(0xFF757575), LucideIcons.users), // Muted label color
+            SizedBox(height: screenHeight * 0.01),
+
+            _buildSummaryRow(screenWidth, "Per Person", "₹${amountPerPerson.toStringAsFixed(2)}",
+                const Color(0xFF757575), LucideIcons.dollarSign), // Muted label color
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSendReminderButton(double screenWidth) {
-    return GestureDetector(
-      onTap: splitData!['participants'].length > 1 ? _sendReminder : null,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenWidth * 0.02),
-        decoration: BoxDecoration(
-          color: const Color(0xFF234567),
-          borderRadius: BorderRadius.circular(screenWidth * 0.03),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade200.withOpacity(0.5),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+  Widget _buildCardHeader(double screenWidth, IconData iconData, String title, Color? iconColor) {
+    return Row(
+      children: [
+        Icon(iconData, size: screenWidth * 0.06, color: iconColor ?? Colors.grey.shade700), // Conditional icon color
+        SizedBox(width: screenWidth * 0.02),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: screenWidth * 0.05,
+            fontWeight: FontWeight.w700, // More prominent header
+            color: Colors.black87,
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.bell, color: Colors.white, size: screenWidth * 0.05),
-            SizedBox(width: screenWidth * 0.015),
-            Text(
-              "Send Reminder",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: screenWidth * 0.04,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
+
 
   Widget _buildSummaryRow(
       double screenWidth, String label, String value, Color color, IconData iconData) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: screenWidth * 0.02),
+      padding: EdgeInsets.symmetric(vertical: screenWidth * 0.015), // Reduced vertical padding
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(iconData, color: Colors.grey.shade500, size: screenWidth * 0.05),
-          SizedBox(width: screenWidth * 0.02),
+          Icon(iconData, color: const Color(0xFF234567), size: screenWidth * 0.045), // Branded icon color, smaller size
+          SizedBox(width: screenWidth * 0.03), // Adjusted spacing
           Expanded(
             flex: 1,
             child: Text(
               label,
-              style: TextStyle(fontSize: screenWidth * 0.04, color: color, fontWeight: FontWeight.w500),
+              style: GoogleFonts.poppins(fontSize: screenWidth * 0.038, color: color, fontWeight: FontWeight.w500), // Smaller label font
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -531,13 +596,13 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
             flex: 1,
             child: Text(
               value,
-              style: TextStyle(
-                fontSize: screenWidth * 0.04,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.poppins(
+                fontSize: screenWidth * 0.038, // Smaller value font
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
               ),
               overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
             ),
           ),
         ],
@@ -545,242 +610,173 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     );
   }
 
-  Widget _buildEnhancedSummaryRow(double screenWidth, String label, String value, IconData iconData) {
+  Widget _buildEnhancedSummaryRow(double screenWidth, String label, String value, Color color, IconData iconData) {
     List<String> dateTimeParts = value.split(', ');
     String datePart = dateTimeParts.isNotEmpty ? dateTimeParts[0] : "";
     String timePart = dateTimeParts.length > 1 ? dateTimeParts[1] : "";
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(iconData, color: Colors.grey.shade500, size: screenWidth * 0.05),
-        SizedBox(width: screenWidth * 0.02),
-        Text(
-          label,
-          style: TextStyle(
-              fontSize: screenWidth * 0.04, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
-        ),
-        const Spacer(),
-        Flexible(
-          child: RichText(
-            textAlign: TextAlign.right,
-            text: TextSpan(
-              style: TextStyle(fontSize: screenWidth * 0.04, color: Colors.black87),
-              children: <TextSpan>[
-                TextSpan(text: datePart, style: const TextStyle(fontWeight: FontWeight.w600)),
-                if (timePart.isNotEmpty)
-                  TextSpan(text: ', ', style: TextStyle(color: Colors.grey.shade700)),
-                TextSpan(text: timePart, style: TextStyle(color: Colors.grey.shade700)),
-              ],
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: screenWidth * 0.015), // Reduced vertical padding
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(iconData, color: const Color(0xFF234567), size: screenWidth * 0.045), // Branded icon color, smaller size
+          SizedBox(width: screenWidth * 0.03), // Adjusted spacing
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+                fontSize: screenWidth * 0.038, color: color, fontWeight: FontWeight.w500), // Smaller label font
+          ),
+          const Spacer(),
+          Flexible(
+            child: RichText(
+              textAlign: TextAlign.right,
+              text: TextSpan(
+                style: GoogleFonts.poppins(fontSize: screenWidth * 0.038, color: Colors.black87), // Smaller RichText font
+                children: <TextSpan>[
+                  TextSpan(text: datePart, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  if (timePart.isNotEmpty)
+                    TextSpan(text: ', ', style: TextStyle(color: Colors.grey.shade700)),
+                  TextSpan(text: timePart, style: TextStyle(color: Colors.grey.shade700)),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+
 
   Widget _buildParticipantsCard(double screenWidth, double screenHeight) {
+    List<dynamic> participants = splitData!['participants'] as List<dynamic>;
     Map<String, dynamic> paidBy = splitData!['paidBy'] as Map<String, dynamic>? ?? {};
-    List<String> participants = List<String>.from(splitData!['participants']);
+    double totalAmount = (splitData!['totalAmount'] as num).toDouble();
+    double sharePerPerson = totalAmount / participants.length;
 
     return Card(
-      elevation: 10,
-      shadowColor: Colors.grey.shade200.withOpacity(0.4),
-      color: Colors.grey.shade200,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.05)),
+      elevation: 4,
+      shadowColor: Colors.grey.shade200.withOpacity(0.3),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+      ),
       child: Padding(
-        padding: EdgeInsets.all(screenWidth * 0.04),
+        padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.05, vertical: screenHeight * 0.02),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildCardHeader(screenWidth, LucideIcons.users, "Participants", null),
-            SizedBox(height: screenWidth * 0.03),
-            ...participants.asMap().entries.map((entry) {
-              int index = entry.key;
-              String uid = entry.value;
-              return FutureBuilder<String?>(
-                future: _getProfileImageUrl(uid),
-                builder: (context, profileSnapshot) {
-                  String? profileImageUrl = profileSnapshot.data;
-                  return FadeInUp(
-                    delay: Duration(milliseconds: 100 * index),
-                    child: _buildParticipantRow(
-                      screenWidth,
-                      uid,
-                      userNames[uid] ?? "Unknown",
-                      (paidBy[uid] as num?)?.toDouble() ?? 0.0,
-                      (splitData!['totalAmount'] as num) / participants.length,
-                      profileImageUrl,
-                    ),
-                  );
-                },
-              );
-            }).toList(),
+            _buildCardHeader(
+                screenWidth, LucideIcons.users, "Participants", null),
+            SizedBox(height: screenHeight * 0.02),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: participants.length,
+              separatorBuilder: (context, index) =>
+                  Divider(color: Colors.grey.shade200, height: 20),
+              itemBuilder: (context, index) {
+                String participantUid = participants[index];
+                double paidAmount = (paidBy[participantUid] as num?)?.toDouble() ?? 0.0;
+                double netAmount = sharePerPerson - paidAmount;
+                return _buildParticipantRow(
+                  screenWidth,
+                  participantUid,
+                  paidAmount,
+                  netAmount,
+                );
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildParticipantRow(double screenWidth, String uid, String name, double paidAmount,
-      double share, String? profileImageUrl) {
-    double netAmount = share - paidAmount;
-    Color amountColor = netAmount > 0 ? Colors.red.shade600 : Colors.green.shade600;
-
-    return Container(
-      margin: EdgeInsets.only(top: screenWidth * 0.02),
-      padding: EdgeInsets.all(screenWidth * 0.03),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(screenWidth * 0.04),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200.withOpacity(0.2),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: screenWidth * 0.06,
-            backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
-                ? NetworkImage(profileImageUrl)
-                : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
-            backgroundColor: Colors.grey.shade200,
-            onBackgroundImageError: (exception, stackTrace) {
-              print("Error loading profile image for UID $uid: $exception");
-            },
-          ),
-          SizedBox(width: screenWidth * 0.03),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildParticipantRow(double screenWidth, String participantUid, double paidAmount, double netAmount) {
+    return FutureBuilder<String>(
+      future: _getUserName(participantUid),
+      builder: (context, snapshot) {
+        String userName = snapshot.data ?? "Loading...";
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
               children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.045,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                CircleAvatar(
+                  backgroundColor: Colors.grey.shade300,
+                  radius: screenWidth * 0.035,
+                  child: FutureBuilder<String?>(
+                    future: _getProfileImageUrl(participantUid),
+                    builder: (context, imageSnapshot) {
+                      if (imageSnapshot.connectionState == ConnectionState.done && imageSnapshot.data != null) {
+                        return ClipOval(
+                          child: Image.network(
+                            imageSnapshot.data!,
+                            width: screenWidth * 0.07,
+                            height: screenWidth * 0.07,
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                      } else {
+                        return Icon(LucideIcons.user,
+                            size: screenWidth * 0.04, color: Colors.white);
+                      }
+                    },
                   ),
                 ),
+                SizedBox(width: screenWidth * 0.03),
                 Text(
-                  "Paid: ₹${paidAmount.toStringAsFixed(2)}",
-                  style: TextStyle(fontSize: screenWidth * 0.035, color: Colors.grey.shade600),
+                  userName,
+                  style: GoogleFonts.poppins(fontSize: screenWidth * 0.042, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                netAmount > 0 ? "-₹${netAmount.toStringAsFixed(2)}" : "+₹${(-netAmount).toStringAsFixed(2)}",
-                style: TextStyle(
-                  fontSize: screenWidth * 0.045,
-                  fontWeight: FontWeight.bold,
-                  color: amountColor,
-                ),
-              ),
-              Text(
-                netAmount > 0 ? "Owes" : "Gets",
-                style: TextStyle(fontSize: screenWidth * 0.03, color: Colors.grey),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransactionsCard(double screenWidth, double screenHeight) {
-    return Card(
-      elevation: 10,
-      shadowColor: Colors.grey.shade200.withOpacity(0.4),
-      color: Colors.grey.shade200,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.05)),
-      child: Padding(
-        padding: EdgeInsets.all(screenWidth * 0.04),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildCardHeader(screenWidth, LucideIcons.arrowRightCircle, "Transactions to Settle",
-                _buildSettleButton(screenWidth)),
-            SizedBox(height: screenWidth * 0.03),
-            _buildTransactionsList(screenWidth),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCardHeader(double screenWidth, IconData icon, String title, Widget? trailing) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            _buildIconContainer(screenWidth, icon),
-            SizedBox(width: screenWidth * 0.02),
             Text(
-              title,
-              style: TextStyle(
-                fontSize: screenWidth * 0.05,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+              netAmount == 0
+                  ? "Settled Up"
+                  : (netAmount > 0
+                  ? "-₹${netAmount.toStringAsFixed(2)}"
+                  : "+₹${(netAmount.abs()).toStringAsFixed(2)}"),
+              style: GoogleFonts.poppins(
+                fontSize: screenWidth * 0.04,
+                fontWeight: FontWeight.w600,
+                color: netAmount == 0 ? Colors.green.shade600 : (netAmount > 0 ? Colors.red.shade700 : Colors.green.shade700),
               ),
             ),
           ],
-        ),
-        if (trailing != null) trailing,
-      ],
-    );
-  }
-
-  Widget _buildIconContainer(double screenWidth, IconData icon) {
-    return Container(
-      padding: EdgeInsets.all(screenWidth * 0.02),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(screenWidth * 0.03),
-      ),
-      child: Icon(icon, color: Colors.black87, size: screenWidth * 0.06),
-    );
-  }
-
-  StreamBuilder<DocumentSnapshot<Object?>> _buildSettleButton(double screenWidth) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('splits')
-          .doc(widget.splitId)
-          .collection('settle')
-          .doc(userId)
-          .snapshots(),
-      builder: (context, settleSnapshot) {
-        final isSplitSettled = settleSnapshot.data?.exists == true
-            ? (settleSnapshot.data!.get('settled') as bool? ?? false)
-            : false;
-        if (settleSnapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox.shrink();
-        }
-        return GestureDetector(
-          onTap: isSplitSettled || !isUserInvolvedInTransactions() ? null : () => _settleSplit(isSplitSettled),
-          child: Text(
-            isSplitSettled ? "Settled" : "Settle",
-            style: TextStyle(
-              fontSize: screenWidth * 0.04,
-              fontWeight: FontWeight.bold,
-              color: isSplitSettled || !isUserInvolvedInTransactions() ? Colors.grey : Colors.blue,
-            ),
-          ),
         );
       },
     );
   }
 
-  StreamBuilder<QuerySnapshot<Object?>> _buildTransactionsList(double screenWidth) {
+
+  Widget _buildTransactionsCard(double screenWidth, double screenHeight) {
+    return Card(
+      elevation: 4,
+      shadowColor: Colors.grey.shade200.withOpacity(0.3),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.05, vertical: screenHeight * 0.02),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCardHeader(
+                screenWidth, LucideIcons.list, "Transactions", null),
+            SizedBox(height: screenHeight * 0.02),
+            _buildTransactionsList(screenWidth, screenHeight),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionsList(double screenWidth, double screenHeight) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('splits')
@@ -788,191 +784,79 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
           .collection('transactions')
           .orderBy('timestamp', descending: true)
           .snapshots(),
-      builder: (context, snapshot) {
+      builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}');
+        }
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.grey));
+          return const CircularProgressIndicator();
         }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildEmptyTransactions(screenWidth);
+        if (snapshot.data!.docs.isEmpty) {
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+            child: Center(
+              child: Text("No transactions yet.",
+                  style: GoogleFonts.poppins(color: Colors.grey.shade500)),
+            ),
+          );
         }
-        return Column(
-          children: snapshot.data!.docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final transactionId = doc.id;
-            final fromName = userNames[data['from']] ?? "Unknown";
-            final toName = userNames[data['to']] ?? "Unknown";
-            final amount = (data['amount'] as num).toDouble();
-            final isUserInvolved = data['from'] == userId || data['to'] == userId;
-
-            return FadeInUp(
-              child: _buildTransactionRow(
-                screenWidth,
-                fromName,
-                toName,
-                amount,
-                transactionId,
-                isUserInvolved,
-              ),
-            );
-          }).toList(),
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: snapshot.data!.docs.length,
+          separatorBuilder: (context, index) =>
+              Divider(color: Colors.grey.shade200, height: 20),
+          itemBuilder: (context, index) {
+            Map<String, dynamic> transaction =
+            snapshot.data!.docs[index].data() as Map<String, dynamic>;
+            return _buildTransactionRow(screenWidth, transaction);
+          },
         );
       },
     );
   }
 
-  Container _buildEmptyTransactions(double screenWidth) {
-    return Container(
-      padding: EdgeInsets.all(screenWidth * 0.04),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(screenWidth * 0.03),
-      ),
-      child: Text(
-        "No transactions to settle.",
-        style: TextStyle(fontSize: screenWidth * 0.04, color: Colors.grey),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  Widget _buildTransactionRow(double screenWidth, String fromName, String toName, double amount,
-      String transactionId, bool isUserInvolved) {
-    return Container(
-      margin: EdgeInsets.only(top: screenWidth * 0.02),
-      padding: EdgeInsets.all(screenWidth * 0.03),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(screenWidth * 0.04),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200.withOpacity(0.2),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+  Widget _buildTransactionRow(double screenWidth, Map<String, dynamic> transaction) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: screenWidth * 0.01),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildIconContainer(screenWidth, LucideIcons.arrowRight),
-          SizedBox(width: screenWidth * 0.03),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fromName,
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.04,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                Text(
-                  "to $toName",
-                  style: TextStyle(fontSize: screenWidth * 0.035, color: Colors.grey.shade600),
-                ),
-              ],
+            child: FutureBuilder<String>(
+              future: _getUserName(transaction['from']),
+              builder: (context, snapshotFrom) {
+                String fromUserName = snapshotFrom.data ?? "Loading...";
+                return Text(
+                  fromUserName,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(fontSize: screenWidth * 0.04, fontWeight: FontWeight.w500),
+                );
+              },
             ),
           ),
-          _buildSettleStatus(screenWidth, transactionId, isUserInvolved, amount),
+          Icon(LucideIcons.arrowRight, size: screenWidth * 0.04, color: Colors.grey.shade500),
+          Expanded(
+            child: FutureBuilder<String>(
+              future: _getUserName(transaction['to']),
+              builder: (context, snapshotTo) {
+                String toUserName = snapshotTo.data ?? "Loading...";
+                return Text(
+                  toUserName,
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(fontSize: screenWidth * 0.04, fontWeight: FontWeight.w500),
+                );
+              },
+            ),
+          ),
+          SizedBox(width: screenWidth * 0.03),
+          Text(
+            "₹${(transaction['amount'] as num).toDouble().toStringAsFixed(2)}",
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: screenWidth * 0.04),
+          ),
         ],
       ),
     );
-  }
-
-  Widget _buildSettleStatus(
-      double screenWidth, String transactionId, bool isUserInvolved, double amount) {
-    return isUserInvolved
-        ? FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('splits')
-          .doc(widget.splitId)
-          .collection('settle')
-          .doc(userId)
-          .collection('transactions')
-          .doc(transactionId)
-          .get(),
-      builder: (context, settleSnapshot) {
-        String settleStatus = "";
-        if (settleSnapshot.connectionState == ConnectionState.waiting) {
-          settleStatus = "Loading...";
-        } else if (settleSnapshot.hasError) {
-          settleStatus = "Error";
-        } else if (settleSnapshot.hasData && settleSnapshot.data!.exists) {
-          settleStatus =
-          (settleSnapshot.data!.get('settled') as bool? ?? false) ? "Settled" : "";
-        }
-        return _buildAmountAndSettleStatusColumn(screenWidth, amount, settleStatus);
-      },
-    )
-        : _buildAmountAndSettleStatusColumn(screenWidth, amount, "");
-  }
-
-  Column _buildAmountAndSettleStatusColumn(double screenWidth, double amount, String settleStatus) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          "₹${amount.toStringAsFixed(2)}",
-          style: TextStyle(
-              fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold, color: Colors.black87),
-        ),
-        if (settleStatus.isNotEmpty)
-          Text(
-            settleStatus,
-            style: TextStyle(
-              fontSize: screenWidth * 0.035,
-              fontWeight: FontWeight.bold,
-              color: settleStatus == "Settled" || settleStatus == "Error" ? Colors.green : Colors.blue,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Future<void> _settleSplit(bool isSplitSettled) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('splits')
-          .doc(widget.splitId)
-          .collection('settle')
-          .doc(userId)
-          .set({
-        'settled': true,
-        'timestamp': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(userId);
-      DocumentSnapshot userDoc = await userRef.get();
-      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>? ?? {};
-
-      double currentAmountToPay = (userData['amountToPay'] as num?)?.toDouble() ?? 0.0;
-      double currentAmountToReceive = (userData['amountToReceive'] as num?)?.toDouble() ?? 0.0;
-
-      if (totalPay > 0) {
-        double newAmountToPay = (currentAmountToPay - totalPay).clamp(0, double.infinity);
-        await userRef.update({'amountToPay': newAmountToPay});
-      } else if (totalReceive > 0) {
-        double newAmountToReceive = (currentAmountToReceive - totalReceive).clamp(0, double.infinity);
-        await userRef.update({'amountToReceive': newAmountToReceive});
-      }
-
-      setState(() {
-        _fetchSplitData();
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Split settled successfully", style: GoogleFonts.poppins())),
-      );
-    } catch (e) {
-      print("Error settling split: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to settle split: $e", style: GoogleFonts.poppins())),
-      );
-    }
-  }
-
-  bool isUserInvolvedInTransactions() {
-    return splitData?['participants']?.contains(userId) ?? false;
   }
 }
