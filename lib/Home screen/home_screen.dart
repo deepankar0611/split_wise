@@ -51,14 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
     "Others": {"icon": LucideIcons.circleDollarSign, "color": Colors.grey},
   };
 
-  final Map<String, Map<String, dynamic>> serviceIcons = {
-    "Swiggy": {"icon": LucideIcons.fastForward, "color": Colors.orange},
-    "Zepto": {"icon": LucideIcons.zap, "color": Colors.purple},
-    "Instamart": {"icon": LucideIcons.shoppingBag, "color": Colors.deepPurple},
-    "Blinkit": {"icon": LucideIcons.clock, "color": Colors.yellow},
-    "Zomato": {"icon": LucideIcons.utensils, "color": Colors.red},
-  };
-
   @override
   void initState() {
     super.initState();
@@ -280,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        padding: EdgeInsets.all(screenWidth * 0.025),
+        padding: EdgeInsets.all(screenWidth * 0.02), // Reduced padding
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(screenWidth * 0.04),
@@ -288,41 +280,52 @@ class _HomeScreenState extends State<HomeScreen> {
             BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3)),
           ],
         ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: screenHeight * 0.15),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01, vertical: screenHeight * 0.005),
-                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                    child: Text(
-                      "Receive",
-                      style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500, fontSize: screenWidth * 0.025),
-                    ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.015, vertical: screenHeight * 0.002),
+                decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                child: Text(
+                  "Receive",
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.w500,
+                    fontSize: screenWidth * 0.03, // Reduced size
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.only(left: screenWidth * 0.015),
-                  child: Text(
-                    "₹${amountToReceive.toInt()}",
-                    style: TextStyle(fontSize: screenWidth * 0.07, fontWeight: FontWeight.bold, color: Colors.black),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: screenWidth * 0.015, bottom: screenHeight * 0.005),
-                  child: Text(
-                    "will get",
-                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: screenWidth * 0.035),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            Padding(
+              padding: EdgeInsets.only(left: screenWidth * 0.015, top: screenHeight * 0.002),
+              child: Text(
+                "₹${amountToReceive.toInt()}",
+                style: TextStyle(
+                  fontSize: screenWidth * 0.05, // Reduced from 0.06
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: screenWidth * 0.015),
+              child: Text(
+                "will get",
+                style: TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.w600,
+                  fontSize: screenWidth * 0.025, // Reduced from 0.03
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -339,17 +342,16 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => ExpenseHistoryDetailedScreen(
-              isPayer: false,
+              isPayer: true,
               showFilter: '',
               splitId: '',
-              friendUid: '',
               sendFilter: '',
             ),
           ),
         );
       },
       child: Container(
-        padding: EdgeInsets.all(screenWidth * 0.025),
+        padding: EdgeInsets.all(screenWidth * 0.02), // Reduced padding
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(screenWidth * 0.04),
@@ -362,41 +364,52 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: screenHeight * 0.15),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01, vertical: screenHeight * 0.005),
-                    decoration: BoxDecoration(color: Colors.red.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                    child: Text(
-                      "Pay",
-                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500, fontSize: screenWidth * 0.025),
-                    ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.015, vertical: screenHeight * 0.002),
+                decoration: BoxDecoration(color: Colors.red.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                child: Text(
+                  "Pay",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w500,
+                    fontSize: screenWidth * 0.03, // Reduced size
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.only(left: screenWidth * 0.015),
-                  child: Text(
-                    "₹${amountToPay.toInt()}",
-                    style: TextStyle(fontSize: screenWidth * 0.07, fontWeight: FontWeight.bold, color: Colors.black),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: screenWidth * 0.015, bottom: screenHeight * 0.005),
-                  child: Text(
-                    "will pay",
-                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: screenWidth * 0.035),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            Padding(
+              padding: EdgeInsets.only(left: screenWidth * 0.015, top: screenHeight * 0.002),
+              child: Text(
+                "₹${amountToPay.toInt()}",
+                style: TextStyle(
+                  fontSize: screenWidth * 0.05, // Reduced from 0.06
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: screenWidth * 0.015),
+              child: Text(
+                "will pay",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                  fontSize: screenWidth * 0.025, // Reduced from 0.03
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -465,7 +478,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3)),
                   ],
                 ),
-                height: screenHeight * 0.18,
+                height: screenHeight * 0.18, // Increased from 0.18 to 0.22 to fix previous overflow
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: snapshot.data!.docs.length,

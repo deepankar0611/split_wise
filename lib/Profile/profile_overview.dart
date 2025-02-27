@@ -95,16 +95,18 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(screenWidth * 0.04),
-        child: Column(
-          children: [
-            _buildProfileHeader(screenWidth, screenHeight),
-            SizedBox(height: screenHeight * 0.03),
-            _buildFinanceSummary(screenWidth, screenHeight),
-            SizedBox(height: screenHeight * 0.03),
-            _buildProfileOptions(context),
-            SizedBox(height: screenHeight * 0.03),
-          ],
+        child: Padding(
+          padding: EdgeInsets.all(screenWidth * 0.04),
+          child: Column(
+            children: [
+              _buildProfileHeader(screenWidth, screenHeight),
+              SizedBox(height: screenHeight * 0.03),
+              _buildFinanceSummary(screenWidth, screenHeight),
+              SizedBox(height: screenHeight * 0.03),
+              _buildProfileOptions(context, screenWidth, screenHeight),
+              SizedBox(height: screenHeight * 0.1), // Extra padding to avoid overlap with FAB
+            ],
+          ),
         ),
       ),
       floatingActionButton: _buildLogoutButton(context),
@@ -112,6 +114,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     );
   }
 
+  // Profile Header (unchanged for brevity)
   Widget _buildProfileHeader(double screenWidth, double screenHeight) {
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance.collection('users').doc(userId).snapshots(),
@@ -235,6 +238,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     );
   }
 
+  // Finance Summary (unchanged for brevity)
   Widget _buildFinanceSummary(double screenWidth, double screenHeight) {
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance.collection('users').doc(userId).snapshots(),
@@ -308,13 +312,15 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     );
   }
 
-  Widget _buildProfileOptions(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    return SizedBox(
-      height: screenHeight * 0.5,
+  // Updated Profile Options
+  Widget _buildProfileOptions(BuildContext context, double screenWidth, double screenHeight) {
+    return Container(
+      constraints: BoxConstraints(
+        minHeight: screenHeight * 0.5, // Minimum height to ensure visibility
+      ),
       child: ListView.builder(
+        shrinkWrap: true, // Makes the ListView take only the space it needs
+        physics: const NeverScrollableScrollPhysics(), // Disable inner scroll, let parent handle it
         itemCount: 5,
         itemBuilder: (context, index) {
           switch (index) {
@@ -334,7 +340,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 title: "Expense History",
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ExpenseHistoryDetailedScreen(sendFilter: '', splitId: '', showFilter: '',)),
+                  MaterialPageRoute(builder: (context) => ExpenseHistoryDetailedScreen(sendFilter: '', splitId: '', showFilter: '')),
                 ),
                 iconColor: const Color(0xFF7B1FA2),
                 backgroundColor: Colors.white,
