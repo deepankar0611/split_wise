@@ -46,6 +46,7 @@ dependencies:
   device_preview: ^1.2.0
 
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -59,4 +60,4 @@ flutter:
     - assets/animation/56qRH8Xl3ih8DWE25i.mp4
     - assets/fonts/
     - assets/animation/45.json
-    - assets/split-wise-891b7-firebase-adminsdk-fbsvc-48c6733945.json
+    - assets/split-wise-891b7-firebase-adminsdk-fbsvc-d28501b2bc.json

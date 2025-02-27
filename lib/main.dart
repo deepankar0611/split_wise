@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
@@ -5,28 +7,32 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:split_wise/bottom_bar.dart';
-import 'package:split_wise/get_started.dart';
-import 'package:split_wise/login%20signup/login%20and%20signup.dart';
-import 'package:split_wise/login%20signup/login_screen.dart';
 import 'package:split_wise/login%20signup/splash_screen.dart';
+import 'package:split_wise/login%20signup/welcome.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'login signup/welcome.dart';
-//
+// Initialize local notifications plugin globally
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-// FCM Background Handler
+// Background handler for FCM
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  // FCM handles notification display in background/terminated states automatically
+  if (message.notification != null) {
+    log('Background message received: ${message.notification!.title}');
+    // FCM automatically shows notification in background/terminated states
+  }
 }
 
-// FCM initialization
-void initializeFCM() async {
-  FirebaseMessaging messaging = FirebaseMessaging.instance;
+// Initialize FCM and local notifications
+Future<void> initializeNotifications() async {
+  final messaging = FirebaseMessaging.instance;
 
+  // Request permission
   await messaging.requestPermission();
 
+  // Store FCM token
   String? token = await messaging.getToken();
   if (token != null && firebase_auth.FirebaseAuth.instance.currentUser != null) {
     String uid = firebase_auth.FirebaseAuth.instance.currentUser!.uid;
@@ -36,6 +42,7 @@ void initializeFCM() async {
     );
   }
 
+  // Handle token refresh
   messaging.onTokenRefresh.listen((newToken) {
     if (firebase_auth.FirebaseAuth.instance.currentUser != null) {
       String uid = firebase_auth.FirebaseAuth.instance.currentUser!.uid;
@@ -46,33 +53,75 @@ void initializeFCM() async {
     }
   });
 
+  // Initialize local notifications
+  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const settings = InitializationSettings(android: androidSettings);
+  await flutterLocalNotificationsPlugin.initialize(settings);
+
   // Handle foreground messages
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     if (message.notification != null) {
-      // Optionally handle foreground notifications here (e.g., show a SnackBar)
+      _showLocalNotification(
+        message.notification!.title ?? 'No Title',
+        message.notification!.body ?? 'No Body',
+        message.data['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      );
     }
   });
 
   // Handle background messages
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Handle notification taps when app is opened from a terminated state
+  final initialMessage = await messaging.getInitialMessage();
+  if (initialMessage != null) {
+    log('App opened from terminated state: ${initialMessage.notification?.title}');
+    // Optionally navigate to NotificationScreen here
+  }
+
+  // Handle notification taps when app is in background
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    log('App opened from background: ${message.notification?.title}');
+    // Navigate to NotificationScreen if needed
+  });
+}
+
+// Show local notification popup
+Future<void> _showLocalNotification(String title, String body, String payload) async {
+  const androidDetails = AndroidNotificationDetails(
+    'settleup_channel',
+    'Settle Up Notifications',
+    channelDescription: 'Notifications for Settle Up app',
+    importance: Importance.max,
+    priority: Priority.high,
+    showWhen: true,
+  );
+  const platformDetails = NotificationDetails(android: androidDetails);
+  await flutterLocalNotificationsPlugin.show(
+    DateTime.now().millisecondsSinceEpoch % 100000,
+    title,
+    body,
+    platformDetails,
+    payload: payload,
+  );
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase
-  await Firebase.initializeApp();
-  initializeFCM();
-  await Supabase.initialize(
-    url: 'https://xzoyevujxvqaumrdskhd.supabase.co',
-    anonKey:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6b3lldnVqeHZxYXVtcmRza2hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMTE1MjMsImV4cCI6MjA1NDc4NzUyM30.mbV_Scy2fXbMalxVRGHNKOxYx0o6t-nUPmDLlH5Mr_U',
-  );
-
-   runApp(
+  try {
+    await Firebase.initializeApp();
+    await initializeNotifications();
+    await Supabase.initialize(
+      url: 'https://xzoyevujxvqaumrdskhd.supabase.co',
+      anonKey: 'your-anon-key',
+    );
+  } catch (e) {
+    debugPrint('Initialization error: $e');
+  }
+  runApp(
     DevicePreview(
       enabled: !kReleaseMode,
-      builder: (context) => MyApp(), // Wrap your app
+      builder: (context) => const MyApp(),
     ),
   );
 }
@@ -91,9 +140,9 @@ class MyApp extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasData) {
-            return SplashScreen();
+            return const BottomBar(); // Logged-in users go to home
           } else {
-            return SplashScreen();
+            return const SplashScreen(); // Logged-out users go to welcome/login
           }
         },
       ),

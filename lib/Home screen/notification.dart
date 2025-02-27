@@ -10,7 +10,7 @@ import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:flutter/services.dart';
-import '../Helper/FCM Service.dart'; // Ensure this matches your file name (e.g., 'fcm_service.dart')
+import '../Helper/FCM Service.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -68,7 +68,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     String? token = await _messaging.getToken();
     log('FCM Token: $token');
 
-    // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       log('Received FCM Message: ${message.notification?.title} - ${message.notification?.body}');
       if (message.notification != null) {
@@ -80,13 +79,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
     });
 
-    // Handle background messages (optional, for completeness)
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
 
   static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     log('Background FCM Message: ${message.notification?.title} - ${message.notification?.body}');
-    // No need to show local notification here as FCM handles it
   }
 
   void _setupNotificationListeners() {
@@ -101,18 +98,28 @@ class _NotificationScreenState extends State<NotificationScreen> {
         if (change.type == DocumentChangeType.added) {
           var data = change.doc.data()!;
           String fromUid = data['fromUid'];
-          _fetchUserName(fromUid).then((name) {
-            String deviceToken = userTokens[currentUserUid] ?? '';
-            if (deviceToken.isNotEmpty) {
-              log('Sending FCM for Friend Request from $name');
-              FCMService.sendPushNotification(
-                deviceToken,
-                "Friend Request",
-                "$name wants to connect with you on Settle Up",
-              );
-            }
-            // Only show local notification if app is in foreground (handled by FCM.onMessage)
-          });
+          if (data['processed'] != true) { // Check if already processed
+            _fetchUserName(fromUid).then((name) {
+              String deviceToken = userTokens[currentUserUid] ?? '';
+              if (deviceToken.isNotEmpty) {
+                log('Sending FCM for Friend Request from $name');
+                FCMService.sendPushNotification(
+                  deviceToken,
+                  "Friend Request",
+                  "$name wants to connect with you on Settle Up",
+                ).then((_) {
+                  FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(currentUserUid)
+                      .collection('friend_requests')
+                      .doc(change.doc.id)
+                      .update({'processed': true});
+                }).catchError((e) {
+                  log('Error sending friend request notification: $e');
+                });
+              }
+            });
+          }
         }
       }
     });
@@ -129,25 +136,29 @@ class _NotificationScreenState extends State<NotificationScreen> {
           var data = change.doc.data()!;
           String splitId = data['splitId'] ?? change.doc.reference.parent.parent!.id;
           String sentBy = data['sentBy'];
-          FirebaseFirestore.instance.collection('splits').doc(splitId).get().then((splitDoc) {
-            String description = splitDoc.data()?['description'] ?? 'No description';
-            double amount = (splitDoc.data()?['totalAmount'] as num?)?.toDouble() ?? 0.0;
-            int participantCount = (splitDoc.data()?['participants'] as List?)?.length ?? 1;
-            double share = amount / participantCount;
-            _fetchUserName(sentBy).then((name) {
-              String deviceToken = userTokens[currentUserUid] ?? '';
-              if (deviceToken.isNotEmpty) {
-                log('Sending FCM for Reminder from $name');
-                FCMService.sendPushNotification(
-                  deviceToken,
-                  "Payment Reminder",
-                  "$name requests ₹${share.toStringAsFixed(2)} for '$description'",
-                );
-              }
-              // Remove local notification trigger here to avoid duplicates
-              // FCM will handle display via onMessage or background handler
+          if (data['processed'] != true) { // Check if already processed
+            FirebaseFirestore.instance.collection('splits').doc(splitId).get().then((splitDoc) {
+              String description = splitDoc.data()?['description'] ?? 'No description';
+              double amount = (splitDoc.data()?['totalAmount'] as num?)?.toDouble() ?? 0.0;
+              int participantCount = (splitDoc.data()?['participants'] as List?)?.length ?? 1;
+              double share = amount / participantCount;
+              _fetchUserName(sentBy).then((name) {
+                String deviceToken = userTokens[currentUserUid] ?? '';
+                if (deviceToken.isNotEmpty) {
+                  log('Sending FCM for Reminder from $name');
+                  FCMService.sendPushNotification(
+                    deviceToken,
+                    "Payment Reminder",
+                    "$name requests ₹${share.toStringAsFixed(2)} for '$description'",
+                  ).then((_) {
+                    change.doc.reference.update({'processed': true});
+                  }).catchError((e) {
+                    log('Error sending reminder notification: $e');
+                  });
+                }
+              });
             });
-          });
+          }
         }
       }
     });
@@ -219,11 +230,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     String currentUid = FirebaseAuth.instance.currentUser!.uid;
     var db = FirebaseFirestore.instance;
 
-    var currentUserRef = db.collection('users').doc(currentUid);
-    var friendUserRef = db.collection('users').doc(friendUid);
-
     try {
-      var friendDoc = await friendUserRef.get();
+      var friendDoc = await db.collection('users').doc(friendUid).get();
       if (!friendDoc.exists) {
         _showSnackBar("User data not found!");
         return;
@@ -234,7 +242,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       String friendEmail = friendData['email'] ?? "No email";
       String friendProfilePic = friendData['profilePic'] ?? "";
 
-      await currentUserRef.collection('friends').doc(friendUid).set({
+      await db.collection('users').doc(currentUid).collection('friends').doc(friendUid).set({
         "uid": friendUid,
         "name": friendName,
         "email": friendEmail,
@@ -242,7 +250,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         "addedAt": FieldValue.serverTimestamp(),
       });
 
-      var currentUserDoc = await currentUserRef.get();
+      var currentUserDoc = await db.collection('users').doc(currentUid).get();
       if (!currentUserDoc.exists) {
         _showSnackBar("Your data not found!");
         return;
@@ -253,7 +261,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       String currentUserEmail = currentUserData['email'] ?? "No email";
       String currentUserProfilePic = currentUserData['profilePic'] ?? "";
 
-      await friendUserRef.collection('friends').doc(currentUid).set({
+      await db.collection('users').doc(friendUid).collection('friends').doc(currentUid).set({
         "uid": currentUid,
         "name": currentUserName,
         "email": currentUserEmail,
@@ -261,7 +269,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         "addedAt": FieldValue.serverTimestamp(),
       });
 
-      await currentUserRef.collection('friend_requests').doc(friendUid).delete();
+      await db.collection('users').doc(currentUid).collection('friend_requests').doc(friendUid).delete();
       _showSnackBar("Friend request accepted!");
 
       String friendToken = userTokens[friendUid] ?? '';
@@ -671,7 +679,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                     description = splitData['description'] ?? 'No description';
                                     amount = (splitData['totalAmount'] as num?)?.toDouble() ?? 0.0;
                                     int participantCount = (splitData['participants'] as List?)?.length ?? 1;
-                                    amount = amount / participantCount; // Share per person
+                                    amount = amount / participantCount;
                                   }
 
                                   return Dismissible(
@@ -741,6 +749,28 @@ class _NotificationScreenState extends State<NotificationScreen> {
               },
             ),
           ),
+          if (_showBanner)
+            Positioned(
+              top: 10,
+              left: 10,
+              right: 10,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    "New notification received!",
+                    style: TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
