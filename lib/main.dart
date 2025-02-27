@@ -8,9 +8,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:split_wise/bottom_bar.dart';
 import 'package:split_wise/login%20signup/splash_screen.dart';
-import 'package:split_wise/login%20signup/welcome.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Initialize local notifications plugin globally
@@ -140,7 +138,7 @@ class MyApp extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasData) {
-            return const BottomBar(); // Logged-in users go to home
+            return const SplashScreen(); // Logged-in users go to home
           } else {
             return const SplashScreen(); // Logged-out users go to welcome/login
           }

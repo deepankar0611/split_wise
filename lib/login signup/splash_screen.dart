@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:video_player/video_player.dart';
 import 'package:split_wise/login%20signup/welcome.dart'; // Import Welcome Page
 import 'package:split_wise/login%20signup/login_screen.dart'; // Import LoginPage
@@ -24,11 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
 
     // Initialize the video player controller
-    _videoController =
-        VideoPlayerController.asset('assets/animation/56qRH8Xl3ih8DWE25i.mp4');
-    _initializeVideoFuture = _videoController.initialize();
-    _videoController.setLooping(true);
-    _videoController.play();
+    Lottie.asset('assets/animation/Animation - 1740671879696.json',fit: BoxFit.contain);
 
     // Check user state and navigate after 4 seconds
     Future.delayed(const Duration(seconds: 4), () {
@@ -64,53 +61,18 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   @override
-  void dispose() {
-    _videoController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFF1A2E39),
       body: Center(
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: size.width * 0.09,
             vertical: size.height * 0.20,
           ),
-          child: FutureBuilder(
-            future: _initializeVideoFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.done) {
-                return Container(
-                  width: size.width * 0.5,
-                  height: size.width * 0.5,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: VideoPlayer(_videoController),
-                  ),
-                );
-              } else {
-                return Container(
-                  width: size.width * 0.5,
-                  height: size.width * 0.5,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey[300],
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-            },
-          ),
+          child:Lottie.asset('assets/animation/Animation - 1740671879696.json',fit: BoxFit.contain),
         ),
       ),
     );
