@@ -414,11 +414,11 @@ class _LoginPageState extends State<LoginPage> {
         ),
         children: [
           TextSpan(
-            text: 'et',
+            text: 'pl',
             style: TextStyle(color: Color(0xFF3C7986), fontSize: 30),
           ),
           TextSpan(
-            text: 'tle',
+            text: 'it',
             style: TextStyle(color: Color(0xFF1A2E39), fontSize: 30),
           ),
           TextSpan(
