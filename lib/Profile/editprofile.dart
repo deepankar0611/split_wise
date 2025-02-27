@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class EditProfileScreen extends StatefulWidget {
   @override
@@ -23,7 +24,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
   String? _imageUrl;
   late String userId;
   bool _isLoading = false;
+  Map<String, dynamic>? _userData;
 
+  static const Color primaryColor = Color(0xFF234567);
+  static const Color accentColor = Colors.tealAccent;
 
   static const List<String> avatarOptions = [
     'https://xzoyevujxvqaumrdskhd.supabase.co/storage/v1/object/public/profile_pictures/profile_pictures/new%201.png',
@@ -37,7 +41,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
     supabase = Supabase.instance.client;
     userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchUserData());
+    _fetchUserData();
   }
 
   @override
@@ -54,10 +58,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
       final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
       if (!mounted) return;
       if (doc.exists) {
-        final data = doc.data() ?? {};
-        _nameController.text = data["name"] ?? "User";
-        _phoneController.text = data["phone"] ?? "";
-        _imageUrl = data["profileImageUrl"];
+        _userData = doc.data() ?? {};
+        _nameController.text = _userData!["name"] ?? "User";
+        _phoneController.text = _userData!["phone"] ?? "";
+        _imageUrl = _userData!["profileImageUrl"];
       }
     } catch (e) {
       print("Error fetching user data: $e");
@@ -79,7 +83,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
       if (!mounted || pickedFile == null) return;
       setState(() {
         _image = File(pickedFile.path);
-        _imageUrl = null; // Clear previous URL when new image is picked
+        _imageUrl = null;
       });
       await _uploadImage();
     } catch (e) {
@@ -107,7 +111,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
         {'profileImageUrl': imageUrl},
         SetOptions(merge: true),
       );
-      if (mounted) setState(() => _imageUrl = imageUrl);
+      if (mounted) setState(() {
+        _imageUrl = imageUrl;
+        _userData?['profileImageUrl'] = imageUrl;
+      });
     } catch (e) {
       print('Image upload failed: $e');
       if (mounted) {
@@ -126,12 +133,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
       if (user == null) return;
       setState(() {
         _imageUrl = avatarUrl;
-        _image = null; // Clear custom image if avatar is selected
+        _image = null;
       });
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
         {'profileImageUrl': avatarUrl},
         SetOptions(merge: true),
       );
+      if (mounted) setState(() {
+        _imageUrl = avatarUrl;
+        _userData?['profileImageUrl'] = avatarUrl;
+      });
     } catch (e) {
       print('Avatar selection failed: $e');
       if (mounted) {
@@ -159,7 +170,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')),
+          SnackBar(
+              content: Text('Profile updated successfully!', style: GoogleFonts.poppins(color: Colors.white)),
+              backgroundColor: primaryColor),
         );
         Navigator.pop(context);
       }
@@ -183,43 +196,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
     super.dispose();
   }
 
-  Stream<DocumentSnapshot<Map<String, dynamic>>> getUserStream() {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) {
-      return Stream.error(Exception("User not logged in"));
-    }
-    return FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
-  }
-
   void _showAvatarPicker() {
     if (_isLoading || !mounted) return;
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.grey.shade100,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25.0))),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        height: 200,
-        child: GridView.builder(
-          physics: const ClampingScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemCount: avatarOptions.length,
-          itemBuilder: (context, index) => GestureDetector(
-            onTap: _isLoading
-                ? null
-                : () {
-              _selectAvatar(avatarOptions[index]);
-              Navigator.pop(context);
-            },
-            child: CircleAvatar(
-              backgroundImage: NetworkImage(avatarOptions[index]),
-              onBackgroundImageError: (exception, stackTrace) {
-                print('Error loading avatar: $exception');
-              },
+        padding: const EdgeInsets.all(20),
+        height: 220,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Choose an avatar", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87)),
+            const SizedBox(height: 15),
+            Expanded(
+              child: GridView.builder(
+                physics: const ClampingScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 15,
+                  mainAxisSpacing: 15,
+                ),
+                itemCount: avatarOptions.length,
+                itemBuilder: (context, index) => GestureDetector(
+                  onTap: _isLoading
+                      ? null
+                      : () {
+                    _selectAvatar(avatarOptions[index]);
+                    Navigator.pop(context);
+                  },
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.white,
+                    backgroundImage: NetworkImage(avatarOptions[index]),
+                    onBackgroundImageError: (exception, stackTrace) {
+                      print('Error loading avatar: $exception');
+                    },
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -230,13 +249,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
     final screenWidth = MediaQuery.sizeOf(context).width;
     final screenHeight = MediaQuery.sizeOf(context).height;
 
+    String profileImageUrl = _userData?['profileImageUrl'] as String? ?? '';
+
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF234567),
-        elevation: 0,
-        title: const Text(
+        backgroundColor: primaryColor,
+        elevation: 2,
+        title: Text(
           'Edit Profile',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
@@ -250,155 +272,105 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
-        toolbarHeight: 50,
+        toolbarHeight: 60,
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.white, Colors.white, Colors.white, Colors.white],
-                  stops: [0.1, 0.3, 0.6, 0.9],
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.all(25),
+          children: <Widget>[
+            Center(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Material(
+                    elevation: 8,
+                    shadowColor: Colors.black45,
+                    borderRadius: BorderRadius.circular(75),
+                    child: CircleAvatar(
+                      radius: 75,
+                      backgroundColor: Colors.white,
+                      backgroundImage: _image != null
+                          ? FileImage(_image!)
+                          : _imageUrl != null && _imageUrl!.isNotEmpty
+                          ? NetworkImage(_imageUrl!)
+                          : profileImageUrl.isNotEmpty
+                          ? NetworkImage(profileImageUrl)
+                          : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 15,
+                    right: -5,
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: _isLoading ? null : _pickImage,
+                      child: Material(
+                        elevation: 6,
+                        shadowColor: Colors.black26,
+                        shape: const CircleBorder(),
+                        color: Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(7.0),
+                          child: Icon(CupertinoIcons.camera_fill, color: accentColor, size: 28),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 15,
+                    left: -5,
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: _isLoading ? null : _showAvatarPicker,
+                      child: Material(
+                        elevation: 6,
+                        shadowColor: Colors.black26,
+                        shape: const CircleBorder(),
+                        color: Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(7.0),
+                          child: Icon(CupertinoIcons.person_circle_fill, color: accentColor, size: 28),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 40),
+            buildTextField("Name", "Enter your name", _nameController, CupertinoIcons.person_fill),
+            PhoneNumberTextFieldWidget(controller: _phoneController, isLoading: _isLoading),
+            const SizedBox(height: 40),
+            ElevatedButton( // Replaced CupertinoButton with ElevatedButton
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor, // Use primary color
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), // Rounded corners
+                elevation: 3, // Add elevation for shadow
+              ),
+              onPressed: _isLoading ? null : _saveProfile,
+              child: _isLoading
+                  ? const SizedBox(
+                width: 25,
+                height: 25,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+                  : Text(
+                'Save Profile',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              child: CustomPaint(painter: FloatingBackgroundPainter()),
             ),
-          ),
-          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: getUserStream(),
-            builder: (context, snapshot) {
-              if (_isLoading || snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!snapshot.hasData || !snapshot.data!.exists) {
-                return const Center(child: Text("User data not found"));
-              }
-
-              final userData = snapshot.data!.data();
-              final profileImageUrl = userData?['profileImageUrl'] as String? ?? '';
-
-              return Form(
-                key: _formKey,
-                child: ListView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
-                  children: <Widget>[
-                    Center(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade300, width: 2),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 70,
-                              backgroundColor: Colors.white,
-                              backgroundImage: _image != null
-                                  ? FileImage(_image!)
-                                  : _imageUrl != null && _imageUrl!.isNotEmpty
-                                  ? NetworkImage(_imageUrl!)
-                                  : profileImageUrl.isNotEmpty
-                                  ? NetworkImage(profileImageUrl)
-                                  : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 10,
-                            right: -10,
-                            child: CupertinoButton(
-                              padding: EdgeInsets.zero,
-                              onPressed: _isLoading ? null : _pickImage,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.grey.shade300, width: 1),
-                                  boxShadow: const [
-                                    BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-                                  ],
-                                ),
-                                padding: const EdgeInsets.all(8),
-                                child: const Icon(CupertinoIcons.add, color: Colors.green, size: 25),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 10,
-                            right: 40,
-                            child: CupertinoButton(
-                              padding: EdgeInsets.zero,
-                              onPressed: _isLoading ? null : _showAvatarPicker,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.grey.shade300, width: 1),
-                                  boxShadow: const [
-                                    BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-                                  ],
-                                ),
-                                padding: const EdgeInsets.all(8),
-                                child: const Icon(CupertinoIcons.person_circle, color: Colors.blue, size: 25),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    buildTextField("Name", "Enter your name", _nameController, CupertinoIcons.person_fill),
-                    PhoneNumberTextFieldWidget(controller: _phoneController, isLoading: _isLoading), // Use the new widget here
-                    const SizedBox(height: 30),
-                    CupertinoButton(
-                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
-                      color: const Color(0xFF234567),
-                      onPressed: _isLoading
-                          ? null
-                          : _saveProfile,
-                      child: _isLoading
-                          ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                          : RichText(
-                        text: const TextSpan(
-                          text: 'Save ',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          children: <TextSpan>[
-                            TextSpan(
-                              text: 'Update',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -413,51 +385,48 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
         IconData? suffixIcon,
       }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15.0),
+      padding: const EdgeInsets.only(bottom: 20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 5.0),
-            child: RichText(
-              text: TextSpan(
-                style: DefaultTextStyle.of(context).style.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                  fontSize: 16,
-                ),
-                children: <TextSpan>[
-                  TextSpan(text: labelText, style: const TextStyle(fontSize: 15)),
-                ],
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              labelText,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+                fontSize: 17,
               ),
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: TextFormField(
+          Material(
+            elevation: 3,
+            shadowColor: Colors.black26,
+            borderRadius: BorderRadius.circular(15),
+            child: TextField(
               controller: controller,
               obscureText: obscureText,
               keyboardType: keyboardType,
               enabled: !_isLoading,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              style: GoogleFonts.poppins(fontSize: 16, color: Colors.black87),
               decoration: InputDecoration(
                 hintText: hintText,
-                hintStyle:  TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                hintStyle:  GoogleFonts.poppins(fontSize: 15, color: Colors.grey.shade500),
                 prefixIcon: Icon(prefixIcon, color: Colors.grey.shade600),
                 suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: Colors.grey.shade600) : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                filled: true,
+                fillColor: Colors.white,
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide:  BorderSide(color: accentColor, width: 2.0),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey.shade200, width: 1.0),
+                ),
               ),
             ),
           ),
@@ -504,49 +473,36 @@ class _PhoneNumberTextFieldWidgetState extends State<PhoneNumberTextFieldWidget>
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15.0),
+      padding: const EdgeInsets.only(bottom: 20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 5.0),
-            child: RichText(
-              text: TextSpan(
-                style: DefaultTextStyle.of(context).style.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                  fontSize: 16,
-                ),
-                children: const <TextSpan>[
-                  TextSpan(text: "Phone", style: TextStyle(fontSize: 15)),
-                ],
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              "Phone",
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+                fontSize: 17,
               ),
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
+          Material(
+            elevation: 3,
+            shadowColor: Colors.black26,
+            borderRadius: BorderRadius.circular(15),
             child: TextField(
               controller: widget.controller,
               focusNode: _phoneFocusNode,
               enabled: !widget.isLoading,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.done,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              style: GoogleFonts.poppins(fontSize: 16, color: Colors.black87),
               inputFormatters: [PhoneInputFormatter()],
               decoration: InputDecoration(
                 hintText: "Enter your phone (e.g., +1234567890)",
-                hintStyle:  TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                hintStyle:  GoogleFonts.poppins(fontSize: 15, color: Colors.grey.shade500),
                 prefixIcon:  Icon(CupertinoIcons.phone_fill, color: Colors.grey.shade600),
                 suffixIcon: widget.controller.text.isNotEmpty && _phoneFocusNode.hasFocus && !widget.isLoading
                     ? IconButton(
@@ -558,7 +514,17 @@ class _PhoneNumberTextFieldWidgetState extends State<PhoneNumberTextFieldWidget>
                 )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                filled: true,
+                fillColor: Colors.white,
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide:  BorderSide(color: Colors.black, width: 2.0),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.grey.shade200, width: 1.0),
+                ),
               ),
               onTapOutside: (_) {
                 if (_phoneFocusNode.hasFocus && !widget.isLoading) {
@@ -577,8 +543,6 @@ class _PhoneNumberTextFieldWidgetState extends State<PhoneNumberTextFieldWidget>
     );
   }
 }
-
-
 class PhoneInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
@@ -595,31 +559,4 @@ class PhoneInputFormatter extends TextInputFormatter {
       selection: TextSelection.collapsed(offset: formattedText.length),
     );
   }
-}
-
-class FloatingBackgroundPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final random = Random();
-    final paintLine = Paint()
-      ..color = Colors.green.shade200.withOpacity(0.3)
-      ..strokeWidth = 1.5;
-    final paintCircle = Paint();
-
-    for (int i = 0; i < 5; i++) {
-      final startPoint = Offset(0, size.height * random.nextDouble());
-      final endPoint = Offset(size.width, size.height * random.nextDouble());
-      canvas.drawLine(startPoint, endPoint, paintLine);
-    }
-
-    for (int i = 0; i < 20; i++) {
-      final center = Offset(size.width * random.nextDouble(), size.height * random.nextDouble());
-      final radius = random.nextDouble() * 15 + 5;
-      paintCircle.color = Color.fromRGBO(random.nextInt(256), random.nextInt(256), random.nextInt(256), 0.1);
-      canvas.drawCircle(center, radius, paintCircle);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

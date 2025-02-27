@@ -22,12 +22,12 @@ class _IntroPageState extends State<IntroPage> {
       "subtitle": "Split Bills, Simplify Life – Effortless Expense Sharing"
     },
     {
-      "image": "assets/logo/icon.png",
+      "image": "assets/logo/wel.jpg",
       "title": "Stay Wealthy",
       "subtitle": "Fair Shares, Happy Affairs – Simplify Splitting Expenses!"
     },
     {
-      "image": "assets/logo/icon.png",
+      "image": "assets/logo/wel2.jpg",
       "title": "Achieve Your Split",
       "subtitle": "Empowering Your Financial Journey, One Split at a Time"
     },
