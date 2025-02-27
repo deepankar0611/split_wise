@@ -23,7 +23,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
   String? _imageUrl;
   late String userId;
   bool _isLoading = false;
-  final FocusNode _phoneFocusNode = FocusNode();
+
 
   static const List<String> avatarOptions = [
     'https://xzoyevujxvqaumrdskhd.supabase.co/storage/v1/object/public/profile_pictures/profile_pictures/new%201.png',
@@ -38,9 +38,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
     userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchUserData());
-    _phoneFocusNode.addListener(() {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
@@ -183,7 +180,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
     WidgetsBinding.instance.removeObserver(this);
     _phoneController.dispose();
     _nameController.dispose();
-    _phoneFocusNode.dispose();
     super.dispose();
   }
 
@@ -359,7 +355,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
                     ),
                     const SizedBox(height: 30),
                     buildTextField("Name", "Enter your name", _nameController, CupertinoIcons.person_fill),
-                    _buildPhoneTextField(controller: _phoneController),
+                    PhoneNumberTextFieldWidget(controller: _phoneController, isLoading: _isLoading), // Use the new widget here
                     const SizedBox(height: 30),
                     CupertinoButton(
                       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
@@ -469,8 +465,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
       ),
     );
   }
+}
 
-  Widget _buildPhoneTextField({required TextEditingController controller}) {
+// New StatefulWidget for Phone Number Text Field
+class PhoneNumberTextFieldWidget extends StatefulWidget {
+  final TextEditingController controller;
+  final bool isLoading;
+
+  const PhoneNumberTextFieldWidget({
+    Key? key,
+    required this.controller,
+    required this.isLoading,
+  }) : super(key: key);
+
+  @override
+  _PhoneNumberTextFieldWidgetState createState() => _PhoneNumberTextFieldWidgetState();
+}
+
+class _PhoneNumberTextFieldWidgetState extends State<PhoneNumberTextFieldWidget> {
+  late final FocusNode _phoneFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneFocusNode = FocusNode();
+    _phoneFocusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _phoneFocusNode.dispose();
+    super.dispose();
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15.0),
       child: Column(
@@ -505,9 +537,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
               ],
             ),
             child: TextField(
-              controller: controller,
+              controller: widget.controller,
               focusNode: _phoneFocusNode,
-              enabled: !_isLoading,
+              enabled: !widget.isLoading,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.done,
               style: const TextStyle(fontSize: 14, color: Colors.black87),
@@ -516,11 +548,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
                 hintText: "Enter your phone (e.g., +1234567890)",
                 hintStyle:  TextStyle(fontSize: 14, color: Colors.grey.shade500),
                 prefixIcon:  Icon(CupertinoIcons.phone_fill, color: Colors.grey.shade600),
-                suffixIcon: controller.text.isNotEmpty && _phoneFocusNode.hasFocus && !_isLoading
+                suffixIcon: widget.controller.text.isNotEmpty && _phoneFocusNode.hasFocus && !widget.isLoading
                     ? IconButton(
                   icon:  Icon(Icons.clear, color: Colors.grey.shade600),
                   onPressed: () {
-                    controller.clear();
+                    widget.controller.clear();
                     setState(() {});
                   },
                 )
@@ -529,12 +561,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               ),
               onTapOutside: (_) {
-                if (_phoneFocusNode.hasFocus && !_isLoading) {
+                if (_phoneFocusNode.hasFocus && !widget.isLoading) {
                   _phoneFocusNode.unfocus();
                 }
               },
               onSubmitted: (_) {
-                if (!_isLoading) _phoneFocusNode.unfocus();
+                if (!widget.isLoading) {
+                  _phoneFocusNode.unfocus();
+                }
               },
             ),
           ),
@@ -543,6 +577,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
     );
   }
 }
+
 
 class PhoneInputFormatter extends TextInputFormatter {
   @override

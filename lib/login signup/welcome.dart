@@ -17,17 +17,17 @@ class _IntroPageState extends State<IntroPage> {
 
   final List<Map<String, String>> _pages = [
     {
-      "image": "assets/logo/intro-removebg.png",
+      "image": "assets/logo/icon.png",
       "title": "Welcome to Our App",
       "subtitle": "Split Bills, Simplify Life – Effortless Expense Sharing"
     },
     {
-      "image": "assets/logo/intro-removebg.png",
+      "image": "assets/logo/icon.png",
       "title": "Stay Wealthy",
       "subtitle": "Fair Shares, Happy Affairs – Simplify Splitting Expenses!"
     },
     {
-      "image": "assets/logo/intro-removebg.png",
+      "image": "assets/logo/icon.png",
       "title": "Achieve Your Split",
       "subtitle": "Empowering Your Financial Journey, One Split at a Time"
     },
