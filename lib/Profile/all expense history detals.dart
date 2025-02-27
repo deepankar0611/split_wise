@@ -38,6 +38,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
   String? friendSinceDate;
   int totalSplitsTogether = 0;
   double avgAmountTogether = 0.0;
+  List<QueryDocumentSnapshot> splits = []; // Store fetched splits
 
   @override
   void initState() {
@@ -46,11 +47,11 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
     if (widget.friendUid != null) {
       _fetchFriendDetails();
     }
+    _fetchSplits(); // Initial fetch of splits
   }
 
   Future<void> _fetchFriendDetails() async {
     try {
-      // Fetch friend basic details (name, profile image)
       DocumentSnapshot friendDoc = await FirebaseFirestore.instance.collection('users').doc(widget.friendUid!).get();
       if (friendDoc.exists) {
         var data = friendDoc.data() as Map<String, dynamic>?;
@@ -60,7 +61,6 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         });
       }
 
-      // Fetch "addedAt" (friendship start date) from friends subcollection
       DocumentSnapshot friendRelationDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
@@ -74,7 +74,6 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         });
       }
 
-      // Calculate total splits and average amount with this friend
       QuerySnapshot splitsSnapshot = await FirebaseFirestore.instance
           .collection('splits')
           .where('participants', arrayContainsAny: [userId, widget.friendUid!])
@@ -102,6 +101,29 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         friendSinceDate = "Unknown date";
         totalSplitsTogether = 0;
         avgAmountTogether = 0.0;
+      });
+    }
+  }
+
+  Future<void> _fetchSplits() async {
+    try {
+      Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+          .collection('splits')
+          .where('participants', arrayContains: userId)
+          .orderBy('createdAt', descending: true);
+
+      if (widget.category != null) {
+        query = query.where('category', isEqualTo: widget.category);
+      }
+
+      QuerySnapshot snapshot = await query.get();
+      setState(() {
+        splits = snapshot.docs;
+      });
+    } catch (e) {
+      print("Error fetching splits: $e");
+      setState(() {
+        splits = [];
       });
     }
   }
@@ -146,6 +168,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
       });
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Your participation has been removed.", style: GoogleFonts.poppins())));
+      await _fetchSplits(); // Refresh splits after removal
     } catch (e) {
       print("Error removing participation: $e");
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to remove participation: $e", style: GoogleFonts.poppins())));
@@ -184,7 +207,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
 
       await FirebaseFirestore.instance.collection('splits').doc(splitId).delete();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Split has been deleted for all participants.", style: GoogleFonts.poppins())));
-      setState(() {});
+      await _fetchSplits(); // Refresh splits after deletion
     } catch (e) {
       print("Error deleting split: $e");
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to delete split: $e", style: GoogleFonts.poppins())));
@@ -219,6 +242,16 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
       return transactionSnapshot.docs.isNotEmpty;
     } catch (e) {
       print("Error checking receiver transactions for split $splitId: $e");
+      return false;
+    }
+  }
+
+  Future<bool> _isSplitSettled(String splitId) async {
+    try {
+      DocumentSnapshot settleDoc = await FirebaseFirestore.instance.collection('splits').doc(splitId).collection('settle').doc(userId).get();
+      return settleDoc.exists ? (settleDoc.get('settled') as bool? ?? false) : false;
+    } catch (e) {
+      print("Error checking settle status for split $splitId: $e");
       return false;
     }
   }
@@ -265,149 +298,129 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                 children: [
                   if (widget.friendUid != null) _buildFriendDetailCard(screenWidth, screenHeight),
                   Expanded(
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: _buildSplitsStream(),
-                      builder: (context, snapshot) {
-                        print("StreamBuilder state: connectionState=${snapshot.connectionState}, hasData=${snapshot.hasData}, hasError=${snapshot.hasError}, error=${snapshot.error}");
-                        if (snapshot.connectionState == ConnectionState.waiting) return _buildShimmerGrid(screenWidth, screenHeight);
-                        if (snapshot.hasError) {
-                          print("Stream error: ${snapshot.error}");
-                          return Center(child: Text("Error: ${snapshot.error}", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 16)));
-                        }
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          print("No splits found for userId=$userId, friendUid=${widget.friendUid}, category=${widget.category}, isPayer=${widget.isPayer}, isReceiver=${widget.isReceiver}");
-                          return Center(
-                            child: Text(
-                              widget.isPayer == true
-                                  ? "No splits where you paid yet."
-                                  : widget.isReceiver == true
-                                  ? "No splits where you received yet."
-                                  : widget.category != null
-                                  ? "No splits in ${widget.category} yet."
-                                  : widget.friendUid != null
-                                  ? "No splits with this friend yet."
-                                  : "No expense history yet.",
-                              style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]!),
-                            ),
-                          );
-                        }
+                    child: RefreshIndicator(
+                      onRefresh: _fetchSplits, // Trigger refresh on swipe down
+                      color: const Color(0xFF234567),
+                      child: splits.isEmpty
+                          ? _buildInitialState(screenWidth, screenHeight)
+                          : FutureBuilder<List<QueryDocumentSnapshot>>(
+                        future: _filterSplits(splits),
+                        builder: (context, futureSnapshot) {
+                          if (futureSnapshot.connectionState == ConnectionState.waiting) {
+                            return _buildShimmerGrid(screenWidth, screenHeight);
+                          }
+                          if (futureSnapshot.hasError) {
+                            return Center(child: Text("Error: ${futureSnapshot.error}", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 16)));
+                          }
+                          if (!futureSnapshot.hasData || futureSnapshot.data!.isEmpty) {
+                            return Center(
+                              child: Text(
+                                widget.isPayer == true
+                                    ? "No splits where you paid found."
+                                    : widget.isReceiver == true
+                                    ? "No splits where you received found."
+                                    : widget.category != null
+                                    ? "No matching splits in ${widget.category} found."
+                                    : widget.friendUid != null
+                                    ? "No matching splits with this friend found."
+                                    : "No matching splits found.",
+                                style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]!),
+                              ),
+                            );
+                          }
 
-                        var splits = snapshot.data!.docs;
-                        print("Total splits before filtering: ${splits.length}");
+                          var filteredSplits = futureSnapshot.data!;
+                          print("Filtered splits count: ${filteredSplits.length}");
 
-                        return FutureBuilder<List<QueryDocumentSnapshot>>(
-                          future: _filterSplits(splits),
-                          builder: (context, futureSnapshot) {
-                            if (futureSnapshot.connectionState == ConnectionState.waiting) return _buildShimmerGrid(screenWidth, screenHeight);
-                            if (futureSnapshot.hasError) return Center(child: Text("Error: ${futureSnapshot.error}", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 16)));
-                            if (!futureSnapshot.hasData || futureSnapshot.data!.isEmpty) {
-                              return Center(
-                                child: Text(
-                                  widget.isPayer == true
-                                      ? "No splits where you paid found."
-                                      : widget.isReceiver == true
-                                      ? "No splits where you received found."
-                                      : widget.category != null
-                                      ? "No matching splits in ${widget.category} found."
-                                      : widget.friendUid != null
-                                      ? "No matching splits with this friend found."
-                                      : "No matching splits found.",
-                                  style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]!),
-                                ),
-                              );
-                            }
+                          return ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(), // Ensure scroll physics for RefreshIndicator
+                            shrinkWrap: true,
+                            itemCount: filteredSplits.length,
+                            itemBuilder: (context, index) {
+                              var splitDoc = filteredSplits[index];
+                              String splitId = splitDoc.id;
+                              Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
+                              Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
+                              double totalAmount = splitData['totalAmount']?.toDouble() ?? 0.0;
+                              int participantCount = (splitData['participants'] as List<dynamic>?)?.length ?? 1;
+                              double userPaidAmount = (paidBy[userId] as num?)?.toDouble() ?? 0.0;
 
-                            var filteredSplits = futureSnapshot.data!;
-                            print("Filtered splits count: ${filteredSplits.length}");
+                              double sharePerPerson = totalAmount / participantCount;
+                              double yourNet = sharePerPerson - userPaidAmount;
+                              double netAmount = yourNet;
+                              String displayAmount = netAmount >= 0 ? "-₹${netAmount.toStringAsFixed(2)}" : "+₹${(-netAmount).toStringAsFixed(2)}";
+                              bool isSettledFinancially = netAmount.abs() < 0.01;
+                              String? creatorId = splitData['createdBy'] as String?;
+                              String createdTime = (splitData['createdAt'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? "Unknown";
 
-                            return ListView.builder(
-                              shrinkWrap: true,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: filteredSplits.length,
-                              itemBuilder: (context, index) {
-                                var splitDoc = filteredSplits[index];
-                                String splitId = splitDoc.id;
-                                Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
-                                Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
-                                double totalAmount = splitData['totalAmount']?.toDouble() ?? 0.0;
-                                int participantCount = (splitData['participants'] as List<dynamic>?)?.length ?? 1;
-                                double userPaidAmount = (paidBy[userId] as num?)?.toDouble() ?? 0.0;
+                              return FutureBuilder<bool>(
+                                future: _isSplitSettled(splitId),
+                                builder: (context, settleSnapshot) {
+                                  if (settleSnapshot.connectionState == ConnectionState.waiting) {
+                                    return _buildShimmerCard(screenWidth, screenHeight);
+                                  }
+                                  bool isSettled = settleSnapshot.data ?? false;
 
-                                double sharePerPerson = totalAmount / participantCount;
-                                double yourNet = sharePerPerson - userPaidAmount;
-                                double netAmount = yourNet;
-                                String displayAmount = netAmount >= 0 ? "-₹${netAmount.toStringAsFixed(2)}" : "+₹${(-netAmount).toStringAsFixed(2)}";
-                                bool isSettledFinancially = netAmount.abs() < 0.01;
-                                String? creatorId = splitData['createdBy'] as String?;
-                                String createdTime = (splitData['createdAt'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? "Unknown";
-
-                                return StreamBuilder<bool>(
-                                  stream: _isSplitSettledStream(splitId),
-                                  builder: (context, settleSnapshot) {
-                                    if (settleSnapshot.connectionState == ConnectionState.waiting) return _buildShimmerCard(screenWidth, screenHeight);
-                                    bool isSettled = settleSnapshot.data ?? false;
-
-                                    return FadeInUp(
-                                      delay: Duration(milliseconds: 100 * index),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          print("Navigating to SplitDetailScreen with splitId: $splitId");
-                                          Navigator.push(context, MaterialPageRoute(builder: (context) => SplitDetailScreen(splitId: splitId))).then((_) => setState(() {}));
-                                        },
-                                        child: Stack(
-                                          children: [
-                                            _buildInteractiveSplitCard(
-                                              context,
-                                              splitData['description'] ?? 'Unknown Split',
-                                              createdTime,
-                                              userPaidAmount.toStringAsFixed(2),
-                                              totalAmount.toStringAsFixed(2),
-                                              isSettled ? "Settled" : displayAmount,
-                                              isSettledFinancially || isSettled,
-                                            ),
-                                            Positioned(
-                                              top: 8,
-                                              right: 8,
-                                              child: PopupMenuButton<String>(
-                                                icon: const Icon(Icons.more_vert, color: Colors.grey, size: 20),
-                                                tooltip: "Options",
-                                                onSelected: (value) {
-                                                  if (value == 'removeParticipation') {
-                                                    _removeMyParticipation(splitId);
-                                                  } else if (value == 'deleteEntireSplit' && creatorId == userId) {
-                                                    _deleteEntireSplit(splitId);
-                                                  }
-                                                },
-                                                itemBuilder: (context) => <PopupMenuEntry<String>>[
+                                  return FadeInUp(
+                                    delay: Duration(milliseconds: 100 * index),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        print("Navigating to SplitDetailScreen with splitId: $splitId");
+                                        Navigator.push(context, MaterialPageRoute(builder: (context) => SplitDetailScreen(splitId: splitId))).then((_) => _fetchSplits());
+                                      },
+                                      child: Stack(
+                                        children: [
+                                          _buildInteractiveSplitCard(
+                                            context,
+                                            splitData['description'] ?? 'Unknown Split',
+                                            createdTime,
+                                            userPaidAmount.toStringAsFixed(2),
+                                            totalAmount.toStringAsFixed(2),
+                                            isSettled ? "Settled" : displayAmount,
+                                            isSettledFinancially || isSettled,
+                                          ),
+                                          Positioned(
+                                            top: 8,
+                                            right: 8,
+                                            child: PopupMenuButton<String>(
+                                              icon: const Icon(Icons.more_vert, color: Colors.grey, size: 20),
+                                              tooltip: "Options",
+                                              onSelected: (value) {
+                                                if (value == 'removeParticipation') {
+                                                  _removeMyParticipation(splitId);
+                                                } else if (value == 'deleteEntireSplit' && creatorId == userId) {
+                                                  _deleteEntireSplit(splitId);
+                                                }
+                                              },
+                                              itemBuilder: (context) => <PopupMenuEntry<String>>[
+                                                const PopupMenuItem<String>(
+                                                  value: 'removeParticipation',
+                                                  child: ListTile(
+                                                    leading: Icon(Icons.person_remove, color: Colors.red),
+                                                    title: Text("Remove My Participation", style: TextStyle(color: Colors.red)),
+                                                  ),
+                                                ),
+                                                if (creatorId == userId)
                                                   const PopupMenuItem<String>(
-                                                    value: 'removeParticipation',
+                                                    value: 'deleteEntireSplit',
                                                     child: ListTile(
-                                                      leading: Icon(Icons.person_remove, color: Colors.red),
-                                                      title: Text("Remove My Participation", style: TextStyle(color: Colors.red)),
+                                                      leading: Icon(Icons.delete_forever, color: Colors.red),
+                                                      title: Text("Delete Entire Split", style: TextStyle(color: Colors.red)),
                                                     ),
                                                   ),
-                                                  if (creatorId == userId)
-                                                    const PopupMenuItem<String>(
-                                                      value: 'deleteEntireSplit',
-                                                      child: ListTile(
-                                                        leading: Icon(Icons.delete_forever, color: Colors.red),
-                                                        title: Text("Delete Entire Split", style: TextStyle(color: Colors.red)),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        );
-                      },
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ],
@@ -419,12 +432,23 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
     );
   }
 
-  Stream<QuerySnapshot> _buildSplitsStream() {
-    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('splits').where('participants', arrayContains: userId).orderBy('createdAt', descending: true);
-
-    if (widget.category != null) query = query.where('category', isEqualTo: widget.category);
-
-    return query.snapshots();
+  Widget _buildInitialState(double screenWidth, double screenHeight) {
+    return Center(
+      child: splits.isEmpty
+          ? Text(
+        widget.isPayer == true
+            ? "No splits where you paid yet."
+            : widget.isReceiver == true
+            ? "No splits where you received yet."
+            : widget.category != null
+            ? "No splits in ${widget.category} yet."
+            : widget.friendUid != null
+            ? "No splits with this friend yet."
+            : "No expense history yet.",
+        style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]!),
+      )
+          : _buildShimmerGrid(screenWidth, screenHeight),
+    );
   }
 
   Future<List<QueryDocumentSnapshot>> _filterSplits(List<QueryDocumentSnapshot> splits) async {
@@ -479,7 +503,12 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.blue))),
-          TextButton(onPressed: () => {setState(() {}), Navigator.pop(context)}, child: Text("Apply", style: GoogleFonts.poppins(color: Colors.blue))),
+          TextButton(
+              onPressed: () {
+                setState(() {});
+                Navigator.pop(context);
+              },
+              child: Text("Apply", style: GoogleFonts.poppins(color: Colors.blue))),
         ],
       ),
     );
@@ -505,7 +534,12 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.blue))),
-          TextButton(onPressed: () => {setState(() {}), Navigator.pop(context)}, child: Text("Apply", style: GoogleFonts.poppins(color: Colors.blue))),
+          TextButton(
+              onPressed: () {
+                setState(() {});
+                Navigator.pop(context);
+              },
+              child: Text("Apply", style: GoogleFonts.poppins(color: Colors.blue))),
         ],
       ),
     );
@@ -514,7 +548,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
   Widget _buildShimmerGrid(double screenWidth, double screenHeight) {
     return GridView.builder(
       shrinkWrap: true,
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, mainAxisExtent: 120),
       itemCount: 4,
       itemBuilder: (context, index) => Shimmer.fromColors(
@@ -594,10 +628,6 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         ),
       ),
     );
-  }
-
-  Stream<bool> _isSplitSettledStream(String splitId) {
-    return FirebaseFirestore.instance.collection('splits').doc(splitId).collection('settle').doc(userId).snapshots().map((snapshot) => snapshot.exists ? (snapshot.get('settled') as bool? ?? false) : false).handleError((error) => false);
   }
 
   Widget _buildFriendDetailCard(double screenWidth, double screenHeight) {

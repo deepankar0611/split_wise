@@ -25,6 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
     "amountToReceive": "0",
   };
 
+  Map<String, Map<String, dynamic>> categoryData = {}; // Store category totals
+
   final List<String> categories = [
     "Grocery",
     "Medicine",
@@ -61,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _fetchUserData();
+    _fetchCategoryData(); // Fetch category data on init
   }
 
   Future<void> _fetchUserData() async {
@@ -84,20 +87,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _refreshData() async {
-    await _fetchUserData();
-    // Adding a small delay to show the refresh indicator
-    await Future.delayed(const Duration(milliseconds: 500));
-  }
+  Future<void> _fetchCategoryData() async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('splits')
+          .where('participants', arrayContains: userId)
+          .orderBy('createdAt', descending: true)
+          .get();
 
-  Stream<Map<String, Map<String, dynamic>>> _streamTotalPaidByCategory() {
-    return FirebaseFirestore.instance
-        .collection('splits')
-        .where('participants', arrayContains: userId)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((QuerySnapshot snapshot) {
-      Map<String, Map<String, dynamic>> categoryData = {};
+      Map<String, Map<String, dynamic>> tempCategoryData = {};
       for (var splitDoc in snapshot.docs) {
         Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
         String category = splitData['category'] ?? 'Others';
@@ -106,22 +104,39 @@ class _HomeScreenState extends State<HomeScreen> {
         Timestamp? createdAt = splitData['createdAt'] as Timestamp?;
 
         if (userPaidAmount > 0) {
-          if (!categoryData.containsKey(category)) {
-            categoryData[category] = {
+          if (!tempCategoryData.containsKey(category)) {
+            tempCategoryData[category] = {
               'totalPaid': 0.0,
               'lastInvolved': createdAt?.toDate(),
             };
           }
-          categoryData[category]!['totalPaid'] = (categoryData[category]!['totalPaid'] as double) + userPaidAmount;
+          tempCategoryData[category]!['totalPaid'] = (tempCategoryData[category]!['totalPaid'] as double) + userPaidAmount;
           if (createdAt != null &&
-              (categoryData[category]!['lastInvolved'] == null ||
-                  createdAt.toDate().isAfter(categoryData[category]!['lastInvolved'] as DateTime))) {
-            categoryData[category]!['lastInvolved'] = createdAt.toDate();
+              (tempCategoryData[category]!['lastInvolved'] == null ||
+                  createdAt.toDate().isAfter(tempCategoryData[category]!['lastInvolved'] as DateTime))) {
+            tempCategoryData[category]!['lastInvolved'] = createdAt.toDate();
           }
         }
       }
-      return categoryData;
-    });
+      if (mounted) {
+        setState(() {
+          categoryData = tempCategoryData;
+        });
+      }
+    } catch (e) {
+      print("Error fetching category data: $e");
+      if (mounted) {
+        setState(() {
+          categoryData = {};
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshData() async {
+    await _fetchUserData();
+    await _fetchCategoryData(); // Refresh category data too
+    await Future.delayed(const Duration(milliseconds: 500)); // Small delay for refresh indicator
   }
 
   Stream<bool> _isSplitSettledStream(String splitId) {
@@ -258,7 +273,8 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context) => ExpenseHistoryDetailedScreen(
               isReceiver: true,
               showFilter: '',
-              splitId: '', sendFilter: '',
+              splitId: '',
+              sendFilter: '',
             ),
           ),
         );
@@ -326,7 +342,8 @@ class _HomeScreenState extends State<HomeScreen> {
               isPayer: false,
               showFilter: '',
               splitId: '',
-              friendUid: '', sendFilter: '',
+              friendUid: '',
+              sendFilter: '',
             ),
           ),
         );
@@ -405,9 +422,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // Remaining methods remain unchanged (_buildHistoryCardBox, _buildExclusiveFeatureCard, etc.)
-  // I'm omitting them here to keep the response concise, but they should remain as they were in your original code
 
   Widget _buildHistoryCardBox() {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -576,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 double totalAmountToPay = 0.0;
                 double totalAmountToReceive = 0.0;
-                Map<String, Map<String, dynamic>> categoryData = {};
+                Map<String, Map<String, dynamic>> tempCategoryData = {};
 
                 for (var splitDoc in snapshot.data!.docs) {
                   Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
@@ -596,17 +610,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   String category = splitData['category'] ?? 'Others';
                   Timestamp? createdAt = splitData['createdAt'] as Timestamp?;
                   if (userPaidAmount > 0) {
-                    if (!categoryData.containsKey(category)) {
-                      categoryData[category] = {
+                    if (!tempCategoryData.containsKey(category)) {
+                      tempCategoryData[category] = {
                         'totalPaid': 0.0,
                         'lastInvolved': createdAt?.toDate(),
                       };
                     }
-                    categoryData[category]!['totalPaid'] = (categoryData[category]!['totalPaid'] as double) + userPaidAmount;
+                    tempCategoryData[category]!['totalPaid'] = (tempCategoryData[category]!['totalPaid'] as double) + userPaidAmount;
                     if (createdAt != null &&
-                        (categoryData[category]!['lastInvolved'] == null ||
-                            createdAt.toDate().isAfter(categoryData[category]!['lastInvolved'] as DateTime))) {
-                      categoryData[category]!['lastInvolved'] = createdAt.toDate();
+                        (tempCategoryData[category]!['lastInvolved'] == null ||
+                            createdAt.toDate().isAfter(tempCategoryData[category]!['lastInvolved'] as DateTime))) {
+                      tempCategoryData[category]!['lastInvolved'] = createdAt.toDate();
                     }
                   }
                 }
@@ -622,7 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => SpendAnalyzerScreen(
-                              categoryData: categoryData,
+                              categoryData: tempCategoryData,
                               amountToPay: totalAmountToPay,
                               amountToReceive: totalAmountToReceive,
                             ),
@@ -825,60 +839,52 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTransactionList() {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    return StreamBuilder<Map<String, Map<String, dynamic>>>(
-      stream: _streamTotalPaidByCategory(),
-      builder: (context, AsyncSnapshot<Map<String, Map<String, dynamic>>> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    // Use pre-fetched categoryData instead of StreamBuilder
+    List<MapEntry<String, Map<String, dynamic>>> sortedCategories = categories
+        .map<MapEntry<String, Map<String, dynamic>>>((category) {
+      return MapEntry(
+        category,
+        categoryData[category] ?? {'totalPaid': 0.0, 'lastInvolved': null},
+      );
+    }).toList()
+      ..sort((a, b) {
+        DateTime? timeA = a.value['lastInvolved'] as DateTime?;
+        DateTime? timeB = b.value['lastInvolved'] as DateTime?;
+        if (timeA == null && timeB == null) return 0;
+        if (timeA == null) return 1;
+        if (timeB == null) return -1;
+        return timeB.compareTo(timeA);
+      });
 
-        final categoryData = snapshot.hasData ? snapshot.data! : {};
-
-        List<MapEntry<String, Map<String, dynamic>>> sortedCategories = categories
-            .map<MapEntry<String, Map<String, dynamic>>>((category) {
-          return MapEntry(
-            category,
-            categoryData[category] ?? {'totalPaid': 0.0, 'lastInvolved': null},
-          );
-        }).toList()
-          ..sort((a, b) {
-            DateTime? timeA = a.value['lastInvolved'] as DateTime?;
-            DateTime? timeB = b.value['lastInvolved'] as DateTime?;
-            if (timeA == null && timeB == null) return 0;
-            if (timeA == null) return 1;
-            if (timeB == null) return -1;
-            return timeB.compareTo(timeA);
-          });
-
-        return Padding(
-          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Overview",
-                style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold, color: Colors.black87),
-              ),
-              Column(
-                children: sortedCategories.map((entry) {
-                  String category = entry.key;
-                  double totalPaid = entry.value['totalPaid']?.toDouble() ?? 0.0;
-                  DateTime? lastInvolved = entry.value['lastInvolved'] as DateTime?;
-                  String subtitle = lastInvolved != null ? _formatTimeAgo(lastInvolved) : "Never";
-                  return _buildTransactionItem(
-                    categoryIcons[category]!['icon'],
-                    category,
-                    subtitle,
-                    "₹${totalPaid.toStringAsFixed(2)}",
-                    categoryIcons[category]!['color'],
-                    category,
-                  );
-                }).toList(),
-              ),
-            ],
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Overview",
+            style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
-        );
-      },
+          categoryData.isEmpty
+              ? const Center(child: Text("No transactions yet.", style: TextStyle(color: Colors.grey)))
+              : Column(
+            children: sortedCategories.map((entry) {
+              String category = entry.key;
+              double totalPaid = entry.value['totalPaid']?.toDouble() ?? 0.0;
+              DateTime? lastInvolved = entry.value['lastInvolved'] as DateTime?;
+              String subtitle = lastInvolved != null ? _formatTimeAgo(lastInvolved) : "Never";
+              return _buildTransactionItem(
+                categoryIcons[category]!['icon'],
+                category,
+                subtitle,
+                "₹${totalPaid.toStringAsFixed(2)}",
+                categoryIcons[category]!['color'],
+                category,
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -906,7 +912,8 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context) => ExpenseHistoryDetailedScreen(
               category: category,
               showFilter: '',
-              splitId: '', sendFilter: '',
+              splitId: '',
+              sendFilter: '',
             ),
           ),
         );
