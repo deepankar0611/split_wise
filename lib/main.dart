@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:split_wise/bottom_bar.dart';
 import 'package:split_wise/login%20signup/login_screen.dart';
+import 'package:split_wise/login%20signup/splash_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 //
 

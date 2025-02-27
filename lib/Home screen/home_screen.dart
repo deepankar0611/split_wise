@@ -487,7 +487,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
     final List<String> card = [
       "assets/logo/spend.jpg",
-      "assets/images/expense.png",
+      "assets/logo/reminder.jpg",
       "assets/images/expense.png",
     ];
 

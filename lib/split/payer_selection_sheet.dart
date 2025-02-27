@@ -439,12 +439,12 @@ class _PayerSelectionSheetState extends State<PayerSelectionSheet> {
           SizedBox(height: screenHeight * 0.025),
           Container(
             padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.04,
-              vertical: screenHeight * 0.017,
+              horizontal: screenWidth * 0.008,
+              vertical: screenHeight * 0.022,
             ),
             decoration: BoxDecoration(
               color: remainingAmount <= 0 ? Colors.green.shade100 : Colors.red.shade100,
-              borderRadius: BorderRadius.circular(screenWidth * 0.03),
+              borderRadius: BorderRadius.circular(screenWidth * 0.02),
               border: Border.all(color: remainingAmount <= 0 ? Colors.green.shade300 : Colors.red.shade300),
             ),
             child: Row(
