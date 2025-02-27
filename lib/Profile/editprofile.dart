@@ -3,28 +3,29 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 class EditProfileScreen extends StatefulWidget {
   @override
   _EditProfileScreenState createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindingObserver {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
-  final supabase = Supabase.instance.client;
+  late final SupabaseClient supabase;
   File? _image;
-  String? _selectedAvatar;
-  final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
+  String? _imageUrl;
+  late String userId;
+  bool _isLoading = false;
+  final FocusNode _phoneFocusNode = FocusNode();
 
-  // List of avatar options using the Supabase URL
-  final List<String> avatarOptions = [
+  static const List<String> avatarOptions = [
     'https://xzoyevujxvqaumrdskhd.supabase.co/storage/v1/object/public/profile_pictures/profile_pictures/new%201.png',
     'https://xzoyevujxvqaumrdskhd.supabase.co/storage/v1/object/public/profile_pictures/profile_pictures/androgynous-avatar-non-binary-queer-person.png',
     'https://xzoyevujxvqaumrdskhd.supabase.co/storage/v1/object/public/profile_pictures/profile_pictures/3d-rendered-illustration-cartoon-character-with-face-picture-frame.jpg',
@@ -33,183 +34,238 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchUserData();
+    supabase = Supabase.instance.client;
+    userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchUserData());
+    _phoneFocusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      _isLoading = false;
+    }
   }
 
   Future<void> _fetchUserData() async {
-    if (userId == 'defaultUserId') return;
+    if (userId == 'defaultUserId' || !mounted) return;
     try {
+      setState(() => _isLoading = true);
       final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      if (doc.exists && mounted) {
+      if (!mounted) return;
+      if (doc.exists) {
         final data = doc.data() ?? {};
-        setState(() {
-          _nameController.text = data["name"] ?? "User";
-          _phoneController.text = data["phone"] ?? "";
-          _selectedAvatar = data["profileImageUrl"]; // Use profileImageUrl instead of avatarUrl
-        });
+        _nameController.text = data["name"] ?? "User";
+        _phoneController.text = data["phone"] ?? "";
+        _imageUrl = data["profileImageUrl"];
       }
     } catch (e) {
       print("Error fetching user data: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to fetch user data')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+    if (_isLoading || !mounted) return;
+    try {
+      setState(() => _isLoading = true);
+      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (!mounted || pickedFile == null) return;
       setState(() {
         _image = File(pickedFile.path);
-        _selectedAvatar = null; // Clear avatar if custom image is selected
+        _imageUrl = null; // Clear previous URL when new image is picked
       });
       await _uploadImage();
+    } catch (e) {
+      print('Image picking failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to pick image')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _uploadImage() async {
-    if (_image == null) return;
+    if (_image == null || !mounted) return;
     try {
-      final user = firebase_auth.FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('No authenticated user');
       final filePath = 'profile_pictures/${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       await supabase.storage.from('profile_pictures').upload(filePath, _image!);
       final imageUrl = supabase.storage.from('profile_pictures').getPublicUrl(filePath);
 
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'profileImageUrl': imageUrl,
-      });
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+        {'profileImageUrl': imageUrl},
+        SetOptions(merge: true),
+      );
+      if (mounted) setState(() => _imageUrl = imageUrl);
     } catch (e) {
       print('Image upload failed: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload image: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to upload image')),
+        );
+      }
     }
   }
 
   Future<void> _selectAvatar(String avatarUrl) async {
+    if (_isLoading || !mounted) return;
     try {
-      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      setState(() => _isLoading = true);
+      final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
       setState(() {
-        _selectedAvatar = avatarUrl; // Store the Supabase URL
+        _imageUrl = avatarUrl;
         _image = null; // Clear custom image if avatar is selected
       });
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'profileImageUrl': avatarUrl, // Store the Supabase URL in profileImageUrl
-      });
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+        {'profileImageUrl': avatarUrl},
+        SetOptions(merge: true),
+      );
     } catch (e) {
       print('Avatar selection failed: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to select avatar: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to select avatar')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _saveProfile() async {
-    final user = firebase_auth.FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+    if (_isLoading || !mounted) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      setState(() => _isLoading = true);
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+        {
           'name': _nameController.text.trim(),
           'phone': _phoneController.text.trim(),
-        });
+        },
+        SetOptions(merge: true),
+      );
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Profile updated successfully!')),
+          const SnackBar(content: Text('Profile updated successfully!')),
         );
         Navigator.pop(context);
-      } catch (e) {
-        print('Error updating profile: $e');
+      }
+    } catch (e) {
+      print('Error updating profile: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile: $e')),
+          const SnackBar(content: Text('Failed to update profile. Try again.')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     _phoneController.dispose();
+    _nameController.dispose();
+    _phoneFocusNode.dispose();
     super.dispose();
   }
 
   Stream<DocumentSnapshot<Map<String, dynamic>>> getUserStream() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) throw Exception("User not logged in");
+    if (userId == null) {
+      return Stream.error(Exception("User not logged in"));
+    }
     return FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
   }
 
   void _showAvatarPicker() {
+    if (_isLoading || !mounted) return;
     showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(16),
-          height: 200,
-          child: GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: avatarOptions.length,
-            itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () {
-                  _selectAvatar(avatarOptions[index]);
-                  Navigator.pop(context);
-                },
-                child: CircleAvatar(
-                  backgroundImage: NetworkImage(avatarOptions[index]), // Load from Supabase URL
-                  onBackgroundImageError: (exception, stackTrace) {
-                    print('Error loading avatar: $exception');
-                  },
-                ),
-              );
-            },
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        height: 200,
+        child: GridView.builder(
+          physics: const ClampingScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
           ),
-        );
-      },
+          itemCount: avatarOptions.length,
+          itemBuilder: (context, index) => GestureDetector(
+            onTap: _isLoading
+                ? null
+                : () {
+              _selectAvatar(avatarOptions[index]);
+              Navigator.pop(context);
+            },
+            child: CircleAvatar(
+              backgroundImage: NetworkImage(avatarOptions[index]),
+              onBackgroundImageError: (exception, stackTrace) {
+                print('Error loading avatar: $exception');
+              },
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenHeight = MediaQuery.sizeOf(context).height;
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.06),
-        child: AppBar(
-          backgroundColor: Color(0xFF234567),
-          elevation: 0,
-          title: Text(
-            'Edit Profile',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              fontSize: screenWidth * 0.045,
-            ),
-          ),
-          centerTitle: true,
-          leading: CupertinoButton(
-            padding: EdgeInsets.zero,
-            child: Icon(CupertinoIcons.back, color: Colors.white, size: screenWidth * 0.06),
-            onPressed: () => Navigator.pop(context),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF234567),
+        elevation: 0,
+        title: const Text(
+          'Edit Profile',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
+        centerTitle: true,
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Icon(CupertinoIcons.back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        ),
+        toolbarHeight: 50,
       ),
       body: Stack(
         children: [
           Positioned.fill(
             child: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.white, Colors.white],
+                  colors: [Colors.white, Colors.white, Colors.white, Colors.white],
+                  stops: [0.1, 0.3, 0.6, 0.9],
                 ),
               ),
               child: CustomPaint(painter: FloatingBackgroundPainter()),
@@ -218,11 +274,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: getUserStream(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
+              if (_isLoading || snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
               }
               if (!snapshot.hasData || !snapshot.data!.exists) {
-                return Center(child: Text("User data not found"));
+                return const Center(child: Text("User data not found"));
               }
 
               final userData = snapshot.data!.data();
@@ -231,8 +287,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               return Form(
                 key: _formKey,
                 child: ListView(
-                  padding: EdgeInsets.all(screenWidth * 0.05),
-                  children: [
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.all(20),
+                  children: <Widget>[
                     Center(
                       child: Stack(
                         clipBehavior: Clip.none,
@@ -240,126 +297,103 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade300, width: screenWidth * 0.005),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black26,
-                                  blurRadius: screenWidth * 0.02,
-                                  offset: Offset(0, screenWidth * 0.01),
-                                ),
+                              border: Border.all(color: Colors.grey.shade300, width: 2),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
                               ],
                             ),
                             child: CircleAvatar(
-                              radius: screenWidth * 0.18,
+                              radius: 70,
                               backgroundColor: Colors.white,
                               backgroundImage: _image != null
                                   ? FileImage(_image!)
-                                  : _selectedAvatar != null && _selectedAvatar!.isNotEmpty
-                                  ? NetworkImage(_selectedAvatar!) // Supabase URL
+                                  : _imageUrl != null && _imageUrl!.isNotEmpty
+                                  ? NetworkImage(_imageUrl!)
                                   : profileImageUrl.isNotEmpty
-                                  ? NetworkImage(profileImageUrl) // Supabase URL
-                                  : AssetImage('assets/logo/intro.jpeg') as ImageProvider,
-                              onBackgroundImageError: (exception, stackTrace) {
-                                print('Error loading profile image: $exception');
-                              },
+                                  ? NetworkImage(profileImageUrl)
+                                  : const AssetImage('assets/logo/intro.jpeg') as ImageProvider,
                             ),
                           ),
                           Positioned(
-                            bottom: screenWidth * 0.025,
-                            right: -screenWidth * 0.05,
+                            bottom: 10,
+                            right: -10,
                             child: CupertinoButton(
                               padding: EdgeInsets.zero,
-                              onPressed: _pickImage,
+                              onPressed: _isLoading ? null : _pickImage,
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.grey.shade300, width: screenWidth * 0.002),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: screenWidth * 0.01,
-                                      offset: Offset(0, screenWidth * 0.005),
-                                    ),
+                                  border: Border.all(color: Colors.grey.shade300, width: 1),
+                                  boxShadow: const [
+                                    BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
                                   ],
                                 ),
-                                padding: EdgeInsets.all(screenWidth * 0.02),
-                                child: Icon(CupertinoIcons.photo, color: Colors.green, size: screenWidth * 0.06),
+                                padding: const EdgeInsets.all(8),
+                                child: const Icon(CupertinoIcons.add, color: Colors.green, size: 25),
                               ),
                             ),
                           ),
                           Positioned(
-                            bottom: screenWidth * 0.025,
-                            right: screenWidth * 0.05,
+                            bottom: 10,
+                            right: 40,
                             child: CupertinoButton(
                               padding: EdgeInsets.zero,
-                              onPressed: _showAvatarPicker,
+                              onPressed: _isLoading ? null : _showAvatarPicker,
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.grey.shade300, width: screenWidth * 0.002),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: screenWidth * 0.01,
-                                      offset: Offset(0, screenWidth * 0.005),
-                                    ),
+                                  border: Border.all(color: Colors.grey.shade300, width: 1),
+                                  boxShadow: const [
+                                    BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
                                   ],
                                 ),
-                                padding: EdgeInsets.all(screenWidth * 0.02),
-                                child: Icon(CupertinoIcons.person_circle, color: Colors.blue, size: screenWidth * 0.06),
+                                padding: const EdgeInsets.all(8),
+                                child: const Icon(CupertinoIcons.person_circle, color: Colors.blue, size: 25),
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(height: screenHeight * 0.04),
-                    buildTextField(
-                      "Name",
-                      "Enter your name",
-                      _nameController,
-                      CupertinoIcons.person_fill,
-                      fontSize: screenWidth * 0.04,
-                    ),
-                    buildTextField(
-                      "Phone",
-                      "Enter your phone",
-                      _phoneController,
-                      CupertinoIcons.phone_fill,
-                      keyboardType: TextInputType.phone,
-                      fontSize: screenWidth * 0.04,
-                    ),
-                    SizedBox(height: screenHeight * 0.02),
+                    const SizedBox(height: 30),
+                    buildTextField("Name", "Enter your name", _nameController, CupertinoIcons.person_fill),
+                    _buildPhoneTextField(controller: _phoneController),
+                    const SizedBox(height: 30),
                     CupertinoButton(
-                      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.015, horizontal: screenWidth * 0.02),
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                       color: const Color(0xFF234567),
-                      borderRadius: BorderRadius.circular(screenWidth * 0.03),
-                      onPressed: _saveProfile,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26.withOpacity(0.3),
-                              spreadRadius: 0.5,
-                              blurRadius: 5,
-                              offset: const Offset(0, 3),
+                      onPressed: _isLoading
+                          ? null
+                          : _saveProfile,
+                      child: _isLoading
+                          ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                          : RichText(
+                        text: const TextSpan(
+                          text: 'Save ',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          children: <TextSpan>[
+                            TextSpan(
+                              text: 'Update',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ],
-                        ),
-                        padding: EdgeInsets.zero,
-                        child: RichText(
-                          text: TextSpan(
-                            text: 'Save ',
-                            style: TextStyle(fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold, color: Colors.white),
-                            children: [
-                              TextSpan(
-                                text: 'Update',
-                                style: TextStyle(fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold, color: Colors.white),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                     ),
@@ -381,37 +415,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         bool obscureText = false,
         TextInputType? keyboardType,
         IconData? suffixIcon,
-        required double fontSize,
       }) {
-    final screenWidth = MediaQuery.of(context).size.width;
     return Padding(
-      padding: EdgeInsets.only(bottom: screenWidth * 0.04),
+      padding: const EdgeInsets.only(bottom: 15.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.only(bottom: screenWidth * 0.012),
+            padding: const EdgeInsets.only(bottom: 5.0),
             child: RichText(
               text: TextSpan(
                 style: DefaultTextStyle.of(context).style.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
-                  fontSize: fontSize * 0.9,
+                  fontSize: 16,
                 ),
-                children: [TextSpan(text: labelText)],
+                children: <TextSpan>[
+                  TextSpan(text: labelText, style: const TextStyle(fontSize: 15)),
+                ],
               ),
             ),
           ),
           Container(
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(screenWidth * 0.04),
-              boxShadow: [
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: const [
                 BoxShadow(
                   color: Colors.black26,
-                  spreadRadius: screenWidth * 0.002,
-                  blurRadius: screenWidth * 0.012,
-                  offset: Offset(0, screenWidth * 0.007),
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                  offset: Offset(0, 3),
                 ),
               ],
             ),
@@ -419,15 +453,89 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               controller: controller,
               obscureText: obscureText,
               keyboardType: keyboardType,
-              style: TextStyle(fontSize: fontSize, color: Colors.black87),
+              enabled: !_isLoading,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
               decoration: InputDecoration(
                 hintText: hintText,
-                hintStyle: TextStyle(fontSize: fontSize * 0.9, color: Colors.grey.shade500),
-                prefixIcon: Icon(prefixIcon, color: Colors.grey.shade600, size: fontSize * 1.2),
-                suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: Colors.grey.shade600, size: fontSize * 1.2) : null,
+                hintStyle:  TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                prefixIcon: Icon(prefixIcon, color: Colors.grey.shade600),
+                suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: Colors.grey.shade600) : null,
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenWidth * 0.045),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneTextField({required TextEditingController controller}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 5.0),
+            child: RichText(
+              text: TextSpan(
+                style: DefaultTextStyle.of(context).style.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                  fontSize: 16,
+                ),
+                children: const <TextSpan>[
+                  TextSpan(text: "Phone", style: TextStyle(fontSize: 15)),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: controller,
+              focusNode: _phoneFocusNode,
+              enabled: !_isLoading,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.done,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              inputFormatters: [PhoneInputFormatter()],
+              decoration: InputDecoration(
+                hintText: "Enter your phone (e.g., +1234567890)",
+                hintStyle:  TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                prefixIcon:  Icon(CupertinoIcons.phone_fill, color: Colors.grey.shade600),
+                suffixIcon: controller.text.isNotEmpty && _phoneFocusNode.hasFocus && !_isLoading
+                    ? IconButton(
+                  icon:  Icon(Icons.clear, color: Colors.grey.shade600),
+                  onPressed: () {
+                    controller.clear();
+                    setState(() {});
+                  },
+                )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              ),
+              onTapOutside: (_) {
+                if (_phoneFocusNode.hasFocus && !_isLoading) {
+                  _phoneFocusNode.unfocus();
+                }
+              },
+              onSubmitted: (_) {
+                if (!_isLoading) _phoneFocusNode.unfocus();
+              },
             ),
           ),
         ],
@@ -436,24 +544,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 }
 
+class PhoneInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final text = newValue.text.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (text.isEmpty) return newValue;
+
+    String formattedText = text.startsWith('+') ? text : '+$text';
+    if (formattedText.length > 12) {
+      formattedText = formattedText.substring(0, 12);
+    }
+
+    return TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: formattedText.length),
+    );
+  }
+}
+
 class FloatingBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final random = Random();
+    final paintLine = Paint()
+      ..color = Colors.green.shade200.withOpacity(0.3)
+      ..strokeWidth = 1.5;
+    final paintCircle = Paint();
+
     for (int i = 0; i < 5; i++) {
       final startPoint = Offset(0, size.height * random.nextDouble());
       final endPoint = Offset(size.width, size.height * random.nextDouble());
-      final paint = Paint()
-        ..color = Colors.green.shade200.withOpacity(0.3)
-        ..strokeWidth = size.width * 0.004;
-      canvas.drawLine(startPoint, endPoint, paint);
+      canvas.drawLine(startPoint, endPoint, paintLine);
     }
+
     for (int i = 0; i < 20; i++) {
       final center = Offset(size.width * random.nextDouble(), size.height * random.nextDouble());
-      final radius = random.nextDouble() * (size.width * 0.04) + (size.width * 0.012);
-      final paint = Paint()
-        ..color = Color.fromRGBO(random.nextInt(256), random.nextInt(256), random.nextInt(256), 0.1);
-      canvas.drawCircle(center, radius, paint);
+      final radius = random.nextDouble() * 15 + 5;
+      paintCircle.color = Color.fromRGBO(random.nextInt(256), random.nextInt(256), random.nextInt(256), 0.1);
+      canvas.drawCircle(center, radius, paintCircle);
     }
   }
 

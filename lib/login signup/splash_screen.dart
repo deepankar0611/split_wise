@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:split_wise/Home%20screen/welcome.dart'; // Import your destination page
+import 'package:split_wise/login%20signup/welcome.dart'; // Import Welcome Page
+import 'package:split_wise/login%20signup/login_screen.dart'; // Import LoginPage
+import 'package:split_wise/bottom_bar.dart'; // Import BottomBar
+import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'login and signup.dart'; // Import Shared Preferences
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -21,23 +27,45 @@ class _SplashScreenState extends State<SplashScreen> {
     _videoController =
         VideoPlayerController.asset('assets/animation/56qRH8Xl3ih8DWE25i.mp4');
     _initializeVideoFuture = _videoController.initialize();
-    _videoController.setLooping(true); // Loop the video
-    _videoController.play(); // Start playing the video
+    _videoController.setLooping(true);
+    _videoController.play();
 
-    // Navigate to the IntroPage after 2 seconds
+    // Check user state and navigate after 4 seconds
     Future.delayed(const Duration(seconds: 4), () {
+      _navigateBasedOnUserState();
+    });
+  }
+
+  Future<void> _navigateBasedOnUserState() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final bool isFirstTime = prefs.getBool('isFirstTime') ?? true;
+    final User? user = FirebaseAuth.instance.currentUser;
+
+    if (isFirstTime) {
+      // First time user: Navigate to LoginPage and mark it as not first time
+      await prefs.setBool('isFirstTime', false);
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => IntroPage(), // Redirects to Welcome Page
-        ),
+        MaterialPageRoute(builder: (context) => IntroPage()),
       );
-    });
+    } else if (user != null && user.emailVerified) {
+      // User is logged in and email is verified: Navigate to BottomBar
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => BottomBar()),
+      );
+    } else {
+      // User has used the app but needs to sign in: Navigate to LoginPage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    }
   }
 
   @override
   void dispose() {
-    _videoController.dispose(); // Dispose of the controller to free resources
+    _videoController.dispose();
     super.dispose();
   }
 
@@ -57,7 +85,6 @@ class _SplashScreenState extends State<SplashScreen> {
             future: _initializeVideoFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.done) {
-                // When the video is ready
                 return Container(
                   width: size.width * 0.5,
                   height: size.width * 0.5,
@@ -70,13 +97,12 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 );
               } else {
-                // Show a loading indicator or placeholder
                 return Container(
                   width: size.width * 0.5,
                   height: size.width * 0.5,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey[300], // Placeholder background color
+                    color: Colors.grey[300],
                   ),
                   child: const Center(
                     child: CircularProgressIndicator(),

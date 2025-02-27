@@ -2,11 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:slider_button/slider_button.dart';
 import 'package:lottie/lottie.dart';
 import 'dart:ui';
-import 'package:google_fonts/google_fonts.dart'; // Import Google Fonts
+import 'package:google_fonts/google_fonts.dart';
 
 class FinalSplitScreen extends StatefulWidget {
   final List<Map<String, dynamic>> selectedPeople;
@@ -61,7 +60,6 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     _totalAmountToPay = userToPay > 0 ? userToPay : 0;
     _totalAmountToReceive = userToPay < 0 ? -userToPay : 0;
   }
-
 
   double _calculateAmountPerPerson() {
     return widget.totalAmount / (widget.selectedPeople.length + 1); // +1 for "You"
@@ -260,9 +258,8 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     _totalAmountToPay = userToPay > 0 ? userToPay : 0; // Update total pay amount
     _totalAmountToReceive = userToPay < 0 ? -userToPay : 0; // Update total receive amount
 
-
     return Scaffold(
-      backgroundColor: Colors.white, // set white background for body
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           CustomScrollView(
@@ -270,11 +267,11 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
               SliverAppBar(
                 pinned: true,
                 floating: false,
-                expandedHeight: screenHeight * 0.2, // decreased expandedHeight
+                expandedHeight: screenHeight * 0.2,
                 backgroundColor: const Color(0xFF234567),
                 centerTitle: true,
                 title: Text(
-                  'Settle Up',
+                  widget.expenseDescription.isNotEmpty ? widget.expenseDescription : "Split Details",
                   style: GoogleFonts.lobster(
                     textStyle: const TextStyle(
                       color: Colors.white,
@@ -298,11 +295,11 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                       background: Padding(
                         padding: EdgeInsets.only(top: screenHeight * 0.12),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.01), // decreased vertical padding
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.01),
                           child: Transform.translate(
-                            offset: Offset(0, cardAnimationProgress * screenHeight * 0.05), // decreased offset
+                            offset: Offset(0, cardAnimationProgress * screenHeight * 0.05),
                             child: Transform.scale(
-                              scale: 1.0 - cardAnimationProgress * 0.1, // decreased scale
+                              scale: 1.0 - cardAnimationProgress * 0.1,
                               child: _buildTotalSpendReceiveCard(_totalAmountToPay, _totalAmountToReceive, context),
                             ),
                           ),
@@ -311,15 +308,14 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                     );
                   },
                 ),
-                // Removed leading and actions properties as requested
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenHeight * 0.01),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: screenHeight * 0.02), // decreased SizedBox height
+                      SizedBox(height: screenHeight * 0.01),
                       Text(
                         "Split Summary",
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -327,9 +323,9 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                             fontWeight: FontWeight.bold,
                             fontSize: screenWidth > 600 ? 22 : 21),
                       ),
-                      SizedBox(height: screenHeight * 0.01), // decreased SizedBox height
+                      SizedBox(height: screenHeight * 0.005),
                       _buildListView(screenWidth, allPeople, finalPayerAmounts, amountPerPerson),
-                      SizedBox(height: screenHeight * 0.02), // decreased SizedBox height
+                      SizedBox(height: screenHeight * 0.01),
                       Text(
                         "Transactions to Settle",
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -337,9 +333,9 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                             fontWeight: FontWeight.bold,
                             fontSize: screenWidth > 600 ? 22 : 21),
                       ),
-                      SizedBox(height: screenHeight * 0.01), // decreased SizedBox height
+                      SizedBox(height: screenHeight * 0.005),
                       _buildListView(screenWidth, transactions, {}, 0),
-                      SizedBox(height: screenHeight * 0.1), // Extra padding to avoid overlap with fixed button
+                      SizedBox(height: screenHeight * 0.05),
                     ],
                   ),
                 ),
@@ -348,9 +344,9 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
           ),
           // Fixed SliderButton at the bottom
           Positioned(
-            left: screenWidth * 0.05, // 5% margin from left
-            right: screenWidth * 0.05, // 5% margin from right
-            bottom: screenHeight * 0.03, // 3% margin from bottom
+            left: screenWidth * 0.05,
+            right: screenWidth * 0.05,
+            bottom: screenHeight * 0.03,
             child: _buildFinalizeButton(),
           ),
           // Overlay for payment finalized animation
@@ -366,19 +362,18 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     );
   }
 
-  Widget _buildListView(double width, List<Map<String, dynamic>> data,
-      Map<String, double> amounts, double amountPerPerson) {
+  Widget _buildListView(double width, List<Map<String, dynamic>> data, Map<String, double> amounts, double amountPerPerson) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: width * 0.02), // further reduced vertical padding
+      padding: EdgeInsets.symmetric(vertical: width * 0.01),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100, // shade of grey for card color
-        borderRadius: BorderRadius.circular(12), // Reduced borderRadius
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-              color: Colors.grey.withOpacity(0.1), // Reduced shadow opacity
+              color: Colors.grey.withOpacity(0.1),
               spreadRadius: 1,
-              blurRadius: 3,   // Reduced blurRadius
-              offset: const Offset(0, 2)), // Reduced offset
+              blurRadius: 3,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: ListView.builder(
@@ -390,9 +385,8 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     );
   }
 
-  Widget _buildListTile(double width, Map<String, dynamic> item,
-      Map<String, double> amounts, double amountPerPerson) {
-    TextStyle bodyTextStyle = TextStyle(fontSize: width > 600 ? 14 : 12); // Smaller body text size
+  Widget _buildListTile(double width, Map<String, dynamic> item, Map<String, double> amounts, double amountPerPerson) {
+    TextStyle bodyTextStyle = TextStyle(fontSize: width > 600 ? 14 : 12);
 
     if (item.containsKey('name')) {
       // Split Summary
@@ -400,37 +394,29 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       String uid = item["uid"];
       double amountPaid = amounts[uid] ?? 0.0;
       double amountToPay = amountPerPerson - amountPaid;
-      String amountText =
-      amountToPay > 0 ? "-₹${amountToPay.toStringAsFixed(0)}" : "+₹${(-amountToPay).toStringAsFixed(0)}";
+      String amountText = amountToPay > 0 ? "-₹${amountToPay.toStringAsFixed(0)}" : "+₹${(-amountToPay).toStringAsFixed(0)}";
       TextStyle amountStyle = TextStyle(
         color: amountToPay > 0 ? Colors.redAccent.shade700 : Colors.green.shade700,
         fontWeight: FontWeight.w700,
-        fontSize: width > 600 ? 18 : 15, // Reduced amount fontSize
+        fontSize: width > 600 ? 18 : 15,
       );
 
       return Padding(
-        padding: EdgeInsets.symmetric(horizontal: width * 0.02, vertical: width * 0.01), // further reduced padding
+        padding: EdgeInsets.symmetric(horizontal: width * 0.02, vertical: width * 0.005),
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Container(
-            padding: EdgeInsets.all(width * 0.015), // further reduced padding
-            decoration: BoxDecoration(
-                color: Colors.teal.shade50, borderRadius: BorderRadius.circular(8)), // Reduced borderRadius
-            child: Icon(
-                name == "You" ? LucideIcons.user : LucideIcons.users,
-                color: Colors.teal.shade700,
-                size: width * 0.05), // Reduced icon size
+            padding: EdgeInsets.all(width * 0.05),
+            decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(8)),
+            child: Icon(name == "You" ? LucideIcons.user : LucideIcons.users, color: Colors.teal.shade700, size: width * 0.05),
           ),
           title: Text(
             name == "You" ? "You" : name,
-            style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: width > 600 ? 16 : 14, // Reduced title fontSize
-                color: Colors.black87),
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: width > 600 ? 16 : 14, color: Colors.black87),
           ),
           subtitle: Text(
             "Paid: ₹${amountPaid.toStringAsFixed(2)}",
-            style: bodyTextStyle.copyWith(color: Colors.grey.shade600), // Apply smaller body text style
+            style: bodyTextStyle.copyWith(color: Colors.grey.shade600),
           ),
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -439,7 +425,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
               Text(amountText, style: amountStyle),
               Text(
                 amountToPay > 0 ? "To Pay" : "To Receive",
-                style: bodyTextStyle.copyWith(color: Colors.grey.shade500), // Apply smaller body text style
+                style: bodyTextStyle.copyWith(color: Colors.grey.shade500),
               ),
             ],
           ),
@@ -448,31 +434,21 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     } else {
       // Transactions to Settle
       return Padding(
-        padding: EdgeInsets.symmetric(horizontal: width * 0.02, vertical: width * 0.01), // further reduced padding
+        padding: EdgeInsets.symmetric(horizontal: width * 0.02, vertical: width * 0.005),
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Container(
-            padding: EdgeInsets.all(width * 0.01), // further reduced padding
-            decoration: BoxDecoration(
-                color: Colors.teal.shade50, borderRadius: BorderRadius.circular(8)), // Reduced borderRadius
-            child: Icon(
-                LucideIcons.arrowRightCircle,
-                color: Colors.teal.shade700,
-                size: width * 0.05), // Reduced icon size
+            padding: EdgeInsets.all(width * 0.05),
+            decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(8)),
+            child: Icon(LucideIcons.arrowRightCircle, color: Colors.teal.shade700, size: width * 0.05),
           ),
           title: Text(
             "${item['from']} to ${item['to']}",
-            style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: width > 600 ? 16 : 14, // Reduced title fontSize
-                color: Colors.black87),
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: width > 600 ? 16 : 14, color: Colors.black87),
           ),
           trailing: Text(
             "₹${item['amount'].toStringAsFixed(2)}",
-            style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: width > 600 ? 16 : 14, // Reduced trailing fontSize
-                color: Colors.green.shade700),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: width > 600 ? 16 : 14, color: Colors.green.shade700),
           ),
         ),
       );
@@ -486,15 +462,15 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         return true;
       },
       label: const Text("Slide to Finalize Payment"),
-      backgroundColor: Colors.grey.shade200, // Track background color
-      buttonColor: Color(0xFF234567), // Button color
+      backgroundColor: Colors.grey.shade200,
+      buttonColor: Color(0xFF234567),
       icon: const Center(
         child: Text(
           ">",
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-      ), // Adds ">>" inside the button
-      width: MediaQuery.of(context).size.width * 0.9, // Ensure it spans most of the width
+      ),
+      width: MediaQuery.of(context).size.width * 0.9,
     );
   }
 
@@ -502,7 +478,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     final screenSize = MediaQuery.of(context).size;
     return Card(
       elevation: 2,
-      color:  Colors.white,
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: EdgeInsets.all(screenSize.width * 0.035),

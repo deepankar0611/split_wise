@@ -17,7 +17,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:21.3.0")
 
     // Fix for Java 8 compatibility issues
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 }
 
 android {

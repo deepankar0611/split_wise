@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'login signup/login.dart';
+import 'login signup/login and signup.dart';
 import 'login signup/login_screen.dart';
 
 class GetStarted extends StatefulWidget {

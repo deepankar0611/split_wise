@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../split/friends.dart';
-import '../login signup/login.dart';
+import 'login and signup.dart';
 
 class IntroPage extends StatefulWidget {
   const IntroPage({super.key});
