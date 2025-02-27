@@ -593,13 +593,13 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         shadowColor: Colors.teal.withOpacity(0.3),
         child: Container(
-          decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.white, Colors.teal.shade50], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(15)),
+          decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.white, Colors.blue.shade50], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(15)),
           child: ListTile(
             contentPadding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.04, vertical: MediaQuery.of(context).size.height * 0.01),
             leading: CircleAvatar(
               radius: MediaQuery.of(context).size.width * 0.06,
-              backgroundColor: Colors.teal.shade100,
-              child: Icon(Icons.receipt, color: Colors.teal.shade900, size: MediaQuery.of(context).size.width * 0.05),
+              backgroundColor: Colors.blue.shade100,
+              child: Icon(Icons.receipt, color: Color(0xFF0288D1), size: MediaQuery.of(context).size.width * 0.05),
             ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,7 +618,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: netAmountOrSettled == "Settled" ? Colors.green : netAmountOrSettled.startsWith('+') ? Colors.green : Colors.red,
+                    color: netAmountOrSettled == "Settled" ? Color(0xFF0288D1) : netAmountOrSettled.startsWith('+') ? Colors.green : Colors.red,
                   ),
                 ),
                 if (settled) const Icon(Icons.flash_on, color: Colors.amber, size: 18),
@@ -636,7 +636,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
       padding: EdgeInsets.all(screenWidth * 0.05),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.teal.shade700, Colors.teal.shade400],
+          colors: [Color(0xFF0288D1), Colors.teal.shade400],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

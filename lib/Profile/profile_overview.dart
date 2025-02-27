@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -142,7 +143,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
                 height: screenHeight * 0.18,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.teal.shade700, Colors.teal.shade400],
+                    colors: [Color(0xFF0288D1), Colors.teal.shade400],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -359,7 +360,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
               );
             case 3:
               return _buildOptionTile(
-                icon: Icons.info,
+                icon: CupertinoIcons.info,
                 title: "About Us",
                 onTap: () => _showAboutUsDialog(context),
                 iconColor: const Color(0xFF6A1B9A),
@@ -390,6 +391,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.blue.shade50,
         title: Text("About Us", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.06)),
         content: Text(
           "Welcome to SplitWise, your premier solution for seamlessly managing expenses and equitably dividing bills among friends. Designed with precision by our adept developers, Aryan Bansal and Depankar Singh, SplitWise ensures a sophisticated yet effortless experience in financial coordination. For further details or assistance, please feel free to reach out to us at support@splitwise.com. Should you encounter any issues or wish to lodge a complaint, we encourage you to raise your concerns via the same email address, where our dedicated team stands ready to assist you.",
@@ -398,7 +400,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Close", style: GoogleFonts.poppins(color: Colors.teal, fontSize: screenWidth * 0.04)),
+            child: Text("Close", style: GoogleFonts.poppins(color: Colors.blue.shade500, fontSize: screenWidth * 0.04)),
           ),
         ],
       ),
