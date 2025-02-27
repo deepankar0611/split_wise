@@ -470,7 +470,10 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.015, vertical: screenHeight * 0.0045),
+        padding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.015,
+          vertical: screenHeight * 0.002,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
@@ -480,34 +483,35 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.analytics_outlined, color: const Color(0xFF234567), size: screenWidth * 0.04),
-                SizedBox(width: screenWidth * 0.01),
+                Icon(Icons.analytics_outlined, color: const Color(0xFF234567), size: screenWidth * 0.035),
+                SizedBox(width: screenWidth * 0.005),
                 Flexible(
                   child: Text(
                     "Total Amount",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
-                      fontSize: screenWidth * 0.035,
+                      fontSize: (screenWidth * 0.035).clamp(12, 16),
                       color: Colors.grey.shade700,
                       fontWeight: FontWeight.w600,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: screenHeight * 0.005),
+            SizedBox(height: screenHeight * 0.002),
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
                 "₹${(splitData!['totalAmount'] as num?)?.toStringAsFixed(2) ?? '0.00'}",
                 style: GoogleFonts.poppins(
-                  fontSize: screenWidth * 0.055,
+                  fontSize: (screenWidth * 0.055).clamp(16, 24),
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF234567),
                 ),
               ),
             ),
-            SizedBox(height: screenHeight * 0.01),
+            SizedBox(height: screenHeight * 0.005),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
               child: Row(
@@ -518,18 +522,28 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.arrow_upward, color: Colors.red.shade700, size: screenWidth * 0.04),
-                        Text("Pay",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(fontSize: screenWidth * 0.028, color: Colors.red.shade700)),
-                        Text("₹${totalPay.toStringAsFixed(2)}",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(fontSize: screenWidth * 0.03, fontWeight: FontWeight.w600)),
+                        Icon(Icons.arrow_upward, color: Colors.red.shade700, size: screenWidth * 0.035),
+                        Text(
+                          "Pay",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: (screenWidth * 0.028).clamp(10, 14),
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                        Text(
+                          "₹${totalPay.toStringAsFixed(2)}",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: (screenWidth * 0.03).clamp(12, 16),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Container(
-                    height: screenHeight * 0.025,
+                    height: screenHeight * 0.02,
                     decoration: BoxDecoration(
                       border: Border(left: BorderSide(color: Colors.grey.shade300, width: 0.8)),
                     ),
@@ -538,13 +552,23 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.arrow_downward, color: Colors.green.shade700, size: screenWidth * 0.04),
-                        Text("Receive",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(fontSize: screenWidth * 0.028, color: Colors.green.shade700)),
-                        Text("₹${totalReceive.toStringAsFixed(2)}",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(fontSize: screenWidth * 0.03, fontWeight: FontWeight.w600)),
+                        Icon(Icons.arrow_downward, color: Colors.green.shade700, size: screenWidth * 0.035),
+                        Text(
+                          "Receive",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: (screenWidth * 0.028).clamp(10, 14),
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                        Text(
+                          "₹${totalReceive.toStringAsFixed(2)}",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: (screenWidth * 0.03).clamp(12, 16),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -744,7 +768,8 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
     );
   }
 
-  Widget _buildParticipantRow(double screenWidth, double screenHeight, String participantUid, double paidAmount, double netAmount) {
+  Widget _buildParticipantRow(
+      double screenWidth, double screenHeight, String participantUid, double paidAmount, double netAmount) {
     return FutureBuilder<String>(
       future: _getUserName(participantUid),
       builder: (context, snapshot) {

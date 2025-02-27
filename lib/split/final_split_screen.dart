@@ -267,7 +267,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
               SliverAppBar(
                 pinned: true,
                 floating: false,
-                expandedHeight: screenHeight * 0.2,
+                expandedHeight: screenHeight * 0.25, // Increased to 25% for more room
                 backgroundColor: const Color(0xFF234567),
                 centerTitle: true,
                 title: Text(
@@ -288,14 +288,15 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                 ),
                 flexibleSpace: LayoutBuilder(
                   builder: (BuildContext context, BoxConstraints constraints) {
-                    final collapseProgress = (screenHeight * 0.2 - constraints.biggest.height) / (screenHeight * 0.2 - kToolbarHeight);
+                    final collapseProgress =
+                        (screenHeight * 0.25 - constraints.biggest.height) / (screenHeight * 0.25 - kToolbarHeight);
                     final cardAnimationProgress = collapseProgress.clamp(0.0, 1.0);
 
                     return FlexibleSpaceBar(
                       background: Padding(
                         padding: EdgeInsets.only(top: screenHeight * 0.12),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.01),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.005), // Reduced vertical padding
                           child: Transform.translate(
                             offset: Offset(0, cardAnimationProgress * screenHeight * 0.05),
                             child: Transform.scale(
@@ -481,69 +482,87 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: EdgeInsets.all(screenSize.width * 0.035),
+        padding: EdgeInsets.all(screenSize.width * 0.015), // Further reduced padding
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            Column(
-              children: [
-                Text(
-                  'Total to Pay',
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: screenSize.width * 0.035,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(LucideIcons.arrowDown, color: Colors.redAccent.shade200, size: screenSize.width * 0.05),
-                    Text(
-                      '₹${totalSpent.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: screenSize.width * 0.05,
-                        fontWeight: FontWeight.bold,
-                      ),
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Pay',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: (screenSize.width * 0.03).clamp(8, 12), // Tighter clamping
+                      fontWeight: FontWeight.w400,
                     ),
-                  ],
-                ),
-              ],
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(LucideIcons.arrowDown,
+                          color: Colors.redAccent.shade200, size: (screenSize.width * 0.035).clamp(10, 14)), // Tighter clamping
+                      SizedBox(width: screenSize.width * 0.005),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '₹${totalSpent.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: (screenSize.width * 0.04).clamp(12, 16), // Tighter clamping
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
             Container(
-              height: screenSize.height * 0.05,
-              padding: EdgeInsets.symmetric(horizontal: screenSize.width * 0.02),
+              height: screenSize.height * 0.025, // Further reduced divider height
+              padding: EdgeInsets.symmetric(horizontal: screenSize.width * 0.005),
               child: VerticalDivider(
                 color: Colors.black,
                 thickness: 1,
               ),
             ),
-            Column(
-              children: [
-                Text(
-                  'Total to Receive',
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: screenSize.width * 0.035,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(LucideIcons.arrowUp, color: Colors.greenAccent.shade200, size: screenSize.width * 0.05),
-                    Text(
-                      '₹${totalReceived.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: screenSize.width * 0.05,
-                        fontWeight: FontWeight.bold,
-                      ),
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Receive',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: (screenSize.width * 0.03).clamp(8, 12), // Tighter clamping
+                      fontWeight: FontWeight.w400,
                     ),
-                  ],
-                ),
-              ],
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(LucideIcons.arrowUp,
+                          color: Colors.greenAccent.shade200, size: (screenSize.width * 0.035).clamp(10, 14)), // Tighter clamping
+                      SizedBox(width: screenSize.width * 0.005),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '₹${totalReceived.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: (screenSize.width * 0.04).clamp(12, 16), // Tighter clamping
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
