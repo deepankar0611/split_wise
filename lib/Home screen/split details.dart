@@ -8,7 +8,6 @@ import 'package:animate_do/animate_do.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:split_wise/Home%20screen/upi%20payment.dart';
 
 import '../Helper/FCM Service.dart';

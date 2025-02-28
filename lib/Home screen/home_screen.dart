@@ -74,9 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       }
-    } catch (e) {
-      print("Error fetching user data: $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> _fetchCategoryData() async {
@@ -272,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        padding: EdgeInsets.all(screenWidth * 0.02), // Reduced padding
+        padding: EdgeInsets.all(screenWidth * 0.03), // Reduced padding
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(screenWidth * 0.04),
@@ -304,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text(
                 "₹${amountToReceive.toInt()}",
                 style: TextStyle(
-                  fontSize: screenWidth * 0.05, // Reduced from 0.06
+                  fontSize: screenWidth * 0.04, // Reduced from 0.06
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
@@ -351,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        padding: EdgeInsets.all(screenWidth * 0.02), // Reduced padding
+        padding: EdgeInsets.all(screenWidth * 0.03), // Reduced padding
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(screenWidth * 0.04),
@@ -384,11 +382,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Padding(
-              padding: EdgeInsets.only(left: screenWidth * 0.015, top: screenHeight * 0.002),
+              padding: EdgeInsets.only(left: screenWidth * 0.015, top: screenHeight * 0.001),
               child: Text(
                 "₹${amountToPay.toInt()}",
                 style: TextStyle(
-                  fontSize: screenWidth * 0.05, // Reduced from 0.06
+                  fontSize: screenWidth * 0.04, // Reduced from 0.06
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
@@ -726,7 +724,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return Container(
           width: screenWidth * 0.4,
           margin: EdgeInsets.only(right: screenWidth * 0.04),
-          padding: EdgeInsets.all(screenWidth * 0.03),
+          padding: EdgeInsets.all(screenWidth * 0.02),
           decoration: BoxDecoration(
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(screenWidth * 0.03),
@@ -775,7 +773,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       color: amount.startsWith('+') ? Colors.green : Colors.red,
                       fontWeight: FontWeight.bold,
-                      fontSize: screenWidth * 0.035,
+                      fontSize: screenWidth * 0.033,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,

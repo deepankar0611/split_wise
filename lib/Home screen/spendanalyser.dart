@@ -21,7 +21,6 @@ class SpendAnalyzerScreen extends StatefulWidget {
 
 class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
   String _timePeriod = 'Month';
-  String _chartType = 'Spent';
   String _selectedChartType = 'Pie';
   DateTime _selectedDate = DateTime.now();
   String _selectedStatisticsCategory = 'Grocery';

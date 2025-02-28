@@ -9,10 +9,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 class FinalSplitScreen extends StatefulWidget {
   final List<Map<String, dynamic>> selectedPeople;
-  final Map<String, double> payerAmounts; // Now expects UID keys
+  final Map<String, double> payerAmounts;
   final double totalAmount;
   final String expenseDescription;
-  final String selectedCategory; // Added for consistency with HomeScreen
+  final String selectedCategory;
 
   const FinalSplitScreen({
     super.key,
@@ -29,21 +29,45 @@ class FinalSplitScreen extends StatefulWidget {
 
 class _FinalSplitScreenState extends State<FinalSplitScreen> {
   bool _paymentFinalized = false;
-  double _totalAmountToPay = 0.0; // To store total pay amount
-  double _totalAmountToReceive = 0.0; // To store total receive amount
+  double _totalAmountToPay = 0.0;
+  double _totalAmountToReceive = 0.0;
+  String? _currentUserProfilePic;
 
   @override
   void initState() {
     super.initState();
-    _calculateTotalAmounts(); // Calculate initial amounts
+    _fetchCurrentUserProfilePic();
+    _calculateTotalAmounts();
+  }
+
+  Future<void> _fetchCurrentUserProfilePic() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists && mounted) {
+          final data = doc.data() ?? {};
+          setState(() {
+            _currentUserProfilePic = (data['profileImageUrl'] as String?)?.isNotEmpty == true ? data['profileImageUrl'] : "";
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching current user's profile picture: $e");
+      if (mounted) {
+        setState(() {
+          _currentUserProfilePic = ""; // Fallback to empty string on error
+        });
+      }
+    }
   }
 
   void _calculateTotalAmounts() {
     double amountPerPerson = _calculateAmountPerPerson();
     User? user = FirebaseAuth.instance.currentUser;
     List<Map<String, dynamic>> allPeople = [
-      {"name": "You", "uid": user?.uid ?? ""}
-    ]..addAll(widget.selectedPeople);
+      {"name": "You", "uid": user?.uid ?? "", "profilePic": _currentUserProfilePic ?? widget.selectedPeople.firstWhere((p) => p['uid'] == user?.uid, orElse: () => {'profilePic': ''})['profilePic']}
+    ]..addAll(widget.selectedPeople.where((p) => p['uid'] != user?.uid).toList());
 
     Map<String, double> finalPayerAmounts = {};
     for (var person in allPeople) {
@@ -73,10 +97,10 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Unified list of participants with UIDs
-    List<Map<String, dynamic>> people = [{"name": "You", "uid": user.uid}]..addAll(widget.selectedPeople);
+    List<Map<String, dynamic>> people = [
+      {"name": "You", "uid": user.uid, "profilePic": _currentUserProfilePic ?? widget.selectedPeople.firstWhere((p) => p['uid'] == user.uid, orElse: () => {'profilePic': ''})['profilePic']}
+    ]..addAll(widget.selectedPeople.where((p) => p['uid'] != user.uid).toList());
 
-    // Convert payerAmounts to UID-based map
     Map<String, double> finalPayerAmounts = {};
     for (var person in people) {
       String uid = person['uid'];
@@ -145,7 +169,6 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         return;
       }
 
-      // Prepare the paidBy map with UIDs
       Map<String, double> paidBy = {};
       for (var person in people) {
         paidBy[person['uid']] = finalPayerAmounts[person['uid']] ?? 0.0;
@@ -157,8 +180,8 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         'totalAmount': widget.totalAmount,
         'participants': people.map((p) => p['uid']).toList(),
         'createdAt': FieldValue.serverTimestamp(),
-        'paidBy': paidBy, // Store paid amounts at split level
-        'category': widget.selectedCategory, // Include category
+        'paidBy': paidBy,
+        'category': widget.selectedCategory,
       });
 
       print("✅ Split created with ID: ${splitRef.id}, PaidBy: $paidBy");
@@ -239,8 +262,8 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
 
     User? user = FirebaseAuth.instance.currentUser;
     List<Map<String, dynamic>> allPeople = [
-      {"name": "You", "uid": user?.uid ?? ""}
-    ]..addAll(widget.selectedPeople);
+      {"name": "You", "uid": user?.uid ?? "", "profilePic": _currentUserProfilePic ?? widget.selectedPeople.firstWhere((p) => p['uid'] == user?.uid, orElse: () => {'profilePic': ''})['profilePic']}
+    ]..addAll(widget.selectedPeople.where((p) => p['uid'] != user?.uid).toList());
 
     Map<String, double> finalPayerAmounts = {};
     for (var person in allPeople) {
@@ -255,8 +278,8 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
 
     double userAmount = finalPayerAmounts[user?.uid ?? ""] ?? 0.0;
     double userToPay = amountPerPerson - userAmount;
-    _totalAmountToPay = userToPay > 0 ? userToPay : 0; // Update total pay amount
-    _totalAmountToReceive = userToPay < 0 ? -userToPay : 0; // Update total receive amount
+    _totalAmountToPay = userToPay > 0 ? userToPay : 0;
+    _totalAmountToReceive = userToPay < 0 ? -userToPay : 0;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -267,7 +290,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
               SliverAppBar(
                 pinned: true,
                 floating: false,
-                expandedHeight: screenHeight * 0.25, // Increased to 25% for more room
+                expandedHeight: screenHeight * 0.25,
                 backgroundColor: const Color(0xFF234567),
                 centerTitle: true,
                 title: Text(
@@ -296,7 +319,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                       background: Padding(
                         padding: EdgeInsets.only(top: screenHeight * 0.12),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.005), // Reduced vertical padding
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.005),
                           child: Transform.translate(
                             offset: Offset(0, cardAnimationProgress * screenHeight * 0.05),
                             child: Transform.scale(
@@ -343,14 +366,12 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
               ),
             ],
           ),
-          // Fixed SliderButton at the bottom
           Positioned(
             left: screenWidth * 0.05,
             right: screenWidth * 0.05,
             bottom: screenHeight * 0.03,
             child: _buildFinalizeButton(),
           ),
-          // Overlay for payment finalized animation
           if (_paymentFinalized)
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
@@ -390,9 +411,9 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
     TextStyle bodyTextStyle = TextStyle(fontSize: width > 600 ? 14 : 12);
 
     if (item.containsKey('name')) {
-      // Split Summary
       String name = item["name"];
       String uid = item["uid"];
+      String? profilePic = item["profilePic"];
       double amountPaid = amounts[uid] ?? 0.0;
       double amountToPay = amountPerPerson - amountPaid;
       String amountText = amountToPay > 0 ? "-₹${amountToPay.toStringAsFixed(0)}" : "+₹${(-amountToPay).toStringAsFixed(0)}";
@@ -407,12 +428,35 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Container(
-            padding: EdgeInsets.all(width * 0.05),
-            decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(8)),
-            child: Icon(name == "You" ? LucideIcons.user : LucideIcons.users, color: Colors.teal.shade700, size: width * 0.05),
+            width: width * 0.1,
+            height: width * 0.1,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.teal.shade50,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: profilePic != null && profilePic.isNotEmpty
+                  ? Image.network(
+                profilePic,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    name == "You" ? LucideIcons.user : LucideIcons.users,
+                    color: Colors.teal.shade700,
+                    size: width * 0.05,
+                  );
+                },
+              )
+                  : Icon(
+                name == "You" ? LucideIcons.user : LucideIcons.users,
+                color: Colors.teal.shade700,
+                size: width * 0.05,
+              ),
+            ),
           ),
           title: Text(
-            name == "You" ? "You" : name,
+            name,
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: width > 600 ? 16 : 14, color: Colors.black87),
           ),
           subtitle: Text(
@@ -433,7 +477,6 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
         ),
       );
     } else {
-      // Transactions to Settle
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: width * 0.02, vertical: width * 0.005),
         child: ListTile(
@@ -482,7 +525,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: EdgeInsets.all(screenSize.width * 0.015), // Further reduced padding
+        padding: EdgeInsets.all(screenSize.width * 0.015),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -494,7 +537,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                     'Pay',
                     style: TextStyle(
                       color: Colors.black87,
-                      fontSize: (screenSize.width * 0.03).clamp(8, 12), // Tighter clamping
+                      fontSize: (screenSize.width * 0.03).clamp(8, 12),
                       fontWeight: FontWeight.w400,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -503,7 +546,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(LucideIcons.arrowDown,
-                          color: Colors.redAccent.shade200, size: (screenSize.width * 0.035).clamp(10, 14)), // Tighter clamping
+                          color: Colors.redAccent.shade200, size: (screenSize.width * 0.035).clamp(10, 14)),
                       SizedBox(width: screenSize.width * 0.005),
                       FittedBox(
                         fit: BoxFit.scaleDown,
@@ -511,7 +554,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                           '₹${totalSpent.toStringAsFixed(2)}',
                           style: TextStyle(
                             color: Colors.black87,
-                            fontSize: (screenSize.width * 0.04).clamp(12, 16), // Tighter clamping
+                            fontSize: (screenSize.width * 0.04).clamp(12, 16),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -522,7 +565,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
               ),
             ),
             Container(
-              height: screenSize.height * 0.025, // Further reduced divider height
+              height: screenSize.height * 0.025,
               padding: EdgeInsets.symmetric(horizontal: screenSize.width * 0.005),
               child: VerticalDivider(
                 color: Colors.black,
@@ -537,7 +580,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                     'Receive',
                     style: TextStyle(
                       color: Colors.black87,
-                      fontSize: (screenSize.width * 0.03).clamp(8, 12), // Tighter clamping
+                      fontSize: (screenSize.width * 0.03).clamp(8, 12),
                       fontWeight: FontWeight.w400,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -546,7 +589,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(LucideIcons.arrowUp,
-                          color: Colors.greenAccent.shade200, size: (screenSize.width * 0.035).clamp(10, 14)), // Tighter clamping
+                          color: Colors.greenAccent.shade200, size: (screenSize.width * 0.035).clamp(10, 14)),
                       SizedBox(width: screenSize.width * 0.005),
                       FittedBox(
                         fit: BoxFit.scaleDown,
@@ -554,7 +597,7 @@ class _FinalSplitScreenState extends State<FinalSplitScreen> {
                           '₹${totalReceived.toStringAsFixed(2)}',
                           style: TextStyle(
                             color: Colors.black87,
-                            fontSize: (screenSize.width * 0.04).clamp(12, 16), // Tighter clamping
+                            fontSize: (screenSize.width * 0.04).clamp(12, 16),
                             fontWeight: FontWeight.bold,
                           ),
                         ),

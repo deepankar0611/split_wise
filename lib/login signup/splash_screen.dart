@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:video_player/video_player.dart';
 import 'package:split_wise/login%20signup/welcome.dart'; // Import Welcome Page
 import 'package:split_wise/login%20signup/login_screen.dart'; // Import LoginPage
 import 'package:split_wise/bottom_bar.dart'; // Import BottomBar
 import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'login and signup.dart'; // Import Shared Preferences
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -17,8 +14,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  late VideoPlayerController _videoController;
-  late Future<void> _initializeVideoFuture;
 
   @override
   void initState() {

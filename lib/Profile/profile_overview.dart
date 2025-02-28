@@ -7,7 +7,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:split_wise/Profile/manage_friends.dart';
 import 'package:split_wise/Profile/setting.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../Search/search_bar.dart';
 import '../login signup/login_screen.dart';
 import 'all expense history detals.dart';
 import 'editprofile.dart';
