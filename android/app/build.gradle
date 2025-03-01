@@ -2,12 +2,12 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
-    id "com.google.gms.google-services" // ✅ Fixed duplication
+    id "com.google.gms.google-services"
 }
 
 dependencies {
     // Import the BoM for the Firebase platform
-    implementation platform("com.google.firebase:firebase-bom:33.9.0") // ✅ Ensure it's the latest
+    implementation platform("com.google.firebase:firebase-bom:33.10.0") //
 
     // Add Firebase dependencies (no need to specify versions when using BoM)
     implementation("com.google.firebase:firebase-auth")
@@ -22,7 +22,7 @@ dependencies {
 
 android {
     namespace = "com.example.split_wise"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -39,8 +39,8 @@ android {
         applicationId = "com.example.split_wise"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = 1
+        versionName = 1.0
     }
 
     buildTypes {

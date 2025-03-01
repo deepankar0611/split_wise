@@ -7,7 +7,7 @@ import '../Helper/local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPage extends StatefulWidget {
-  LoginPage({Key? key, this.title}) : super(key: key);
+  const LoginPage({super.key, this.title});
 
   final String? title;
 
