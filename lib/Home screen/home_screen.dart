@@ -25,7 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
     "amountToReceive": "0",
   };
 
-  Map<String, Map<String, dynamic>> categoryData = {}; // Store category totals
+  Map<String, Map<String, dynamic>> categoryData = {};
+  bool _isLoading = true; // Add loading state
 
   final List<String> categories = [
     "Grocery",
@@ -54,8 +55,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchUserData();
-    _fetchCategoryData(); // Fetch category data on init
+    _fetchInitialData();
+  }
+
+  Future<void> _fetchInitialData() async {
+    setState(() {
+      _isLoading = true; // Start loading
+    });
+    await _fetchUserData();
+    await _fetchCategoryData();
+    if (mounted) {
+      setState(() {
+        _isLoading = false; // Stop loading
+      });
+    }
   }
 
   Future<void> _fetchUserData() async {
@@ -74,7 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      print("Error fetching user data: $e");
+    }
   }
 
   Future<void> _fetchCategoryData() async {
@@ -124,9 +139,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refreshData() async {
+    setState(() {
+      _isLoading = true; // Show shimmer during refresh
+    });
     await _fetchUserData();
-    await _fetchCategoryData(); // Refresh category data too
-    await Future.delayed(const Duration(milliseconds: 500)); // Small delay for refresh indicator
+    await _fetchCategoryData();
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      setState(() {
+        _isLoading = false; // Hide shimmer after refresh
+      });
+    }
   }
 
   Stream<bool> _isSplitSettledStream(String splitId) {
@@ -188,7 +211,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           offset: Offset(0, cardAnimationProgress * screenHeight * 0.1),
                           child: Transform.scale(
                             scale: 1.0 - cardAnimationProgress * 0.2,
-                            child: Container(
+                            child: _isLoading
+                                ? _buildShimmerCard(screenWidth, screenHeight)
+                                : Container(
                               padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.015),
                               decoration: BoxDecoration(
                                 color: Colors.white,
@@ -241,11 +266,161 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             SliverList(
               delegate: SliverChildListDelegate([
-                _buildBodyCard(),
+                _isLoading ? _buildShimmerBodyCard(screenWidth, screenHeight) : _buildBodyCard(),
               ]),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Shimmer placeholder for the top card (Receive and Pay)
+  Widget _buildShimmerCard(double screenWidth, double screenHeight) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.015),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(screenWidth * 0.05),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Expanded(
+              child: Container(
+                height: screenHeight * 0.1,
+                color: Colors.grey[300],
+              ),
+            ),
+            SizedBox(width: screenWidth * 0.02),
+            Expanded(
+              child: Container(
+                height: screenHeight * 0.1,
+                color: Colors.grey[300],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Shimmer placeholder for the body card (Recent Bills, Features, Transactions)
+  Widget _buildShimmerBodyCard(double screenWidth, double screenHeight) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(screenWidth * 0.05),
+      ),
+      padding: EdgeInsets.only(top: screenWidth * 0.05),
+      child: Column(
+        children: [
+          // Shimmer for Recent Priority Bills
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: screenWidth * 0.4,
+                    height: screenHeight * 0.02,
+                    color: Colors.grey[300],
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.015),
+                SizedBox(
+                  height: screenHeight * 0.18,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: 3,
+                    itemBuilder: (context, index) {
+                      return Shimmer.fromColors(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.grey[100]!,
+                        child: Container(
+                          width: screenWidth * 0.4,
+                          margin: EdgeInsets.only(right: screenWidth * 0.04),
+                          color: Colors.grey[300],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: screenWidth * 0.05),
+          // Shimmer for Exclusive Features
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: screenWidth * 0.3,
+                    height: screenHeight * 0.02,
+                    color: Colors.grey[300],
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.015),
+                SizedBox(
+                  height: screenHeight * 0.2,
+                  child: Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      width: screenWidth * 0.9,
+                      color: Colors.grey[300],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: screenWidth * 0.05),
+          // Shimmer for Transaction List
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: screenWidth * 0.3,
+                    height: screenHeight * 0.02,
+                    color: Colors.grey[300],
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.015),
+                Column(
+                  children: List.generate(
+                    3,
+                        (index) => Shimmer.fromColors(
+                      baseColor: Colors.grey[300]!,
+                      highlightColor: Colors.grey[100]!,
+                      child: Container(
+                        margin: EdgeInsets.symmetric(vertical: screenWidth * 0.02),
+                        height: screenHeight * 0.08,
+                        color: Colors.grey[300],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -270,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        padding: EdgeInsets.all(screenWidth * 0.03), // Reduced padding
+        padding: EdgeInsets.all(screenWidth * 0.03),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(screenWidth * 0.04),
@@ -292,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.w500,
-                    fontSize: screenWidth * 0.03, // Reduced size
+                    fontSize: screenWidth * 0.03,
                   ),
                 ),
               ),
@@ -302,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text(
                 "₹${amountToReceive.toInt()}",
                 style: TextStyle(
-                  fontSize: screenWidth * 0.04, // Reduced from 0.06
+                  fontSize: screenWidth * 0.04,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
@@ -317,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   color: Colors.green,
                   fontWeight: FontWeight.w600,
-                  fontSize: screenWidth * 0.025, // Reduced from 0.03
+                  fontSize: screenWidth * 0.025,
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
@@ -349,7 +524,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        padding: EdgeInsets.all(screenWidth * 0.03), // Reduced padding
+        padding: EdgeInsets.all(screenWidth * 0.03),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(screenWidth * 0.04),
@@ -376,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     color: Colors.red,
                     fontWeight: FontWeight.w500,
-                    fontSize: screenWidth * 0.03, // Reduced size
+                    fontSize: screenWidth * 0.03,
                   ),
                 ),
               ),
@@ -386,7 +561,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text(
                 "₹${amountToPay.toInt()}",
                 style: TextStyle(
-                  fontSize: screenWidth * 0.04, // Reduced from 0.06
+                  fontSize: screenWidth * 0.04,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
@@ -401,7 +576,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.w600,
-                  fontSize: screenWidth * 0.025, // Reduced from 0.03
+                  fontSize: screenWidth * 0.025,
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
@@ -476,7 +651,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 7, offset: const Offset(0, 3)),
                   ],
                 ),
-                height: screenHeight * 0.18, // Increased from 0.18 to 0.22 to fix previous overflow
+                height: screenHeight * 0.18,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: snapshot.data!.docs.length,
@@ -850,7 +1025,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTransactionList() {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Use pre-fetched categoryData instead of StreamBuilder
     List<MapEntry<String, Map<String, dynamic>>> sortedCategories = categories
         .map<MapEntry<String, Map<String, dynamic>>>((category) {
       return MapEntry(

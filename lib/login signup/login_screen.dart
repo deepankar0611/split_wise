@@ -19,8 +19,13 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false; // Add loading state
 
   Future<void> _signIn() async {
+    setState(() {
+      _isLoading = true; // Show loading indicator
+    });
+
     try {
       // Attempt to sign in with email and password
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -124,15 +129,26 @@ class _LoginPageState extends State<LoginPage> {
           duration: Duration(seconds: 4),
         ),
       );
+    } finally {
+      setState(() {
+        _isLoading = false; // Hide loading indicator
+      });
     }
   }
 
   Future<UserCredential?> signInWithGoogle() async {
+    setState(() {
+      _isLoading = true; // Show loading indicator for Google Sign-In
+    });
+
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
       if (googleUser == null) {
         print("Google Sign-In was cancelled.");
+        setState(() {
+          _isLoading = false;
+        });
         return null;
       }
 
@@ -232,6 +248,10 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
       return null;
+    } finally {
+      setState(() {
+        _isLoading = false; // Hide loading indicator
+      });
     }
   }
 
@@ -263,7 +283,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _submitButton() {
     return GestureDetector(
-      onTap: _signIn,
+      onTap: _isLoading ? null : _signIn, // Disable button while loading
       child: Container(
         width: MediaQuery.of(context).size.width,
         padding: EdgeInsets.symmetric(vertical: 15),
@@ -284,7 +304,11 @@ class _LoginPageState extends State<LoginPage> {
             colors: [Color(0xFF3C7986), Color(0xFF1A2E39)],
           ),
         ),
-        child: Text(
+        child: _isLoading
+            ? CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        )
+            : Text(
           'Login',
           style: TextStyle(fontSize: 20, color: Colors.white),
         ),
@@ -319,9 +343,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _googleSignInButton() {
     return GestureDetector(
-      onTap: () {
-        signInWithGoogle();
-      },
+      onTap: _isLoading ? null : signInWithGoogle, // Disable button while loading
       child: Container(
         height: 50,
         margin: EdgeInsets.symmetric(vertical: 20),
@@ -357,11 +379,17 @@ class _LoginPageState extends State<LoginPage> {
                       topRight: Radius.circular(5)),
                 ),
                 alignment: Alignment.center,
-                child: Text('Sign in with Google',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w400)),
+                child: _isLoading
+                    ? CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                )
+                    : Text(
+                  'Sign in with Google',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w400),
+                ),
               ),
             ),
           ],

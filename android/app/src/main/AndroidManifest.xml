@@ -40,6 +40,9 @@
             <meta-data
                 android:name="com.google.android.gms.auth.api.signin"
                 android:value="true" />
+            <meta-data
+                android:name="io.flutter.embedding.android.EnableImpeller"
+                android:value="false" />
 
             <!-- Intent filter to handle deep links for Google Sign-In -->
             <intent-filter>
