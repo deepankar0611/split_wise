@@ -22,7 +22,6 @@ dependencies:
   image_picker:
   supabase_flutter:
   shared_preferences:
-  slider_button: ^2.1.0
   permission_handler:
   lottie:
   intl:
