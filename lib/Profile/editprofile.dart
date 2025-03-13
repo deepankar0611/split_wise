@@ -269,7 +269,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
-        toolbarHeight: 60,
+        toolbarHeight: 45,
       ),
       body: Form(
         key: _formKey,

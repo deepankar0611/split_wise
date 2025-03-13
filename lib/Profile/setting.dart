@@ -255,7 +255,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildDeleteAccountTile(ThemeData theme) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(Icons.delete, color: Colors.red.shade600, size: 28),
+      leading: Icon(Icons.delete, color: Colors.black, size: 28),
       title: Text(
         "Delete Account",
         style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500), // Reduced from 16

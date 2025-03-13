@@ -176,6 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
           controller: widget.scrollController,
           slivers: <Widget>[
             SliverAppBar(
+
               pinned: true,
               floating: false,
               expandedHeight: screenHeight * 0.3,
@@ -700,7 +701,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<String> card = [
       "assets/logo/spend.jpg",
       "assets/logo/reminder.jpg",
-      "assets/images/expense.png",
     ];
 
     return Padding(

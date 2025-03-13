@@ -19,9 +19,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
   Future<void> _deleteAccount() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       User? user = FirebaseAuth.instance.currentUser;
@@ -29,24 +27,24 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
         throw Exception("No user is currently signed in.");
       }
 
-      // Reauthenticate the user
       AuthCredential credential = EmailAuthProvider.credential(
         email: user.email!,
         password: _passwordController.text.trim(),
       );
       await user.reauthenticateWithCredential(credential);
 
-      // Delete Firestore data (optional, depending on your app's structure)
       await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
-
-      // Delete the user account
       await user.delete();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Account deleted successfully!")),
+        SnackBar(
+          content: Text("Account deleted successfully!", style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: Colors.green.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
 
-      // Navigate to login screen after deletion
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => LoginPage()),
@@ -54,12 +52,15 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error deleting account: $e")),
+        SnackBar(
+          content: Text("Error deleting account: $e", style: GoogleFonts.poppins(color: Colors.white)),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -75,112 +76,167 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Colors.grey.shade900, // Darker background for neon contrast
       appBar: AppBar(
         title: Text(
           "Delete Account",
           style: GoogleFonts.poppins(
             color: Colors.white,
-            fontWeight: FontWeight.w500,
-            fontSize: screenWidth * 0.055, // Scaled from 22
+            fontWeight: FontWeight.bold,
+            fontSize: screenWidth * 0.055,
           ),
         ),
-        backgroundColor: const Color(0xFF234567),
-        elevation: 4,
         centerTitle: true,
+        elevation: 4,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF1A3C6D), // Deep neon blue
+                Color(0xFF0A2A4D), // Darker neon blue
+                Color(0xFF1A3C6D), // Dark neon purple
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0xFF1A3C6D).withOpacity(0.5),
+                blurRadius: 10.0,
+                spreadRadius: 2.0,
+              ),
+            ],
+          ),
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
         ),
-        toolbarHeight: screenHeight * 0.07, // Scaled from 50
+        toolbarHeight: screenHeight * 0.05,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(screenWidth * 0.04), // Scaled from 16
+        padding: EdgeInsets.all(screenWidth * 0.04),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Card(
-              elevation: 6,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.04)),
-              shadowColor: Colors.teal.withOpacity(0.3),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.white, Colors.teal.shade50],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(screenWidth * 0.04),
-                ),
-                padding: EdgeInsets.all(screenWidth * 0.04),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Confirm Account Deletion",
-                      style: GoogleFonts.poppins(
-                        fontSize: screenWidth * 0.05, // Scaled from 20
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.015), // Scaled from 10
-                    Text(
-                      "This action cannot be undone. Please enter your password to confirm.",
-                      style: GoogleFonts.poppins(
-                        fontSize: screenWidth * 0.035, // Scaled from 14
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.03), // Scaled from 20
-                    Form(
-                      key: _formKey,
-                      child: TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: "Password",
-                          labelStyle: GoogleFonts.poppins(color: Colors.grey.shade700),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(screenWidth * 0.03), // Scaled from 12
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(screenWidth * 0.03),
-                            borderSide: const BorderSide(color: Colors.teal, width: 2),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter your password";
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.03), // Scaled from 20
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _deleteAccount,
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.1, // Scaled from 40
-                            vertical: screenHeight * 0.02), // Scaled from 15
-                        backgroundColor: Colors.red.shade600,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(screenWidth * 0.03)), // Scaled from 12
-                        elevation: 3,
-                      ),
-                      child: _isLoading
-                          ? CircularProgressIndicator(color: Colors.white, strokeWidth: screenWidth * 0.01)
-                          : Text(
-                        "Delete Account",
-                        style: GoogleFonts.poppins(
-                          fontSize: screenWidth * 0.04, // Scaled from 16
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF1A3C6D).withOpacity(0.9),
+                    Color(0xFF0A2A4D).withOpacity(0.7),
                   ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF1A3C6D).withOpacity(0.4),
+                    blurRadius: 8.0,
+                    spreadRadius: 1.0,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+              ),
+              padding: EdgeInsets.all(screenWidth * 0.04),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.red.shade400, size: screenWidth * 0.07),
+                      SizedBox(width: screenWidth * 0.02),
+                      Text(
+                        "Confirm Deletion",
+                        style: GoogleFonts.poppins(
+                          fontSize: screenWidth * 0.05,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: screenHeight * 0.015),
+                  Text(
+                    "This action is permanent and cannot be undone. Enter your password to proceed.",
+                    style: GoogleFonts.poppins(
+                      fontSize: screenWidth * 0.035,
+                      color: Colors.grey.shade300,
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.03),
+                  Form(
+                    key: _formKey,
+                    child: TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      style: GoogleFonts.poppins(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: "Password",
+                        labelStyle: GoogleFonts.poppins(color: Colors.grey.shade400),
+                        filled: true,
+                        fillColor: Colors.white.withOpacity(0.1),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                          borderSide: BorderSide(color: Colors.teal.shade300, width: 2),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                          borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                          borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please enter your password";
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.04),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _deleteAccount,
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth * 0.25,
+                        vertical: screenHeight * 0.025,
+                      ),
+                      backgroundColor: Color(0xFF1A3C6D),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                      ),
+                      elevation: 2,
+                      shadowColor: Color(0xFF1A3C6D),
+                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                      width: screenWidth * 0.05,
+                      height: screenWidth * 0.05,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: screenWidth * 0.01,
+                      ),
+                    )
+                        : Text(
+                      "Delete Account",
+                      style: GoogleFonts.poppins(
+                        fontSize: screenWidth * 0.04,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

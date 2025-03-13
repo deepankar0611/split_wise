@@ -77,7 +77,27 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
               fontSize: screenWidth * 0.045,
             ),
           ),
-          backgroundColor: const Color(0xFF234567),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF1A3C6D), // Base: Deep neon blue
+                  Color(0xFF0A2A4D), // Darker neon blue (shadowy tone)
+                  Color(0xFF1A3C6D),// Neon purple
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xFF1A3C6D).withOpacity(0.5),
+                  blurRadius: 10.0,
+                  spreadRadius: 2.0,
+                ),
+              ],
+            ),
+          ),
           elevation: 4,
           centerTitle: true,
           shape: RoundedRectangleBorder(

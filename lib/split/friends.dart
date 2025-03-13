@@ -25,10 +25,18 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Map<String, double> payerAmounts = {};
   double totalAmount = 0.0;
   String expenseDescription = "";
+  String? currentUserProfilePic;
 
   final List<String> categories = [
-    "Grocery", "Medicine", "Food", "Rent", "Travel",
-    "Shopping", "Entertainment", "Utilities", "Others"
+    "Grocery",
+    "Medicine",
+    "Food",
+    "Rent",
+    "Travel",
+    "Shopping",
+    "Entertainment",
+    "Utilities",
+    "Others"
   ];
 
   @override
@@ -36,6 +44,35 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     super.initState();
     payerAmounts = Map.from(widget.payerAmounts);
     _fetchFriends();
+    _fetchCurrentUserProfilePic();
+  }
+
+  void _resetState() {
+    setState(() {
+      selectedPeople = [];
+      searchQuery = "";
+      showExpenseDetails = false;
+      selectedCategory = "Grocery";
+      selectedPayers = ["You"];
+      payerAmounts = {};
+      totalAmount = 0.0;
+      expenseDescription = "";
+      displayFriends = List.from(friends);
+    });
+  }
+
+  Future<void> _fetchCurrentUserProfilePic() async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (doc.exists && mounted) {
+        final data = doc.data() ?? {};
+        setState(() {
+          currentUserProfilePic = (data['profileImageUrl'] as String?)?.isNotEmpty == true ? data['profileImageUrl'] : "";
+        });
+      }
+    } catch (e) {
+      print("Error fetching current user's profile picture: $e");
+    }
   }
 
   Future<void> _fetchFriends() async {
@@ -59,16 +96,20 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         }
       }
 
-      setState(() {
-        friends = fetchedFriends;
-        displayFriends = List.from(friends);
-      });
+      if (mounted) {
+        setState(() {
+          friends = fetchedFriends;
+          displayFriends = List.from(friends);
+        });
+      }
     } catch (e) {
       print("Error fetching friends: $e");
-      setState(() {
-        friends = [];
-        displayFriends = [];
-      });
+      if (mounted) {
+        setState(() {
+          friends = [];
+          displayFriends = [];
+        });
+      }
     }
   }
 
@@ -97,292 +138,346 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     });
   }
 
-  // Method to reset the state
-  void _resetState() {
-    setState(() {
-      selectedPeople.clear();
-      displayFriends = List.from(friends);
-      searchQuery = "";
-      showExpenseDetails = false;
-      selectedCategory = "Grocery";
-      selectedPayers = ["You"];
-      payerAmounts.clear();
-      totalAmount = 0.0;
-      expenseDescription = "";
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        title: const Text(
-          "Add Expense",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
-        backgroundColor: const Color(0xFF1A3C6D),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1A3C6D), Color(0xFF2E6B9F)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: () async {
-              if (totalAmount > 0 && expenseDescription.isNotEmpty) {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FinalSplitScreen(
-                      selectedPeople: selectedPeople,
-                      payerAmounts: payerAmounts,
-                      totalAmount: totalAmount,
-                      expenseDescription: expenseDescription,
-                      selectedCategory: selectedCategory,
-                    ),
-                  ),
-                );
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(screenHeight * 0.06),
+        child: AppBar(
 
-                // Check if result is true, then reset state
-                if (result == true) {
-                  _resetState();
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid amount and description')),
-                );
-              }
-            },
-            child: const Text(
-              "Save",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+          title: Text(
+            "Add Expense",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: screenWidth * 0.045,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF1A3C6D), // Base: Deep neon blue
+                  Color(0xFF0A2A4D), // Darker neon blue (shadowy tone)
+                  Color(0xFF1A3C6D),// Neon purple
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Split With",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A3C6D),
-                        ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xFF1A3C6D).withOpacity(0.5),
+                  blurRadius: 10.0,
+                  spreadRadius: 2.0,
+                ),
+              ],
+            ),
+          ),
+          elevation: 0,
+          centerTitle: true,
+          actions: [
+            TextButton(
+              onPressed: () async {
+                // Validation check for totalAmount and expenseDescription
+                if (totalAmount == 0.0 || expenseDescription.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Please enter both amount and description"),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                } else {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FinalSplitScreen(
+                        selectedPeople: selectedPeople,
+                        payerAmounts: payerAmounts,
+                        totalAmount: totalAmount,
+                        expenseDescription: expenseDescription,
+                        selectedCategory: selectedCategory,
                       ),
-                      Text(
-                        "${selectedPeople.length} selected",
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ),
+                  );
+                  if (result == true && mounted) {
+                    _resetState(); // Reset state if split was finalized
+                  }
+                }
+              },
+              child: Text(
+                "Save",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: screenWidth * 0.045,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+          ),
+        ),
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                      screenWidth * 0.04,
+                      screenHeight * 0.025,
+                      screenWidth * 0.04,
+                      screenHeight * 0.015),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: screenWidth * 0.025,
+                        offset: Offset(0, screenWidth * 0.01),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeInOut,
-                    child: Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: selectedPeople.map((friend) {
-                        return Chip(
-                          label: Text(
-                            friend['name'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Split With",
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.05,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1A3C6D),
                             ),
                           ),
-                          avatar: CircleAvatar(
-                            radius: 14,
-                            backgroundImage: friend['profilePic'].isNotEmpty
-                                ? NetworkImage(friend['profilePic'])
-                                : null,
-                            backgroundColor: Colors.blueGrey[100]!,
-                            child: friend['profilePic'].isEmpty
-                                ? Text(
-                              friend['name'][0].toUpperCase(),
-                              style: const TextStyle(color: Colors.white),
-                            )
-                                : null,
+                          Text(
+                            "${selectedPeople.length} selected",
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.035,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                          deleteIcon: const Icon(Icons.close, size: 18, color: Colors.grey),
-                          onDeleted: () => _toggleSelection(friend),
-                          backgroundColor: Colors.blueGrey[50]!,
-                          elevation: 2,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                        ],
+                      ),
+                      SizedBox(height: screenHeight * 0.015),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                        child: Wrap(
+                          spacing: screenWidth * 0.025,
+                          runSpacing: screenHeight * 0.012,
+                          children: selectedPeople.map((friend) {
+                            return Chip(
+                              label: Text(
+                                friend['name'],
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.035,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              avatar: CircleAvatar(
+                                radius: screenWidth * 0.035,
+                                backgroundImage: friend['profilePic'].isNotEmpty
+                                    ? NetworkImage(friend['profilePic'])
+                                    : null,
+                                backgroundColor: Colors.blueGrey[100]!,
+                                child: friend['profilePic'].isEmpty
+                                    ? Text(
+                                  friend['name'][0].toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: screenWidth * 0.035,
+                                  ),
+                                )
+                                    : null,
+                              ),
+                              deleteIcon: Icon(Icons.close,
+                                  size: screenWidth * 0.045, color: Colors.grey),
+                              onDeleted: () => _toggleSelection(friend),
+                              backgroundColor: Colors.blueGrey[50]!,
+                              elevation: 2,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.025,
+                                  vertical: screenHeight * 0.005),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: "Search friends...",
+                          hintStyle: TextStyle(fontSize: screenWidth * 0.04),
+                          prefixIcon: Icon(Icons.search,
+                              color: Colors.grey, size: screenWidth * 0.06),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                            icon: Icon(Icons.clear,
+                                color: Colors.grey, size: screenWidth * 0.06),
+                            onPressed: () {
+                              setState(() {
+                                searchQuery = "";
+                                displayFriends = List.from(friends);
+                              });
+                            },
+                          )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.grey[100]!,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(screenWidth * 0.075),
+                            borderSide: BorderSide.none,
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: "Search friends...",
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                      suffixIcon: searchQuery.isNotEmpty
-                          ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: () {
+                          contentPadding:
+                          EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                        ),
+                        style: TextStyle(fontSize: screenWidth * 0.04),
+                        onChanged: (value) {
                           setState(() {
-                            searchQuery = "";
-                            displayFriends = List.from(friends);
+                            searchQuery = value.toLowerCase();
+                            displayFriends = friends
+                                .where((friend) => friend["name"]
+                                .toLowerCase()
+                                .contains(searchQuery))
+                                .toList();
                           });
                         },
-                      )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.grey[100]!,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value.toLowerCase();
-                        displayFriends = friends
-                            .where((friend) => friend["name"].toLowerCase().contains(searchQuery))
-                            .toList();
-                      });
+                    ],
+                  ),
+                ),
+                Container(
+                  height: screenHeight * 0.35,
+                  margin: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.04,
+                      vertical: screenHeight * 0.015),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: screenWidth * 0.025,
+                        offset: Offset(0, screenWidth * 0.01),
+                      ),
+                    ],
+                  ),
+                  child: ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: displayFriends.length,
+                    itemBuilder: (context, index) {
+                      return _buildFriendItem(
+                          displayFriends[index], screenWidth, screenHeight);
                     },
                   ),
-                ],
-              ),
-            ),
-            Container(
-              height: 300,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                itemCount: displayFriends.length,
-                itemBuilder: (context, index) {
-                  return _buildFriendItem(displayFriends[index]);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A3C6D),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 5,
-                  minimumSize: const Size(double.infinity, 60),
                 ),
-                onPressed: selectedPeople.isEmpty
-                    ? null
-                    : () {
-                  setState(() {
-                    showExpenseDetails = true;
-                  });
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Continue (${selectedPeople.length})",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                Padding(
+                  padding: EdgeInsets.all(screenWidth * 0.04),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A3C6D),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(screenWidth * 0.03),
                       ),
+                      elevation: 5,
+                      minimumSize: Size(double.infinity, screenHeight * 0.075),
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward_ios, size: 18),
-                  ],
+                    onPressed: selectedPeople.isEmpty
+                        ? null
+                        : () {
+                      _showExpenseDetailModal(screenWidth, screenHeight);
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Continue (${selectedPeople.length})",
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.045,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: screenWidth * 0.02),
+                        Icon(Icons.arrow_forward_ios,
+                            size: screenWidth * 0.045, color: Colors.white),
+                      ],
+                    ),
+                  ),
                 ),
+              ],
+            ),
+          ),
+          if (showExpenseDetails)
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  showExpenseDetails = false;
+                });
+              },
+              behavior: HitTestBehavior.translucent,
+              child: Stack(
+                children: [
+                  BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                    child: Container(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      height: screenHeight * 0.55,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(screenWidth * 0.075)),
+                      ),
+                      padding: EdgeInsets.all(screenWidth * 0.05),
+                      child: _buildExpenseDetailsUI(screenWidth, screenHeight),
+                    ),
+                  ),
+                ],
               ),
             ),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 600),
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                return SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 1),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  )),
-                  child: FadeTransition(opacity: animation, child: child),
-                );
-              },
-              child: showExpenseDetails
-                  ? _buildExpenseDetailsUI()
-                  : const SizedBox.shrink(),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildFriendItem(Map<String, dynamic> friend) {
+  void _showExpenseDetailModal(double screenWidth, double screenHeight) {
+    setState(() {
+      showExpenseDetails = true;
+    });
+  }
+
+  Widget _buildFriendItem(
+      Map<String, dynamic> friend, double screenWidth, double screenHeight) {
     bool isSelected = selectedPeople.any((p) => p['uid'] == friend["uid"]);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      margin: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.025, vertical: screenHeight * 0.005),
       decoration: BoxDecoration(
         color: isSelected ? Colors.blueGrey[50] : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(screenWidth * 0.03),
         border: Border.all(
           color: isSelected ? const Color(0xFF1A3C6D) : Colors.grey[200]!,
           width: 1,
@@ -390,73 +485,79 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          radius: 20,
+          radius: screenWidth * 0.05,
           backgroundImage: friend["profilePic"].isNotEmpty
               ? NetworkImage(friend["profilePic"])
               : null,
           backgroundColor: Colors.blueGrey[100]!,
           child: friend["profilePic"].isEmpty
-              ? Text(friend["name"][0], style: const TextStyle(color: Colors.white))
+              ? Text(
+            friend["name"][0],
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: screenWidth * 0.04,
+            ),
+          )
               : null,
         ),
         title: Text(
           friend["name"],
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: screenWidth * 0.04,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         onTap: () => _toggleSelection(friend),
         trailing: isSelected
-            ? const Icon(Icons.check_circle, color: Color(0xFF1A3C6D))
+            ? Icon(Icons.check_circle,
+            color: const Color(0xFF1A3C6D), size: screenWidth * 0.06)
             : null,
       ),
     );
   }
 
-  Widget _buildExpenseDetailsUI() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 20,
-            offset: Offset(0, -5),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
+  Widget _buildExpenseDetailsUI(double screenWidth, double screenHeight) {
+    final paidPayers = selectedPayers.where((payer) => (payerAmounts[payer] ?? 0.0) > 0).toList();
+
+    return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Expense Details",
             style: TextStyle(
-              fontSize: 24,
+              fontSize: screenWidth * 0.06,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A3C6D),
+              color: Colors.black,
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: screenHeight * 0.025),
+          Text(
             "Total Amount",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: screenHeight * 0.01),
           TextField(
             decoration: InputDecoration(
               hintText: "Enter amount",
-              prefixIcon: const Icon(Icons.currency_rupee, color: Color(0xFF1A3C6D)),
+              hintStyle: TextStyle(fontSize: screenWidth * 0.04),
+              prefixIcon: Icon(Icons.currency_rupee,
+                  color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
               filled: true,
               fillColor: Colors.grey[100]!,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
                 borderSide: const BorderSide(color: Color(0xFF1A3C6D)),
               ),
             ),
+            style: TextStyle(fontSize: screenWidth * 0.04),
             keyboardType: TextInputType.number,
             onChanged: (value) {
               setState(() {
@@ -464,75 +565,139 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               });
             },
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: screenHeight * 0.025),
+          Text(
             "Category",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: screenHeight * 0.01),
           GestureDetector(
-            onTap: () => _showCategoryBackdrop(context),
+            onTap: () =>
+                _showCategoryBackdrop(context, screenWidth, screenHeight),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.04,
+                  vertical: screenHeight * 0.017),
               decoration: BoxDecoration(
                 color: Colors.grey[100]!,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Icon(_getCategoryIcon(selectedCategory), color: const Color(0xFF1A3C6D)),
-                      const SizedBox(width: 10),
+                      Icon(_getCategoryIcon(selectedCategory),
+                          color: const Color(0xFF1A3C6D),
+                          size: screenWidth * 0.06),
+                      SizedBox(width: screenWidth * 0.025),
                       Text(
                         selectedCategory,
-                        style: const TextStyle(fontSize: 16, color: Colors.black87),
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.04,
+                          color: Colors.black87,
+                        ),
                       ),
                     ],
                   ),
-                  const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                  Icon(Icons.arrow_drop_down,
+                      color: Colors.grey, size: screenWidth * 0.06),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: screenHeight * 0.025),
+          Text(
             "Description",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: screenHeight * 0.01),
           TextField(
             decoration: InputDecoration(
               hintText: "What’s this expense for?",
-              prefixIcon: const Icon(Icons.description, color: Color(0xFF1A3C6D)),
+              hintStyle: TextStyle(fontSize: screenWidth * 0.04),
+              prefixIcon: Icon(Icons.description,
+                  color: const Color(0xFF1A3C6D), size: screenWidth * 0.06),
               filled: true,
               fillColor: Colors.grey[100]!,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(screenWidth * 0.03),
                 borderSide: const BorderSide(color: Color(0xFF1A3C6D)),
               ),
             ),
+            style: TextStyle(fontSize: screenWidth * 0.04),
             onChanged: (value) {
               setState(() {
                 expenseDescription = value;
               });
             },
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Paid By",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          SizedBox(height: screenHeight * 0.025),
+          Text(
+            "Paid By",
+            style: TextStyle(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.01),
+          paidPayers.isEmpty
+              ? ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PayerSelectionSheet(
+                    friends: selectedPeople,
+                    selectedPayers: selectedPayers,
+                    payerAmounts: payerAmounts,
+                    totalAmount: totalAmount,
+                    onSelectionDone: (updatedPayers, updatedAmounts) {
+                      setState(() {
+                        selectedPayers = updatedPayers;
+                        payerAmounts = updatedAmounts;
+                      });
+                    },
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A3C6D),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(screenWidth * 0.025),
               ),
-              ElevatedButton(
-                onPressed: () {
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.04,
+                vertical: screenHeight * 0.012,
+              ),
+            ),
+            child: Text(
+              "Select Payers",
+              style: TextStyle(fontSize: screenWidth * 0.035),
+            ),
+          )
+              : Wrap(
+            spacing: screenWidth * 0.02,
+            runSpacing: screenHeight * 0.01,
+            children: paidPayers.map((payer) {
+              final friend = selectedPeople.firstWhere(
+                    (f) => f["name"] == payer,
+                orElse: () => {"name": payer, "profilePic": ""},
+              );
+              return GestureDetector(
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -551,24 +716,35 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     ),
                   );
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A3C6D),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: CircleAvatar(
+                  radius: screenWidth * 0.05,
+                  backgroundImage: payer == "You" && currentUserProfilePic != null && currentUserProfilePic!.isNotEmpty
+                      ? NetworkImage(currentUserProfilePic!)
+                      : friend["profilePic"].isNotEmpty
+                      ? NetworkImage(friend["profilePic"])
+                      : null,
+                  backgroundColor: Colors.grey[300],
+                  child: (payer == "You" && (currentUserProfilePic == null || currentUserProfilePic!.isEmpty)) ||
+                      friend["profilePic"].isEmpty
+                      ? Text(
+                    payer[0].toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: screenWidth * 0.035,
+                    ),
+                  )
+                      : null,
                 ),
-                child: const Text("Select Payers"),
-              ),
-            ],
+              );
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  void _showCategoryBackdrop(BuildContext context) {
+  void _showCategoryBackdrop(
+      BuildContext context, double screenWidth, double screenHeight) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -576,28 +752,30 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.5,
-          decoration: const BoxDecoration(
+          height: screenHeight * 0.5,
+          decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+            borderRadius:
+            BorderRadius.vertical(top: Radius.circular(screenWidth * 0.06)),
           ),
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(screenWidth * 0.04),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       "Select Category",
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: screenWidth * 0.05,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A3C6D),
+                        color: const Color(0xFF1A3C6D),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.grey),
+                      icon: Icon(Icons.close,
+                          color: Colors.grey, size: screenWidth * 0.06),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -612,18 +790,26 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     return ListTile(
                       leading: Icon(
                         _getCategoryIcon(category),
-                        color: isSelected ? const Color(0xFF1A3C6D) : Colors.grey[600]!,
+                        color: isSelected
+                            ? const Color(0xFF1A3C6D)
+                            : Colors.grey[600]!,
+                        size: screenWidth * 0.06,
                       ),
                       title: Text(
                         category,
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? const Color(0xFF1A3C6D) : Colors.black87,
+                          fontSize: screenWidth * 0.04,
+                          fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? const Color(0xFF1A3C6D)
+                              : Colors.black87,
                         ),
                       ),
                       trailing: isSelected
-                          ? const Icon(Icons.check_circle, color: Color(0xFF1A3C6D))
+                          ? Icon(Icons.check_circle,
+                          color: const Color(0xFF1A3C6D),
+                          size: screenWidth * 0.06)
                           : null,
                       onTap: () {
                         setState(() {

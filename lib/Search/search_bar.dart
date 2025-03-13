@@ -15,7 +15,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   String searchQuery = "";
 
   Stream<List<Map<String, dynamic>>> getUsersByName(String name) {
-    if (name.isEmpty) return const Stream.empty();
+    if (name.isEmpty) return Stream.value([]); // Return empty list instead of empty stream
     String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
 
     return FirebaseFirestore.instance.collection('users').snapshots().map(
@@ -68,37 +68,56 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(screenHeight * 0.06),
-        child: AppBar(
-          title: Text(
-            "Find Friends",
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: screenWidth * 0.045,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          backgroundColor: const Color(0xFF234567),
-          elevation: 4,
-          centerTitle: true,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+      appBar: AppBar(
+        title: Text(
+          "Find Friends",
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: screenWidth * 0.045,
+            fontWeight: FontWeight.bold,
           ),
         ),
+        centerTitle: true,
+        elevation: 4,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF1A3C6D), // Base: Deep neon blue
+                Color(0xFF0A2A4D), // Darker neon blue (shadowy tone)
+                Color(0xFF1A3C6D),// Neon purple
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0xFF1A3C6D).withOpacity(0.5),
+                blurRadius: 10.0,
+                spreadRadius: 2.0,
+              ),
+            ],
+          ),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(screenWidth * 0.05)),
+        ),
+        toolbarHeight: screenWidth * 0.15,
       ),
       body: Stack(
-        alignment: Alignment.bottomCenter, // Align stack children to bottom center
         children: [
-          Positioned( // Use Positioned instead of Positioned.fill
-            bottom: 100, // Align to bottom
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
             child: Opacity(
-              opacity: 0.9,
+              opacity: 0.5,
               child: Image.asset(
-                'assets/logo/123.jpg', // Your image path
+                'assets/logo/123.jpg',
                 fit: BoxFit.cover,
-                height: screenHeight * 0.4, // Adjust height as needed, half of the screen height in this case
-                width: screenWidth * 0.9, // Adjust width as needed, 80% of screen width in this case
+                height: screenHeight * 0.5,
+                width: screenWidth,
               ),
             ),
           ),
@@ -129,27 +148,35 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.03),
-                searchQuery.isNotEmpty
-                    ? StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: getUsersByName(searchQuery),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator(color: Colors.teal.shade700));
-                    }
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Center(
-                        child: Text(
-                          "No users found",
-                          style: GoogleFonts.poppins(
-                            fontSize: screenWidth * 0.045,
-                            color: Colors.grey.shade600,
+                Expanded(
+                  child: searchQuery.isNotEmpty
+                      ? StreamBuilder<List<Map<String, dynamic>>>(
+                    stream: getUsersByName(searchQuery),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator(color: Colors.teal.shade700));
+                      }
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            "Error: ${snapshot.error}",
+                            style: GoogleFonts.poppins(color: Colors.red),
                           ),
-                        ),
-                      );
-                    }
+                        );
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Center(
+                          child: Text(
+                            "No users found",
+                            style: GoogleFonts.poppins(
+                              fontSize: screenWidth * 0.045,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        );
+                      }
 
-                    return Expanded(
-                      child: ListView.builder(
+                      return ListView.builder(
                         itemCount: snapshot.data!.length,
                         itemBuilder: (context, index) {
                           final userData = snapshot.data![index];
@@ -255,16 +282,16 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                             },
                           );
                         },
+                      );
+                    },
+                  )
+                      : Center(
+                    child: Text(
+                      "Search for a user by name",
+                      style: GoogleFonts.poppins(
+                        fontSize: screenWidth * 0.045,
+                        color: Colors.teal.shade700,
                       ),
-                    );
-                  },
-                )
-                    : Center(
-                  child: Text(
-                    "Search for a user by name",
-                    style: GoogleFonts.poppins(
-                      fontSize: screenWidth * 0.045,
-                      color: Colors.teal.shade700,
                     ),
                   ),
                 ),

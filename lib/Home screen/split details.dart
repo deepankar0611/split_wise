@@ -380,7 +380,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
         onPressed: _sendReminder,
         backgroundColor: const Color(0xFF234567),
         elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         icon: Icon(LucideIcons.bell, color: Colors.white, size: screenWidth * 0.06),
         label: Text("Remind All",
             style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
