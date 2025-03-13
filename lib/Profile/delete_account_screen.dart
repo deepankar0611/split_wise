@@ -64,6 +64,72 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     }
   }
 
+  Future<void> _showConfirmationDialog() async {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // User must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey.shade800,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(screenWidth * 0.03)),
+          title: Text(
+            'Confirm Delete',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: screenWidth * 0.05,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text(
+                  'Are you sure you want to delete your account?',
+                  style: GoogleFonts.poppins(color: Colors.grey.shade300, fontSize: screenWidth * 0.04),
+                ),
+                SizedBox(height: screenHeight * 0.02),
+                Text(
+                  'This action is permanent and cannot be undone.',
+                  style: GoogleFonts.poppins(color: Colors.red.shade400, fontSize: screenWidth * 0.035),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey.shade400,
+              ),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(fontSize: screenWidth * 0.04),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red.shade400,
+              ),
+              child: Text(
+                'Confirm',
+                style: GoogleFonts.poppins(fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
+                _deleteAccount(); // Call the delete account function
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _passwordController.dispose();
@@ -205,7 +271,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                   ),
                   SizedBox(height: screenHeight * 0.04),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _deleteAccount,
+                    onPressed: _isLoading ? null : _showConfirmationDialog,
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.symmetric(
                         horizontal: screenWidth * 0.25,
