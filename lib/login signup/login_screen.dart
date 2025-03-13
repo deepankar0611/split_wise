@@ -6,6 +6,8 @@ import 'package:split_wise/login%20signup/sign_up.dart';
 import '../Helper/local.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'forgotpassword.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, this.title});
 
@@ -223,20 +225,19 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
-            children: [
+              children: [
               Icon(Icons.error_outline, color: Colors.white, size: 24),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Google Sign-In Failed: $e",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              "Google Sign-In Failed: $e",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
-            ],
+            ),
+          )],
           ),
           backgroundColor: Color(0xFF1A2E39),
           shape: RoundedRectangleBorder(
@@ -399,29 +400,28 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _createAccountLabel() {
-    return InkWell(
+    return GestureDetector(
       onTap: () {
         Navigator.push(
             context, MaterialPageRoute(builder: (context) => SignUpPage()));
       },
       child: Container(
-        margin: EdgeInsets.symmetric(vertical: 20),
-        padding: EdgeInsets.all(15),
+        padding: EdgeInsets.symmetric(vertical: 10), // Reduced vertical padding
         alignment: Alignment.bottomCenter,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
-              'Don\'t have an account ?',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              'Don\'t have an account?',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500), // Slightly adjusted font size
             ),
-            SizedBox(width: 10),
+            SizedBox(width: 5), // Reduced spacing
             Text(
               'Register',
               style: TextStyle(
                   color: Color(0xFF1A2E39),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600), // Slightly adjusted font size
             ),
           ],
         ),
@@ -470,44 +470,50 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
     return Scaffold(
-      body: Container(
-        height: height,
-        child: Stack(
-          children: <Widget>[
-            Positioned(
-                top: -height * .15,
-                right: -MediaQuery.of(context).size.width * .4,
-                child: BezierContainer()),
-            Container(
+      body: Stack(
+        children: <Widget>[
+          Positioned(
+              top: -height * .15,
+              right: -MediaQuery.of(context).size.width * .4,
+              child: BezierContainer()),
+          SingleChildScrollView( // Wrap the main content with SingleChildScrollView
+            child: Padding( // Use Padding instead of Container for consistent padding
               padding: EdgeInsets.symmetric(horizontal: 20),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    SizedBox(height: height * .2),
-                    _title(),
-                    SizedBox(height: 50),
-                    _emailPasswordWidget(),
-                    SizedBox(height: 20),
-                    _submitButton(),
-                    Container(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      alignment: Alignment.centerRight,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  SizedBox(height: height * .15), // Adjusted top spacing
+                  _title(),
+                  SizedBox(height: 40), // Adjusted spacing
+                  _emailPasswordWidget(),
+                  SizedBox(height: 15), // Adjusted spacing
+                  _submitButton(),
+                  Container(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    alignment: Alignment.centerRight,
+                    child: InkWell( // Use InkWell for visual feedback on tap
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                        );
+                      },
                       child: Text('Forgot Password ?',
                           style: TextStyle(
                               fontSize: 14, fontWeight: FontWeight.w500)),
                     ),
-                    _divider(),
-                    _googleSignInButton(),
-                    SizedBox(height: height * .055),
-                    _createAccountLabel(),
-                  ],
-                ),
+                  ),
+                  _divider(),
+                  _googleSignInButton(),
+                  SizedBox(height: 20), // Adjusted spacing
+                  _createAccountLabel(),
+                  SizedBox(height: 30), // Add some bottom padding for better scroll view
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

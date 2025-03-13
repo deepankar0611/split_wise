@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../Helper/local.dart';
 import 'login_screen.dart';
 
+
 class SignUpPage extends StatefulWidget {
   SignUpPage({Key? key, this.title}) : super(key: key);
 
@@ -18,14 +19,21 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
 
   Future<void> signUpUser(String email, String password, String name) async {
+    setState(() {
+      _isLoading = true;
+    });
     try {
       // Validate inputs before proceeding
       if (email.isEmpty || password.isEmpty || name.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Please fill all fields")),
         );
+        setState(() {
+          _isLoading = false;
+        });
         return;
       }
 
@@ -52,7 +60,7 @@ class _SignUpPageState extends State<SignUpPage> {
           print("Verification email sent!");
 
           // Show alert dialog
-          if (mounted) { // Check if widget is still mounted
+          if (mounted) {
             await showDialog(
               context: context,
               barrierDismissible: false,
@@ -87,6 +95,10 @@ class _SignUpPageState extends State<SignUpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Sign Up Failed: $e")),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -96,15 +108,15 @@ class _SignUpPageState extends State<SignUpPage> {
         Navigator.pop(context);
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Reduced vertical padding
         child: Row(
           children: <Widget>[
-            Container(
-              padding: EdgeInsets.only(left: 0, top: 10, bottom: 10),
-              child: Icon(Icons.keyboard_arrow_left, color: Colors.black),
+            Padding(
+              padding: const EdgeInsets.only(right: 5),
+              child: Icon(Icons.keyboard_arrow_left, color: Colors.black, size: 20), // Reduced icon size
             ),
             Text('Back',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500))
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)) // Adjusted font size
           ],
         ),
       ),
@@ -113,22 +125,26 @@ class _SignUpPageState extends State<SignUpPage> {
 
   Widget _entryField(String title, TextEditingController controller, {bool isPassword = false}) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 10),
+      margin: EdgeInsets.symmetric(vertical: 6), // Further reduced vertical margin
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
             title,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14), // Slightly reduced font size
           ),
-          SizedBox(height: 10),
+          SizedBox(height: 4), // Further reduced SizedBox height
           TextField(
             controller: controller,
             obscureText: isPassword,
             decoration: InputDecoration(
-              border: InputBorder.none,
-              fillColor: Color(0xfff3f3f4),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
               filled: true,
+              fillColor: Color(0xfff3f3f4),
+              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10), // Further reduced padding
             ),
           ),
         ],
@@ -138,15 +154,15 @@ class _SignUpPageState extends State<SignUpPage> {
 
   Widget _submitButton() {
     return GestureDetector(
-      onTap: () {
+      onTap: _isLoading ? null : () {
         signUpUser(_emailController.text.trim(), _passwordController.text.trim(), _usernameController.text.trim());
       },
       child: Container(
-        width: MediaQuery.of(context).size.width,
-        padding: EdgeInsets.symmetric(vertical: 15),
+        width: MediaQuery.of(context).size.width * 0.7, // Further reduced width (you can adjust this)
+        padding: EdgeInsets.symmetric(vertical: 12), // Further reduced vertical padding
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.all(Radius.circular(5)),
+          borderRadius: BorderRadius.circular(10),
           boxShadow: <BoxShadow>[
             BoxShadow(
               color: Colors.grey.shade200,
@@ -156,14 +172,23 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ],
           gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [Color(0xFF3C7986), Color(0xFF1A2E39)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF1A2E39), // Brighter green for neon effect
+              Color(0xFF1A2E39), // Brighter blue for neon effect
+            ],
+            stops: [0.0, 1.0], // Adjust stops for desired transition
           ),
         ),
-        child: Text(
+        child: _isLoading
+            ? CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        )
+            : Text(
           'Register Now',
-          style: TextStyle(fontSize: 20, color: Colors.white),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold), // Further adjusted style
         ),
       ),
     );
@@ -176,23 +201,23 @@ class _SignUpPageState extends State<SignUpPage> {
             context, MaterialPageRoute(builder: (context) => LoginPage()));
       },
       child: Container(
-        margin: EdgeInsets.symmetric(vertical: 20),
-        padding: EdgeInsets.all(15),
+        margin: EdgeInsets.symmetric(vertical: 7), // Further reduced vertical margin
+        padding: EdgeInsets.all(7), // Further reduced padding
         alignment: Alignment.bottomCenter,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
               'Already have an account ?',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500), // Further adjusted font size
             ),
-            SizedBox(width: 10),
+            SizedBox(width: 5),
             Text(
               'Login',
               style: TextStyle(
                   color: Color(0xFF1A2E39),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600), // Further adjusted font size
             ),
           ],
         ),
@@ -206,22 +231,22 @@ class _SignUpPageState extends State<SignUpPage> {
       text: TextSpan(
         text: 's',
         style: TextStyle(
-          fontSize: 30,
+          fontSize: 28, // Slightly reduced title font size
           fontWeight: FontWeight.w700,
           color: Color(0xFF1A2E39),
         ),
         children: [
           TextSpan(
-            text: 'et',
-            style: TextStyle(color: Color(0xFF3C7986), fontSize: 30),
+            text: 'pl',
+            style: TextStyle(color: Color(0xFF3C7986), fontSize: 28), // Slightly reduced title font size
           ),
           TextSpan(
-            text: 'tle',
-            style: TextStyle(color: Color(0xFF1A2E39), fontSize: 30),
+            text: 'it-',
+            style: TextStyle(color: Color(0xFF1A2E39), fontSize: 28), // Slightly reduced title font size
           ),
           TextSpan(
             text: 'up',
-            style: TextStyle(color: Color(0xFF3C7986), fontSize: 30),
+            style: TextStyle(color: Color(0xFF3C7986), fontSize: 28), // Slightly reduced title font size
           ),
         ],
       ),
@@ -242,37 +267,32 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
     return Scaffold(
-      body: Container(
-        height: height,
-        child: Stack(
-          children: <Widget>[
-            Positioned(
-              top: -MediaQuery.of(context).size.height * .15,
-              right: -MediaQuery.of(context).size.width * .4,
-              child: BezierContainer(),
+      body: Stack(
+        children: <Widget>[
+          Positioned(
+            top: -MediaQuery.of(context).size.height * .15,
+            right: -MediaQuery.of(context).size.width * .4,
+            child: BezierContainer(),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                SizedBox(height: height * .10), // Further adjusted top spacing
+                _title(),
+                SizedBox(height: 25), // Further reduced spacing
+                _emailPasswordWidget(),
+                SizedBox(height: 8), // Further reduced spacing
+                _submitButton(),
+                SizedBox(height: 25), // Further reduced spacing
+                _loginAccountLabel(),
+              ],
             ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    SizedBox(height: height * .2),
-                    _title(),
-                    SizedBox(height: 50),
-                    _emailPasswordWidget(),
-                    SizedBox(height: 20),
-                    _submitButton(),
-                    SizedBox(height: height * .14),
-                    _loginAccountLabel(),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(top: 40, left: 0, child: _backButton()),
-          ],
-        ),
+          ),
+          Positioned(top: 40, left: 0, child: _backButton()),
+        ],
       ),
     );
   }
