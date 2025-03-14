@@ -60,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchInitialData() async {
     setState(() {
-      _isLoading = true; // Start loading
+      _isLoading = true;
     });
     await _fetchUserData();
     await _fetchCategoryData();
