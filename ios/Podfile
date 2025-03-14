@@ -1,0 +1,50 @@
+platform :ios, '13.0'
+
+# Disable CocoaPods analytics to reduce build latency
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  # Use static linkage for frameworks and enable modular headers globally
+  use_frameworks! :linkage => :static
+  use_modular_headers!
+
+  # Install all Flutter-managed iOS pods
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  # Specify Firebase pods with consistent versioning (optional, only if needed)
+  # These are already managed by flutterfire plugins, so only add if overriding is necessary
+  # pod 'Firebase/Messaging', '11.8.0'
+
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+end

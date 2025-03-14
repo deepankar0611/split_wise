@@ -9,7 +9,7 @@ class FCMService {
 
   static Future<String> _getAccessToken() async {
     try {
-      final jsonString = await rootBundle.loadString('assets/split-wise-891b7-firebase-adminsdk-fbsvc-d28501b2bc.json');
+      final jsonString = await rootBundle.loadString('assets/split-wise-891b7-firebase-adminsdk-fbsvc-e1cf10d06c.json');
       log('Service account JSON loaded successfully');
       final credentials = ServiceAccountCredentials.fromJson(jsonDecode(jsonString));
       log('Credentials parsed: ${credentials.email}');

@@ -10,9 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  firebase_core: ^3.11.0
-  firebase_auth: ^5.4.2
-  cloud_firestore: ^5.6.3
+  firebase_core:
+  firebase_auth:
+  cloud_firestore:
   google_fonts: ^6.2.1
   lucide_icons: ^0.257.0
   google_sign_in: ^6.0.0
@@ -32,7 +32,7 @@ dependencies:
   flutter_neumorphic: ^3.2.0
   rtf_textfield: ^1.0.0 # For neumorphic design elements
   shimmer: ^3.0.0
-  fl_chart: ^0.68.0
+  fl_chart: ^0.70.2
   firebase_messaging:
   flutter_local_notifications:
   flutter_foreground_task:
@@ -43,13 +43,20 @@ dependencies:
   flutter_spinkit: ^5.2.1
   url_launcher:
   device_preview: ^1.2.0
-  slider_button:
+  flutter_launcher_icons: ^0.14.3
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/ic_launcher.png"
+
+
 
 flutter:
   uses-material-design: true
@@ -59,5 +66,5 @@ flutter:
     - assets/animation/56qRH8Xl3ih8DWE25i.mp4
     - assets/fonts/
     - assets/animation/45.json
-    - assets/split-wise-891b7-firebase-adminsdk-fbsvc-d28501b2bc.json
+    - assets/split-wise-891b7-firebase-adminsdk-fbsvc-e1cf10d06c.json
     - assets/Animation - 1740671879696.json

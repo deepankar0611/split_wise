@@ -835,37 +835,37 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                 ),
                 if (participantUid != userId && netAmount > 0) ...[
                   SizedBox(width: screenWidth * 0.03),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UPIPaymentScreen(
-                            splitId: widget.splitId,
-                            amountToPay: netAmount,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.02,
-                        vertical: screenHeight * 0.005,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF234567),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        "Pay Now",
-                        style: GoogleFonts.poppins(
-                          fontSize: screenWidth * 0.035,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // GestureDetector(
+                  //   onTap: () {
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(
+                  //         builder: (context) => UPIPaymentScreen(
+                  //           splitId: widget.splitId,
+                  //           amountToPay: netAmount,
+                  //         ),
+                  //       ),
+                  //     );
+                  //   },
+                  //   child: Container(
+                  //     padding: EdgeInsets.symmetric(
+                  //       horizontal: screenWidth * 0.02,
+                  //       vertical: screenHeight * 0.005,
+                  //     ),
+                  //     decoration: BoxDecoration(
+                  //       color: const Color(0xFF234567),
+                  //       borderRadius: BorderRadius.circular(6),
+                  //     ),
+                  //     child: Text(
+                  //       "Pay Now",
+                  //       style: GoogleFonts.poppins(
+                  //         fontSize: screenWidth * 0.035,
+                  //         fontWeight: FontWeight.w600,
+                  //         color: Colors.white,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ],
             ),

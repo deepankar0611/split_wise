@@ -4,6 +4,13 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
     id "com.google.gms.google-services"
 }
+// Load keystore properties from key.properties
+def keystorePropertiesFile = rootProject.file("key.properties")
+def keystoreProperties = new Properties()
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
 
 dependencies {
     // Import the BoM for the Firebase platform
@@ -21,7 +28,7 @@ dependencies {
 }
 
 android {
-    namespace = "com.example.split_wise"
+    namespace = "com.ad.split_up"
     compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
@@ -36,16 +43,30 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.split_wise"
+        applicationId = "com.ad.split_up"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = 1
         versionName = 1.0
+        ndk {
+            debugSymbolLevel 'FULL'
+        }
     }
 
+    signingConfigs {
+        release {
+            keyAlias = keystoreProperties['keyAlias']
+            keyPassword = keystoreProperties['keyPassword']
+            storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword = keystoreProperties['storePassword']
+        }
+    }
     buildTypes {
         release {
-            signingConfig = signingConfigs.debug
+            signingConfig signingConfigs.release
+            ndk {
+                debugSymbolLevel 'FULL'
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:split_wise/login%20signup/login_screen.dart';
 import 'login and signup.dart';
 
 class IntroPage extends StatefulWidget {
@@ -59,7 +60,7 @@ class _IntroPageState extends State<IntroPage> {
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
+      MaterialPageRoute(builder: (context) => LoginPage()),
     );
   }
 

@@ -1,0 +1,2 @@
+/Users/deepankarsingh/AndroidStudioProjects/split_wise/android/app/.cxx/RelWithDebInfo/62194k1a/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/deepankarsingh/AndroidStudioProjects/split_wise/android/app/.cxx/RelWithDebInfo/62194k1a/armeabi-v7a/CMakeFiles/rebuild_cache.dir
