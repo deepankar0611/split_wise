@@ -45,4 +45,5 @@ app.*.map.json
 /android/app/release
 assets/split-wise-891b7-firebase-adminsdk-fbsvc-d28501b2bc.json
 /android/app/keystore.jks
+/android/key.properties
 
