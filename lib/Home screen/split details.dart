@@ -351,9 +351,9 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
                                 elevation: 4,
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10)),
+                                tooltip: 'Generate PDF',
                                 child: Icon(Icons.picture_as_pdf,
                                     color: Colors.white, size: screenWidth * 0.05),
-                                tooltip: 'Generate PDF',
                               ),
                             ),
                           ],
@@ -398,7 +398,7 @@ class _SplitDetailScreenState extends State<SplitDetailScreen> {
       backgroundColor: Color(0xFF234567),
       centerTitle: true,
       title: Text(
-        'Settle Up',
+        'Split Up',
         style: GoogleFonts.lobster(
           textStyle: const TextStyle(
             color: Colors.white,

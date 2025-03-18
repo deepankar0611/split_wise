@@ -46,8 +46,8 @@ android {
         applicationId = "com.ad.split_up"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
-        versionCode = 1
-        versionName = 1.0
+        versionCode = 2
+        versionName = 1.1
         ndk {
             debugSymbolLevel 'FULL'
         }

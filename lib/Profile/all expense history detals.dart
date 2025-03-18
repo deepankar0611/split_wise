@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:intl/intl.dart'; // Added for date formatting
+import 'package:intl/intl.dart';
 import 'package:split_wise/Home%20screen/split%20details.dart';
 
 class ExpenseHistoryDetailedScreen extends StatefulWidget {
@@ -38,7 +38,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
   String? friendSinceDate;
   int totalSplitsTogether = 0;
   double avgAmountTogether = 0.0;
-  List<QueryDocumentSnapshot> splits = []; // Store fetched splits
+  List<QueryDocumentSnapshot> splits = [];
 
   @override
   void initState() {
@@ -47,7 +47,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
     if (widget.friendUid != null) {
       _fetchFriendDetails();
     }
-    _fetchSplits(); // Initial fetch of splits
+    _fetchSplits();
   }
 
   Future<void> _fetchFriendDetails() async {
@@ -153,12 +153,51 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
       Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
       List<String> participants = List<String>.from(splitData['participants'] ?? []);
       Map<String, dynamic> paidBy = Map<String, dynamic>.from(splitData['paidBy'] ?? {});
+      double totalAmount = splitData['totalAmount']?.toDouble() ?? 0.0;
 
       if (!participants.contains(userId)) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You are not part of this split.", style: GoogleFonts.poppins())));
         return;
       }
 
+      // Calculate financial impact before removing participation
+      int participantCount = participants.length; // Current number of participants
+      double userPaidAmount = (paidBy[userId] as num?)?.toDouble() ?? 0.0;
+      double sharePerPerson = totalAmount / participantCount; // User's share before removal
+      double netAmount = sharePerPerson - userPaidAmount; // Net amount user owes or is owed
+
+      // Fetch user's current balances
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("User data not found.", style: GoogleFonts.poppins())));
+        return;
+      }
+
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      double currentAmountToPay = (userData['amountToPay'] as num?)?.toDouble() ?? 0.0;
+      double currentAmountToReceive = (userData['amountToReceive'] as num?)?.toDouble() ?? 0.0;
+
+      // Check if the split is settled for the user
+      bool isSettled = await _isSplitSettled(splitId);
+
+      if (!isSettled) {
+        // Adjust balances based on net amount
+        if (netAmount > 0) {
+          // User owes money, reduce amountToPay
+          currentAmountToPay = (currentAmountToPay - netAmount).clamp(0, double.infinity);
+        } else if (netAmount < 0) {
+          // User is owed money, reduce amountToReceive (since they won't receive it anymore)
+          currentAmountToReceive = (currentAmountToReceive + netAmount).clamp(0, double.infinity); // netAmount is negative, so this reduces it
+        }
+
+        // Update user's balances in Firestore
+        await FirebaseFirestore.instance.collection('users').doc(userId).update({
+          'amountToPay': currentAmountToPay,
+          'amountToReceive': currentAmountToReceive,
+        });
+      }
+
+      // Remove user's participation
       participants.remove(userId);
       paidBy.remove(userId);
 
@@ -167,21 +206,27 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         'paidBy': paidBy.isEmpty ? FieldValue.delete() : paidBy,
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Your participation has been removed.", style: GoogleFonts.poppins())));
-      await _fetchSplits(); // Refresh splits after removal
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          isSettled
+              ? "Your participation has been removed."
+              : "Your participation has been removed and your balance updated.",
+          style: GoogleFonts.poppins(),
+        ),
+      ));
+      await _fetchSplits();
     } catch (e) {
       print("Error removing participation: $e");
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to remove participation: $e", style: GoogleFonts.poppins())));
     }
   }
-
   Future<void> _deleteEntireSplit(String splitId) async {
     try {
       bool? confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text("Confirm Delete", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-          content: Text("Are you sure you want to delete this split entirely? This will remove it for all participants.", style: GoogleFonts.poppins(fontSize: 16)),
+          content: Text("Are you sure you want to delete this split entirely? This will remove it for all participants and update your balances if unsettled.", style: GoogleFonts.poppins(fontSize: 16)),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.blue))),
             TextButton(onPressed: () => Navigator.pop(context, true), child: Text("Delete", style: GoogleFonts.poppins(color: Colors.red))),
@@ -205,9 +250,50 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
         return;
       }
 
+      bool isSettled = await _isSplitSettled(splitId);
+      if (!isSettled) {
+        Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
+        double totalAmount = splitData['totalAmount']?.toDouble() ?? 0.0;
+        int participantCount = (splitData['participants'] as List<dynamic>?)?.length ?? 1;
+        double userPaidAmount = (paidBy[userId] as num?)?.toDouble() ?? 0.0;
+        double sharePerPerson = totalAmount / participantCount;
+        double netAmount = sharePerPerson - userPaidAmount;
+
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        if (!userDoc.exists) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("User data not found.", style: GoogleFonts.poppins())));
+          return;
+        }
+
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+        double currentAmountToPay = (userData['amountToPay'] as num?)?.toDouble() ?? 0.0;
+        double currentAmountToReceive = (userData['amountToReceive'] as num?)?.toDouble() ?? 0.0;
+
+        if (netAmount > 0) {
+          currentAmountToPay = (currentAmountToPay - netAmount).clamp(0, double.infinity);
+        } else if (netAmount < 0) {
+          currentAmountToReceive = (currentAmountToReceive + netAmount).clamp(0, double.infinity);
+        }
+
+        await FirebaseFirestore.instance.collection('users').doc(userId).update({
+          'amountToPay': currentAmountToPay,
+          'amountToReceive': currentAmountToReceive,
+        });
+      }
+
       await FirebaseFirestore.instance.collection('splits').doc(splitId).delete();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Split has been deleted for all participants.", style: GoogleFonts.poppins())));
-      await _fetchSplits(); // Refresh splits after deletion
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isSettled
+                ? "Split has been deleted for all participants."
+                : "Split deleted and your balance updated.",
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
+
+      await _fetchSplits();
     } catch (e) {
       print("Error deleting split: $e");
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to delete split: $e", style: GoogleFonts.poppins())));
@@ -283,9 +369,9 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFF1A3C6D), // Base: Deep neon blue
-                Color(0xFF0A2A4D), // Darker neon blue (shadowy tone)
-                Color(0xFF1A3C6D),// Neon purple
+                Color(0xFF1A3C6D),
+                Color(0xFF0A2A4D),
+                Color(0xFF1A3C6D),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -320,7 +406,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                   if (widget.friendUid != null) _buildFriendDetailCard(screenWidth, screenHeight),
                   Expanded(
                     child: RefreshIndicator(
-                      onRefresh: _fetchSplits, // Trigger refresh on swipe down
+                      onRefresh: _fetchSplits,
                       color: const Color(0xFF234567),
                       child: splits.isEmpty
                           ? _buildInitialState(screenWidth, screenHeight)
@@ -354,7 +440,7 @@ class _ExpenseHistoryDetailedScreenState extends State<ExpenseHistoryDetailedScr
                           print("Filtered splits count: ${filteredSplits.length}");
 
                           return ListView.builder(
-                            physics: const AlwaysScrollableScrollPhysics(), // Ensure scroll physics for RefreshIndicator
+                            physics: const AlwaysScrollableScrollPhysics(),
                             shrinkWrap: true,
                             itemCount: filteredSplits.length,
                             itemBuilder: (context, index) {

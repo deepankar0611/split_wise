@@ -26,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   };
 
   Map<String, Map<String, dynamic>> categoryData = {};
-  bool _isLoading = true; // Add loading state
+  bool _isLoading = true;
 
   final List<String> categories = [
     "Grocery",
@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await _fetchCategoryData();
     if (mounted) {
       setState(() {
-        _isLoading = false; // Stop loading
+        _isLoading = false;
       });
     }
   }
@@ -100,29 +100,46 @@ class _HomeScreenState extends State<HomeScreen> {
           .orderBy('createdAt', descending: true)
           .get();
 
-      Map<String, Map<String, dynamic>> tempCategoryData = {};
+      // Initialize all categories with default values
+      Map<String, Map<String, dynamic>> tempCategoryData = {
+        for (var category in categories)
+          category: {'averageAmount': 0.0, 'lastInvolved': null}
+      };
+
+      // Temporary maps to aggregate data per category
+      Map<String, double> totalAmountPerCategory = {};
+      Map<String, int> splitCountPerCategory = {};
+
       for (var splitDoc in snapshot.docs) {
         Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
         String category = splitData['category'] ?? 'Others';
-        Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
-        double userPaidAmount = paidBy[userId]?.toDouble() ?? 0.0;
+        double totalAmount = splitData['totalAmount']?.toDouble() ?? 0.0;
+        int participantCount = (splitData['participants'] as List<dynamic>?)?.length ?? 1;
         Timestamp? createdAt = splitData['createdAt'] as Timestamp?;
 
-        if (userPaidAmount > 0) {
-          if (!tempCategoryData.containsKey(category)) {
-            tempCategoryData[category] = {
-              'totalPaid': 0.0,
-              'lastInvolved': createdAt?.toDate(),
-            };
-          }
-          tempCategoryData[category]!['totalPaid'] = (tempCategoryData[category]!['totalPaid'] as double) + userPaidAmount;
-          if (createdAt != null &&
-              (tempCategoryData[category]!['lastInvolved'] == null ||
-                  createdAt.toDate().isAfter(tempCategoryData[category]!['lastInvolved'] as DateTime))) {
-            tempCategoryData[category]!['lastInvolved'] = createdAt.toDate();
-          }
+        // Aggregate total amount and count of splits for averaging
+        totalAmountPerCategory[category] = (totalAmountPerCategory[category] ?? 0.0) + totalAmount;
+        splitCountPerCategory[category] = (splitCountPerCategory[category] ?? 0) + 1;
+
+        // Update lastInvolved if this split is more recent
+        if (createdAt != null &&
+            (tempCategoryData[category]!['lastInvolved'] == null ||
+                createdAt.toDate().isAfter(tempCategoryData[category]!['lastInvolved'] as DateTime))) {
+          tempCategoryData[category]!['lastInvolved'] = createdAt.toDate();
         }
       }
+
+      // Calculate average amount per participant for each category
+      totalAmountPerCategory.forEach((category, totalAmount) {
+        int splitCount = splitCountPerCategory[category] ?? 1;
+        double avgTotalAmount = totalAmount / splitCount; // Average total amount per split
+        int avgParticipantCount = snapshot.docs
+            .where((doc) => (doc.data() as Map<String, dynamic>)['category'] == category)
+            .map((doc) => ((doc.data() as Map<String, dynamic>)['participants'] as List<dynamic>?)?.length ?? 1)
+            .reduce((a, b) => a + b) ~/ splitCountPerCategory[category]!; // Average participants per split
+        tempCategoryData[category]!['averageAmount'] = avgTotalAmount / avgParticipantCount;
+      });
+
       if (mounted) {
         setState(() {
           categoryData = tempCategoryData;
@@ -132,7 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
       print("Error fetching category data: $e");
       if (mounted) {
         setState(() {
-          categoryData = {};
+          categoryData = {
+            for (var category in categories)
+              category: {'averageAmount': 0.0, 'lastInvolved': null}
+          };
         });
       }
     }
@@ -140,14 +160,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _refreshData() async {
     setState(() {
-      _isLoading = true; // Show shimmer during refresh
+      _isLoading = true;
     });
     await _fetchUserData();
     await _fetchCategoryData();
     await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) {
       setState(() {
-        _isLoading = false; // Hide shimmer after refresh
+        _isLoading = false;
       });
     }
   }
@@ -176,14 +196,13 @@ class _HomeScreenState extends State<HomeScreen> {
           controller: widget.scrollController,
           slivers: <Widget>[
             SliverAppBar(
-
               pinned: true,
               floating: false,
               expandedHeight: screenHeight * 0.3,
               backgroundColor: const Color(0xFF234567),
               centerTitle: true,
               title: Text(
-                'Settle Up',
+                'Split Up',
                 style: GoogleFonts.lobster(
                   textStyle: const TextStyle(
                     color: Colors.white,
@@ -276,7 +295,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Shimmer placeholder for the top card (Receive and Pay)
   Widget _buildShimmerCard(double screenWidth, double screenHeight) {
     return Shimmer.fromColors(
       baseColor: Colors.grey[300]!,
@@ -309,7 +327,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Shimmer placeholder for the body card (Recent Bills, Features, Transactions)
   Widget _buildShimmerBodyCard(double screenWidth, double screenHeight) {
     return Container(
       decoration: BoxDecoration(
@@ -319,7 +336,6 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: EdgeInsets.only(top: screenWidth * 0.05),
       child: Column(
         children: [
-          // Shimmer for Recent Priority Bills
           Padding(
             padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
             child: Column(
@@ -357,7 +373,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           SizedBox(height: screenWidth * 0.05),
-          // Shimmer for Exclusive Features
           Padding(
             padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
             child: Column(
@@ -388,7 +403,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           SizedBox(height: screenWidth * 0.05),
-          // Shimmer for Transaction List
           Padding(
             padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
             child: Column(
@@ -719,138 +733,44 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(height: screenHeight * 0.015),
           SizedBox(
             height: screenHeight * 0.2,
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('splits')
-                  .where('participants', arrayContains: userId)
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: card.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                        onTap: index == 0
-                            ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SpendAnalyzerScreen(
-                                categoryData: <String, Map<String, dynamic>>{},
-                                amountToPay: 0.0,
-                                amountToReceive: 0.0,
-                              ),
-                            ),
-                          );
-                        }
-                            : null,
-                        child: Container(
-                          margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
-                          width: screenWidth * 0.9,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(screenWidth * 0.05),
-                            image: DecorationImage(
-                              image: AssetImage(card[index]),
-                              fit: BoxFit.cover,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.2),
-                                spreadRadius: 1,
-                                blurRadius: 7,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                }
-
-                double totalAmountToPay = 0.0;
-                double totalAmountToReceive = 0.0;
-                Map<String, Map<String, dynamic>> tempCategoryData = {};
-
-                for (var splitDoc in snapshot.data!.docs) {
-                  Map<String, dynamic> splitData = splitDoc.data() as Map<String, dynamic>;
-                  Map<String, dynamic> paidBy = splitData['paidBy'] as Map<String, dynamic>? ?? {};
-                  double totalAmount = splitData['totalAmount']?.toDouble() ?? 0.0;
-                  int participantCount = (splitData['participants'] as List<dynamic>?)?.length ?? 1;
-                  double userPaidAmount = paidBy[userId]?.toDouble() ?? 0.0;
-                  double userShare = totalAmount / participantCount;
-                  double netAmount = userShare - userPaidAmount;
-
-                  if (netAmount > 0) {
-                    totalAmountToPay += netAmount;
-                  } else if (netAmount < 0) {
-                    totalAmountToReceive += netAmount.abs();
-                  }
-
-                  String category = splitData['category'] ?? 'Others';
-                  Timestamp? createdAt = splitData['createdAt'] as Timestamp?;
-                  if (userPaidAmount > 0) {
-                    if (!tempCategoryData.containsKey(category)) {
-                      tempCategoryData[category] = {
-                        'totalPaid': 0.0,
-                        'lastInvolved': createdAt?.toDate(),
-                      };
-                    }
-                    tempCategoryData[category]!['totalPaid'] = (tempCategoryData[category]!['totalPaid'] as double) + userPaidAmount;
-                    if (createdAt != null &&
-                        (tempCategoryData[category]!['lastInvolved'] == null ||
-                            createdAt.toDate().isAfter(tempCategoryData[category]!['lastInvolved'] as DateTime))) {
-                      tempCategoryData[category]!['lastInvolved'] = createdAt.toDate();
-                    }
-                  }
-                }
-
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: card.length,
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: index == 0
-                          ? () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SpendAnalyzerScreen(
-                              categoryData: tempCategoryData,
-                              amountToPay: totalAmountToPay,
-                              amountToReceive: totalAmountToReceive,
-                            ),
-                          ),
-                        );
-                      }
-                          : null,
-                      child: Container(
-                        margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
-                        width: screenWidth * 0.9,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(screenWidth * 0.05),
-                          image: DecorationImage(
-                            image: AssetImage(card[index]),
-                            fit: BoxFit.cover,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.2),
-                              spreadRadius: 1,
-                              blurRadius: 7,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: card.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: index == 0
+                      ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SpendAnalyzerScreen(
+                          categoryData: categoryData,
+                          amountToPay: double.tryParse(userData["amountToPay"] as String? ?? "0") ?? 0.0,
+                          amountToReceive: double.tryParse(userData["amountToReceive"] as String? ?? "0") ?? 0.0,
                         ),
                       ),
                     );
-                  },
+                  }
+                      : null,
+                  child: Container(
+                    margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
+                    width: screenWidth * 0.9,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                      image: DecorationImage(
+                        image: AssetImage(card[index]),
+                        fit: BoxFit.cover,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          spreadRadius: 1,
+                          blurRadius: 7,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),
@@ -1025,13 +945,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTransactionList() {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    List<MapEntry<String, Map<String, dynamic>>> sortedCategories = categories
-        .map<MapEntry<String, Map<String, dynamic>>>((category) {
-      return MapEntry(
-        category,
-        categoryData[category] ?? {'totalPaid': 0.0, 'lastInvolved': null},
-      );
-    }).toList()
+    // Use categoryData directly, which now includes all categories with average amounts
+    List<MapEntry<String, Map<String, dynamic>>> sortedCategories = categoryData.entries.toList()
       ..sort((a, b) {
         DateTime? timeA = a.value['lastInvolved'] as DateTime?;
         DateTime? timeB = b.value['lastInvolved'] as DateTime?;
@@ -1050,20 +965,18 @@ class _HomeScreenState extends State<HomeScreen> {
             "Overview",
             style: TextStyle(fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
-          categoryData.isEmpty
-              ? const Center(child: Text("No transactions yet.", style: TextStyle(color: Colors.grey)))
-              : Column(
+          Column(
             children: sortedCategories.map((entry) {
               String category = entry.key;
-              double totalPaid = entry.value['totalPaid']?.toDouble() ?? 0.0;
+              double averageAmount = entry.value['averageAmount']?.toDouble() ?? 0.0;
               DateTime? lastInvolved = entry.value['lastInvolved'] as DateTime?;
               String subtitle = lastInvolved != null ? _formatTimeAgo(lastInvolved) : "Never";
               return _buildTransactionItem(
-                categoryIcons[category]!['icon'],
+                categoryIcons[category]!['icon'] as IconData,
                 category,
                 subtitle,
-                "₹${totalPaid.toStringAsFixed(2)}",
-                categoryIcons[category]!['color'],
+                "₹${averageAmount.toStringAsFixed(2)}",
+                categoryIcons[category]!['color'] as Color,
                 category,
               );
             }).toList(),

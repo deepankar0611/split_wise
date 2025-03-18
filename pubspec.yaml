@@ -44,6 +44,9 @@ dependencies:
   url_launcher:
   device_preview: ^1.2.0
   flutter_launcher_icons: ^0.14.3
+  image:
+  dropdown_button2:
+  flutter_svg:
 
 
 dev_dependencies:
@@ -62,6 +65,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo/
+    - assets/icons/instagram.svg
+    - assets/icons/linkedin.svg
     - assets/logo/g1.png
     - assets/animation/56qRH8Xl3ih8DWE25i.mp4
     - assets/fonts/

@@ -102,7 +102,7 @@ void main() async {
     await initializeNotifications();
     await Supabase.initialize(
       url: 'https://xzoyevujxvqaumrdskhd.supabase.co',
-      anonKey: 'your-anon-key', // Replace with your actual Supabase anon key
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6b3lldnVqeHZxYXVtcmRza2hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMTE1MjMsImV4cCI6MjA1NDc4NzUyM30.mbV_Scy2fXbMalxVRGHNKOxYx0o6t-nUPmDLlH5Mr_U', // Replace with your actual Supabase anon key
     );
   } catch (e) {
     debugPrint('Initialization error: $e');

@@ -110,10 +110,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
         {'profileImageUrl': imageUrl},
         SetOptions(merge: true),
       );
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _imageUrl = imageUrl;
         _userData?['profileImageUrl'] = imageUrl;
       });
+      }
     } catch (e) {
       print('Image upload failed: $e');
       if (mounted) {
@@ -138,12 +140,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> with WidgetsBindi
         {'profileImageUrl': avatarUrl},
         SetOptions(merge: true),
       );
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _imageUrl = avatarUrl;
         _userData?['profileImageUrl'] = avatarUrl;
       });
+      }
     } catch (e) {
-      print('Avatar selection failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to select avatar')),
@@ -546,9 +549,9 @@ class PhoneInputFormatter extends TextInputFormatter {
     final text = newValue.text.replaceAll(RegExp(r'[^0-9+]'), '');
     if (text.isEmpty) return newValue;
 
-    String formattedText = text.startsWith('+') ? text : '+$text';
-    if (formattedText.length > 12) {
-      formattedText = formattedText.substring(0, 12);
+    String formattedText = text.startsWith('+') ? text : '+91$text';
+    if (formattedText.length > 13) {
+      formattedText = formattedText.substring(0, 13);
     }
 
     return TextEditingValue(

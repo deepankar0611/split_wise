@@ -36,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final prefs = await SharedPreferences.getInstance();
     final bool isFirstTime = prefs.getBool('isFirstTime') ?? true;
     final User? user = FirebaseAuth.instance.currentUser;
-    await Future.delayed(const Duration(seconds: 4));
+    await Future.delayed(const Duration(seconds: 2));
 
     // Check if the widget is still mounted before navigating
     if (!mounted) return;

@@ -15,7 +15,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   String searchQuery = "";
 
   Stream<List<Map<String, dynamic>>> getUsersByName(String name) {
-    if (name.isEmpty) return Stream.value([]); // Return empty list instead of empty stream
+    if (name.isEmpty) return Stream.value([]);
     String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
 
     return FirebaseFirestore.instance.collection('users').snapshots().map(
@@ -68,6 +68,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(
           "Find Friends",
@@ -83,9 +84,9 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFF1A3C6D), // Base: Deep neon blue
-                Color(0xFF0A2A4D), // Darker neon blue (shadowy tone)
-                Color(0xFF1A3C6D),// Neon purple
+                Color(0xFF1A3C6D),
+                Color(0xFF0A2A4D),
+                Color(0xFF1A3C6D),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -107,10 +108,8 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       ),
       body: Stack(
         children: [
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
+          // Centered Image
+          Center(
             child: Opacity(
               opacity: 0.5,
               child: Image.asset(
@@ -121,181 +120,210 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               ),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.all(screenWidth * 0.04),
-            child: Column(
-              children: [
-                Material(
-                  elevation: screenWidth * 0.015,
-                  shadowColor: Colors.grey.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(screenWidth * 0.04),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      fillColor: Colors.white,
-                      filled: true,
-                      hintText: "Search by name...",
-                      hintStyle: GoogleFonts.poppins(
-                        color: Colors.grey.shade500,
-                        fontSize: screenWidth * 0.04,
-                      ),
-                      prefixIcon: Icon(Icons.search, color: Colors.teal.shade700, size: screenWidth * 0.06),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+          // Text on top of the image
+          Positioned(
+            top: screenHeight * 0.1,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                "Find Your Friends",
+                style: GoogleFonts.poppins(
+                  fontSize: screenWidth * 0.06,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.teal.shade700,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 4.0,
+                      color: Colors.black.withOpacity(0.3),
+                      offset: Offset(2.0, 2.0),
                     ),
-                    style: GoogleFonts.poppins(fontSize: screenWidth * 0.04),
-                    onChanged: (value) => setState(() => searchQuery = value.trim()),
-                  ),
+                  ],
                 ),
-                SizedBox(height: screenHeight * 0.03),
-                Expanded(
-                  child: searchQuery.isNotEmpty
-                      ? StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: getUsersByName(searchQuery),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator(color: Colors.teal.shade700));
-                      }
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Text(
-                            "Error: ${snapshot.error}",
-                            style: GoogleFonts.poppins(color: Colors.red),
+              ),
+            ),
+          ),
+          // Scrollable content
+          SingleChildScrollView(
+            child: SizedBox(
+              height: screenHeight,
+              child: Padding(
+                padding: EdgeInsets.all(screenWidth * 0.04),
+                child: Column(
+                  children: [
+                    Material(
+                      elevation: screenWidth * 0.015,
+                      shadowColor: Colors.grey.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          fillColor: Colors.white,
+                          filled: true,
+                          hintText: "Search by name...",
+                          hintStyle: GoogleFonts.poppins(
+                            color: Colors.grey.shade500,
+                            fontSize: screenWidth * 0.04,
                           ),
-                        );
-                      }
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Center(
-                          child: Text(
-                            "No users found",
-                            style: GoogleFonts.poppins(
-                              fontSize: screenWidth * 0.045,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        );
-                      }
-
-                      return ListView.builder(
-                        itemCount: snapshot.data!.length,
-                        itemBuilder: (context, index) {
-                          final userData = snapshot.data![index];
-                          return FutureBuilder<bool>(
-                            future: isAlreadyFriend(userData['uid']),
-                            builder: (context, isFriendSnapshot) {
-                              if (isFriendSnapshot.connectionState == ConnectionState.waiting) {
-                                return SizedBox.shrink();
-                              }
-
-                              bool isFriend = isFriendSnapshot.data ?? false;
-
-                              return Card(
-                                elevation: screenWidth * 0.015,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                          prefixIcon: Icon(Icons.search, color: Colors.teal.shade700, size: screenWidth * 0.06),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                        ),
+                        style: GoogleFonts.poppins(fontSize: screenWidth * 0.04),
+                        onChanged: (value) => setState(() => searchQuery = value.trim()),
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.03),
+                    Expanded(
+                      child: searchQuery.isNotEmpty
+                          ? StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: getUsersByName(searchQuery),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return Center(child: CircularProgressIndicator(color: Colors.teal.shade700));
+                          }
+                          if (snapshot.hasError) {
+                            return Center(
+                              child: Text(
+                                "Error: ${snapshot.error}",
+                                style: GoogleFonts.poppins(color: Colors.red),
+                              ),
+                            );
+                          }
+                          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return Center(
+                              child: Text(
+                                "No users found",
+                                style: GoogleFonts.poppins(
+                                  fontSize: screenWidth * 0.045,
+                                  color: Colors.grey.shade600,
                                 ),
-                                shadowColor: Colors.teal.withOpacity(0.3),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [Colors.white, Colors.teal.shade50],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            itemCount: snapshot.data!.length,
+                            itemBuilder: (context, index) {
+                              final userData = snapshot.data![index];
+                              return FutureBuilder<bool>(
+                                future: isAlreadyFriend(userData['uid']),
+                                builder: (context, isFriendSnapshot) {
+                                  if (isFriendSnapshot.connectionState == ConnectionState.waiting) {
+                                    return SizedBox.shrink();
+                                  }
+
+                                  bool isFriend = isFriendSnapshot.data ?? false;
+
+                                  return Card(
+                                    elevation: screenWidth * 0.015,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(screenWidth * 0.04),
                                     ),
-                                    borderRadius: BorderRadius.circular(screenWidth * 0.04),
-                                  ),
-                                  child: ListTile(
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: screenWidth * 0.04,
-                                      vertical: screenHeight * 0.01,
-                                    ),
-                                    leading: CircleAvatar(
-                                      radius: screenWidth * 0.06,
-                                      backgroundImage: userData['profileImageUrl'] != null &&
-                                          userData['profileImageUrl'].isNotEmpty
-                                          ? NetworkImage(userData['profileImageUrl'])
-                                          : null,
-                                      backgroundColor: Colors.teal.shade100,
-                                      child: userData['profileImageUrl'] == null ||
-                                          userData['profileImageUrl'].isEmpty
-                                          ? Text(
-                                        userData['name']?[0].toUpperCase() ?? "?",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: screenWidth * 0.05,
-                                          color: Colors.teal.shade900,
-                                          fontWeight: FontWeight.bold,
+                                    shadowColor: Colors.teal.withOpacity(0.3),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [Colors.white, Colors.teal.shade50],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
                                         ),
-                                      )
-                                          : null,
-                                    ),
-                                    title: Text(
-                                      userData['name'] ?? "Unknown",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: screenWidth * 0.045,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
+                                        borderRadius: BorderRadius.circular(screenWidth * 0.04),
                                       ),
-                                    ),
-                                    subtitle: Text(
-                                      userData['email'] ?? "No email",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: screenWidth * 0.035,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                    trailing: isFriend
-                                        ? Chip(
-                                      label: Text(
-                                        "Friend",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: screenWidth * 0.035,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      backgroundColor: Colors.green.shade700,
-                                      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
-                                    )
-                                        : ElevatedButton(
-                                      onPressed: () => sendFriendRequest(userData['uid']),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF234567),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(screenWidth * 0.03),
-                                        ),
-                                        padding: EdgeInsets.symmetric(
+                                      child: ListTile(
+                                        contentPadding: EdgeInsets.symmetric(
                                           horizontal: screenWidth * 0.04,
-                                          vertical: screenHeight * 0.015,
+                                          vertical: screenHeight * 0.01,
                                         ),
-                                      ),
-                                      child: Text(
-                                        "Add Friend",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: screenWidth * 0.035,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
+                                        leading: CircleAvatar(
+                                          radius: screenWidth * 0.06,
+                                          backgroundImage: userData['profileImageUrl'] != null &&
+                                              userData['profileImageUrl'].isNotEmpty
+                                              ? NetworkImage(userData['profileImageUrl'])
+                                              : null,
+                                          backgroundColor: Colors.teal.shade100,
+                                          child: userData['profileImageUrl'] == null ||
+                                              userData['profileImageUrl'].isEmpty
+                                              ? Text(
+                                            userData['name']?[0].toUpperCase() ?? "?",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: screenWidth * 0.05,
+                                              color: Colors.teal.shade900,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          )
+                                              : null,
+                                        ),
+                                        title: Text(
+                                          userData['name'] ?? "Unknown",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: screenWidth * 0.045,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                          userData['email'] ?? "No email",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: screenWidth * 0.035,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                        trailing: isFriend
+                                            ? Chip(
+                                          label: Text(
+                                            "Friend",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: screenWidth * 0.035,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          backgroundColor: Colors.green.shade700,
+                                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
+                                        )
+                                            : ElevatedButton(
+                                          onPressed: () => sendFriendRequest(userData['uid']),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(0xFF234567),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                                            ),
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: screenWidth * 0.04,
+                                              vertical: screenHeight * 0.015,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            "Add Friend",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: screenWidth * 0.035,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ),
+                                  );
+                                },
                               );
                             },
                           );
                         },
-                      );
-                    },
-                  )
-                      : Center(
-                    child: Text(
-                      "Search for a user by name",
-                      style: GoogleFonts.poppins(
-                        fontSize: screenWidth * 0.045,
-                        color: Colors.teal.shade700,
+                      )
+                          : Center(
+                        child: Text(
+                          "Search for a user by name",
+                          style: GoogleFonts.poppins(
+                            fontSize: screenWidth * 0.045,
+                            color: Colors.teal.shade700,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],

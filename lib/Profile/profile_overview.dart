@@ -8,6 +8,7 @@ import 'package:split_wise/Profile/manage_friends.dart';
 import 'package:split_wise/Profile/setting.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../login signup/login_screen.dart';
+import 'about_us_screen.dart';
 import 'all expense history detals.dart';
 import 'editprofile.dart';
 
@@ -381,7 +382,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
               return _buildOptionTile(
                 icon: CupertinoIcons.info,
                 title: "About Us",
-                onTap: () => _showAboutUsDialog(context),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AboutUsScreen())),
                 iconColor: const Color(0xFF6A1B9A),
                 backgroundColor: Colors.white,
                 screenWidth: screenWidth,
@@ -413,7 +414,7 @@ class _ProfileOverviewScreenState extends State<ProfileOverviewScreen> {
         backgroundColor: Colors.blue.shade50,
         title: Text("About Us", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.06)),
         content: Text(
-          "Welcome to Settleup, your premier solution for seamlessly managing expenses and equitably dividing bills among friends. Designed with precision by our adept developers, Aryan Bansal and Depankar Singh, SplitWise ensures a sophisticated yet effortless experience in financial coordination. For further details or assistance, please feel free to reach out to us at support@settleup.com. Should you encounter any issues or wish to lodge a complaint, we encourage you to raise your concerns via the same email address, where our dedicated team stands ready to assist you.",
+          "Welcome to Settleup, your premier solution for seamlessly managing expenses and equitably dividing bills among friends. Designed with precision by our adept developers, Aryan Bansal and Depankar Singh, SplitWise ensures a sophisticated yet effortless experience in financial coordination. For further details or assistance, please feel free to reach out to us at ad.dev8b@gmail.com. Should you encounter any issues or wish to lodge a complaint, we encourage you to raise your concerns via the same email address, where our dedicated team stands ready to assist you.",
           style: GoogleFonts.poppins(fontSize: screenWidth * 0.04),
         ),
         actions: [

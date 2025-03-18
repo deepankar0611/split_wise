@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import 'all expense history detals.dart'; // Ensure this matches your file name
+import 'all expense history detals.dart';
 
 class FriendsList extends StatefulWidget {
   const FriendsList({super.key});
@@ -17,7 +17,7 @@ class FriendsList extends StatefulWidget {
 class _FriendsListState extends State<FriendsList> {
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? 'defaultUserId';
   Map<String, Map<String, String>> friendDetails = {};
-  bool isLoading = true; // Add loading state
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -28,7 +28,7 @@ class _FriendsListState extends State<FriendsList> {
   Future<void> _fetchFriendDetails() async {
     try {
       setState(() {
-        isLoading = true; // Show loading initially
+        isLoading = true;
       });
 
       QuerySnapshot friendsSnapshot = await FirebaseFirestore.instance
@@ -42,52 +42,102 @@ class _FriendsListState extends State<FriendsList> {
       for (String uid in friendUids) {
         DocumentSnapshot friendDoc = await FirebaseFirestore.instance
             .collection('users')
-            .doc(userId)
-            .collection('friends')
             .doc(uid)
             .get();
 
         if (friendDoc.exists) {
-          Timestamp? addedAt = friendDoc.get('addedAt') as Timestamp?;
-          DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          var data = friendDoc.data() as Map<String, dynamic>;
+          DocumentSnapshot friendRelationDoc = await FirebaseFirestore.instance
               .collection('users')
+              .doc(userId)
+              .collection('friends')
               .doc(uid)
               .get();
 
-          if (userDoc.exists) {
-            var data = userDoc.data() as Map<String, dynamic>?;
-            friendDetails[uid] = {
-              "name": data?['name'] ?? "Unknown ($uid)",
-              "profileImageUrl": data?['profileImageUrl'] ?? "",
-              "addedAt": addedAt?.toDate().toString() ?? "Unknown date",
-            };
-          } else {
-            friendDetails[uid] = {
-              "name": "User Not Found ($uid)",
-              "profileImageUrl": "",
-              "addedAt": "Unknown date",
-            };
-          }
-        } else {
+          Timestamp? addedAt = friendRelationDoc.exists
+              ? friendRelationDoc.get('addedAt') as Timestamp?
+              : null;
+
           friendDetails[uid] = {
-            "name": "Friend Not Found ($uid)",
-            "profileImageUrl": "",
-            "addedAt": "Unknown date",
+            "name": data['name'] ?? "Unknown ($uid)",
+            "profileImageUrl": data['profileImageUrl'] ?? "",
+            "addedAt": addedAt?.toDate().toString() ?? "Unknown date",
           };
+        } else {
+          // If user doesn't exist, remove them from friends list
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .collection('friends')
+              .doc(uid)
+              .delete();
+          friendDetails.remove(uid);
         }
       }
     } catch (e) {
       print("Error fetching friend details: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to load friends: $e")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to load friends: $e")),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
-          isLoading = false; // Hide loading when done
+          isLoading = false;
         });
       }
     }
+  }
+
+  Future<void> _removeFriend(String friendUid) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('friends')
+          .doc(friendUid)
+          .delete();
+
+      setState(() {
+        friendDetails.remove(friendUid);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Friend removed successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to remove friend: $e")),
+      );
+    }
+  }
+
+  void _showUnfriendDialog(String friendUid, String friendName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Unfriend $friendName?",
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          content: Text("Are you sure you want to remove $friendName from your friends list?",
+              style: GoogleFonts.poppins()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                _removeFriend(friendUid);
+                Navigator.pop(context);
+              },
+              child: Text("Unfriend", style: GoogleFonts.poppins(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -108,7 +158,7 @@ class _FriendsListState extends State<FriendsList> {
               fontSize: screenWidth * 0.045,
             ),
           ),
-          backgroundColor: const Color(0xFF234567), // Kept the AppBar color as it is not teal
+          backgroundColor: const Color(0xFF234567),
           elevation: 4,
           centerTitle: true,
           shape: RoundedRectangleBorder(
@@ -121,7 +171,7 @@ class _FriendsListState extends State<FriendsList> {
         ),
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator(color: Colors.grey)) // Changed loading indicator to grey for visibility on white
+          ? Center(child: CircularProgressIndicator(color: Colors.grey))
           : StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -130,7 +180,7 @@ class _FriendsListState extends State<FriendsList> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator(color: Colors.grey)); // Changed loading indicator to grey for visibility on white
+            return Center(child: CircularProgressIndicator(color: Colors.grey));
           }
           if (snapshot.hasError) {
             return Center(
@@ -169,69 +219,83 @@ class _FriendsListState extends State<FriendsList> {
                 String friendName = friendDetails[friendUid]?["name"] ?? "Loading...";
                 String profileImageUrl = friendDetails[friendUid]?["profileImageUrl"] ?? "";
 
-                return GestureDetector(
-                  onTap: () {
-                    print("Tapping on friend: $friendName (UID: $friendUid)");
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ExpenseHistoryDetailedScreen(
-                          friendUid: friendUid,
-                          showFilter: '',
-                          splitId: '',
-                          isReceiver: false,
-                          isPayer: false, sendFilter: '',
-                        ),
-                      ),
-                    );
+                return Dismissible(
+                  key: Key(friendUid),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: EdgeInsets.only(right: screenWidth * 0.04),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  onDismissed: (direction) {
+                    _showUnfriendDialog(friendUid, friendName);
                   },
-                  child: FadeInUp(
-                    delay: Duration(milliseconds: 100 * index),
-                    child: Card(
-                      elevation: 0, // Removed shadow for white background
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(screenWidth * 0.04),
-                      ),
-                      shadowColor: Colors.transparent, // Removed shadow for white background
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white, // Changed container background to white
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ExpenseHistoryDetailedScreen(
+                            friendUid: friendUid,
+                            showFilter: '',
+                            splitId: '',
+                            isReceiver: false,
+                            isPayer: false,
+                            sendFilter: '',
+                          ),
+                        ),
+                      );
+                    },
+                    child: FadeInUp(
+                      delay: Duration(milliseconds: 100 * index),
+                      child: Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(screenWidth * 0.04),
                         ),
-                        child: ListTile(
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.04,
-                            vertical: screenHeight * 0.01,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(screenWidth * 0.04),
                           ),
-                          leading: CircleAvatar(
-                            radius: screenWidth * 0.06,
-                            backgroundColor: Colors.white, // Changed CircleAvatar background to white
-                            foregroundImage: profileImageUrl.isNotEmpty
-                                ? CachedNetworkImageProvider(profileImageUrl)
-                                : null,
-                            child: profileImageUrl.isEmpty
-                                ? Text(
-                              friendName.isNotEmpty ? friendName[0].toUpperCase() : "U",
-                              style: TextStyle(
-                                fontSize: screenWidth * 0.05,
-                                color: Colors.black87, // Changed text color in CircleAvatar to black
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                                : null,
-                          ),
-                          title: Text(
-                            friendName,
-                            style: GoogleFonts.poppins(
-                              fontSize: screenWidth * 0.045,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87, // Changed title text color to black
+                          child: ListTile(
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.04,
+                              vertical: screenHeight * 0.01,
                             ),
-                          ),
-                          trailing: Icon(
-                            Icons.person,
-                            color: Colors.black, // Kept the icon color as teal
-                            size: screenWidth * 0.07,
+                            leading: CircleAvatar(
+                              radius: screenWidth * 0.06,
+                              backgroundColor: Colors.white,
+                              foregroundImage: profileImageUrl.isNotEmpty
+                                  ? CachedNetworkImageProvider(profileImageUrl)
+                                  : null,
+                              child: profileImageUrl.isEmpty
+                                  ? Text(
+                                friendName.isNotEmpty
+                                    ? friendName[0].toUpperCase()
+                                    : "U",
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.05,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                                  : null,
+                            ),
+                            title: Text(
+                              friendName,
+                              style: GoogleFonts.poppins(
+                                fontSize: screenWidth * 0.045,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.person,
+                              color: Colors.black,
+                              size: screenWidth * 0.07,
+                            ),
                           ),
                         ),
                       ),
