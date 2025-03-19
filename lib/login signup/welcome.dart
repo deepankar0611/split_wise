@@ -17,7 +17,7 @@ class _IntroPageState extends State<IntroPage> {
 
   final List<Map<String, String>> _pages = [
     {
-      "image": "assets/logo/icon.png",
+      "image": "assets/logo/icon.jpg",
       "title": "Welcome to Our App",
       "subtitle": "Split Bills, Simplify Life – Effortless Expense Sharing"
     },

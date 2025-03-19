@@ -242,49 +242,48 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
   }
 
   Map<String, double> _getSpendingForTimePeriod(Map<String, Map<String, dynamic>> categoryData) {
+    print('Category Data: $categoryData'); // Debug input data
     Map<String, double> spending = {};
     for (String category in categories) {
-      double totalPaid = categoryData[category]?['totalPaid']?.toDouble() ?? 0.0;
+      double averageAmount = categoryData[category]?['averageAmount']?.toDouble() ?? 0.0;
       DateTime? lastInvolved = categoryData[category]?['lastInvolved'] as DateTime?;
+      print('$category - Average: $averageAmount, Last Involved: $lastInvolved'); // Debug each category
 
-      if (lastInvolved == null) {
-        spending[category] = 0.0;
-        continue;
-      }
+      // Default to showing average amount
+      spending[category] = averageAmount;
 
-      switch (_timePeriod) {
-        case 'Day':
-          if (lastInvolved.day == _selectedDate.day &&
-              lastInvolved.month == _selectedDate.month &&
-              lastInvolved.year == _selectedDate.year) {
-            spending[category] = totalPaid;
-          } else {
-            spending[category] = 0.0;
-          }
-          break;
-        case 'Month':
-          if (lastInvolved.month == _selectedDate.month && lastInvolved.year == _selectedDate.year) {
-            spending[category] = totalPaid;
-          } else {
-            spending[category] = 0.0;
-          }
-          break;
-        case 'Custom Range':
-          if (_customDateRange != null &&
-              lastInvolved.isAfter(_customDateRange!.start) &&
-              lastInvolved.isBefore(_customDateRange!.end.add(const Duration(days: 1)))) {
-            spending[category] = totalPaid;
-          } else {
-            spending[category] = 0.0;
-          }
-          break;
-        case 'Multi-Month':
-          bool inSelectedMonths = _selectedMonths.any((month) =>
-          lastInvolved.month == month.month && lastInvolved.year == month.year);
-          spending[category] = inSelectedMonths ? totalPaid : 0.0;
-          break;
+      if (lastInvolved != null) {
+        switch (_timePeriod) {
+          case 'Day':
+            if (lastInvolved.day != _selectedDate.day ||
+                lastInvolved.month != _selectedDate.month ||
+                lastInvolved.year != _selectedDate.year) {
+              spending[category] = 0.0;
+            }
+            break;
+          case 'Month':
+            if (lastInvolved.month != _selectedDate.month || lastInvolved.year != _selectedDate.year) {
+              spending[category] = 0.0;
+            }
+            break;
+          case 'Custom Range':
+            if (_customDateRange != null &&
+                (lastInvolved.isBefore(_customDateRange!.start) ||
+                    lastInvolved.isAfter(_customDateRange!.end.add(const Duration(days: 1))))) {
+              spending[category] = 0.0;
+            }
+            break;
+          case 'Multi-Month':
+            bool inSelectedMonths = _selectedMonths.any((month) =>
+            lastInvolved.month == month.month && lastInvolved.year == month.year);
+            if (!inSelectedMonths) {
+              spending[category] = 0.0;
+            }
+            break;
+        }
       }
     }
+    print('Filtered Spending: $spending'); // Debug output
     return spending;
   }
 
@@ -583,7 +582,17 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
 
   List<PieChartSectionData> _generatePieChartSections(Map<String, double> spending, List<String> categories) {
     double totalSpending = spending.values.fold(0, (sum, amount) => sum + amount);
-    if (totalSpending == 0) return [];
+    if (totalSpending == 0) {
+      return [
+        PieChartSectionData(
+          value: 1,
+          color: Colors.grey,
+          radius: MediaQuery.of(context).size.width * 0.1,
+          title: 'No Data',
+          titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+        )
+      ];
+    }
 
     var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
 
@@ -612,6 +621,16 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
 
   List<BarChartGroupData> _generateBarChartGroups(Map<String, double> spending, List<String> categories) {
     var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    if (sortedEntries.isEmpty || sortedEntries.every((entry) => entry.value == 0)) {
+      return [
+        BarChartGroupData(
+          x: 0,
+          barRods: [
+            BarChartRodData(toY: 1, color: Colors.grey, width: MediaQuery.of(context).size.width * 0.05),
+          ],
+        )
+      ];
+    }
 
     return sortedEntries.asMap().entries.map((entry) {
       int index = entry.key;
@@ -651,6 +670,14 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
 
   LineChartBarData _generateLineChartBarData(Map<String, double> spending, List<String> sortedCategories) {
     var sortedEntries = spending.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    if (sortedEntries.isEmpty || sortedEntries.every((entry) => entry.value == 0)) {
+      return LineChartBarData(
+        spots: [const FlSpot(0, 0)],
+        color: Colors.grey,
+        barWidth: 2,
+        dotData: FlDotData(show: false),
+      );
+    }
 
     final List<FlSpot> spots = sortedEntries.asMap().entries.map((entry) {
       int index = entry.key;
@@ -918,31 +945,31 @@ class _SpendAnalyzerScreenState extends State<SpendAnalyzerScreen> {
 
   List<FlSpot> _generateLineChartDataForCategory(Map<String, Map<String, dynamic>> categoryData) {
     List<FlSpot> spots = [];
-    double totalPaid = categoryData[_selectedStatisticsCategory]?['totalPaid']?.toDouble() ?? 0.0;
+    double averageAmount = categoryData[_selectedStatisticsCategory]?['averageAmount']?.toDouble() ?? 0.0;
     DateTime? lastInvolved = categoryData[_selectedStatisticsCategory]?['lastInvolved'] as DateTime?;
 
     if (_timePeriod == 'Custom Range' && _customDateRange != null) {
       int daysInRange = _customDateRange!.end.difference(_customDateRange!.start).inDays + 1;
-      double dailyAverage = totalPaid / daysInRange;
+      double dailyAverage = averageAmount / daysInRange;
       for (int i = 0; i < 6; i++) {
         double x = i * (daysInRange / 5);
         double y = lastInvolved != null && lastInvolved.isAfter(_customDateRange!.start.add(Duration(days: x.toInt())))
             ? dailyAverage * (x + 1)
-            : totalPaid;
+            : averageAmount;
         spots.add(FlSpot(x, y));
       }
     } else if (_timePeriod == 'Multi-Month' && _selectedMonths.isNotEmpty) {
       int totalMonths = _selectedMonths.length;
-      double monthlyAverage = totalPaid / totalMonths;
+      double monthlyAverage = averageAmount / totalMonths;
       for (int i = 0; i < totalMonths && i < 6; i++) {
         spots.add(FlSpot(i.toDouble(), monthlyAverage * (i + 1)));
       }
     } else {
       int daysInMonth = DateTime(_selectedDate.year, _selectedDate.month + 1, 0).day;
-      double dailyAverage = totalPaid / daysInMonth;
+      double dailyAverage = averageAmount / daysInMonth;
       for (int i = 0; i < 6; i++) {
         double x = i * (daysInMonth / 5);
-        double y = lastInvolved != null && lastInvolved.day > x ? dailyAverage * (x + 1) : totalPaid;
+        double y = lastInvolved != null && lastInvolved.day > x ? dailyAverage * (x + 1) : averageAmount;
         spots.add(FlSpot(x, y));
       }
     }

@@ -5,6 +5,7 @@ import 'package:split_wise/bottom_bar.dart';
 import 'package:split_wise/login%20signup/welcome.dart';
 import 'package:video_player/video_player.dart';
 
+import '../Helper/checkforupdate.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -21,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-
+      checkForUpdate();
     // Initialize the video player controller
     _videoController = VideoPlayerController.asset('assets/animation/56qRH8Xl3ih8DWE25i.mp4');
     _initializeVideoFuture = _videoController.initialize();

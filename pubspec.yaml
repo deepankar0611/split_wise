@@ -47,6 +47,7 @@ dependencies:
   image:
   dropdown_button2:
   flutter_svg:
+  flutter_upgrade_version: ^1.1.8
 
 
 dev_dependencies:
