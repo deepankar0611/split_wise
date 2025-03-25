@@ -18,7 +18,7 @@
 
     <application
 
-        android:label="split_wise"
+        android:label="Split Up"
         android:icon="@mipmap/ic_launcher">
 
 

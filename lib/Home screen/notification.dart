@@ -469,11 +469,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Notifications"),
+        title: const Text("Notifications",style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold),),
         backgroundColor: const Color(0xFF234567),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_forever),
+            icon: const Icon(Icons.delete_forever,color: Colors.white),
             tooltip: "Delete All",
             onPressed: () async {
               final friendSnapshot = await getFriendRequests().first;
